@@ -6,6 +6,7 @@ import type {
   NewTransaction,
   NewTransferPair,
   TransactionFilter,
+  TransactionPatch,
   TransferPair,
   UpdateTransferPairInput,
 } from '../../application/transactions/ports';
@@ -175,6 +176,24 @@ export async function getTransferPair(transferGroupId: string): Promise<Transfer
   return { out, in: inLeg };
 }
 
+// TransactionPatch (Application-layer, camelCase) -> the snake_case columns
+// updateTransaction() writes. Supabase forwards JSON body keys to Postgres
+// column names literally with no case translation, so passing the
+// camelCase patch straight through fails with PGRST204 ("Could not find
+// the 'occurredAt' column..."). Only maps fields actually present on the
+// patch, so an omitted field stays omitted rather than being sent as
+// `undefined`.
+function toUpdatePayload(
+  patch: TransactionPatch
+): Partial<Pick<Transaction, 'category_id' | 'amount' | 'description' | 'occurred_at'>> {
+  const payload: Partial<Pick<Transaction, 'category_id' | 'amount' | 'description' | 'occurred_at'>> = {};
+  if (patch.amount !== undefined) payload.amount = patch.amount;
+  if (patch.categoryId !== undefined) payload.category_id = patch.categoryId;
+  if (patch.description !== undefined) payload.description = patch.description;
+  if (patch.occurredAt !== undefined) payload.occurred_at = patch.occurredAt;
+  return payload;
+}
+
 // Adapter for the Application-layer TransactionPort — thin wrappers over the
 // functions above, translating NewTransaction/TransactionFilter/etc. (the
 // Application ports' shape) to what the existing functions already expect.
@@ -198,7 +217,9 @@ export const transactionRepository = {
   getTransferPair,
   // Not-found is checked by the UpdateTransaction use case itself (it loads
   // the row via getById before ever calling this) — no duplicate check here.
-  update: updateTransaction,
+  async update(id: string, patch: TransactionPatch): Promise<Transaction> {
+    return updateTransaction(id, toUpdatePayload(patch));
+  },
   updateTransferPair,
   archive: deleteTransaction,
   archiveTransferPair,
