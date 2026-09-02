@@ -12,6 +12,12 @@ export async function listAccounts(): Promise<Account[]> {
   return data as Account[];
 }
 
+export async function getAccountById(id: string): Promise<Account | null> {
+  const { data, error } = await supabase.from('accounts').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data as Account | null;
+}
+
 export async function createAccount(input: {
   name: string;
   type: AccountType;

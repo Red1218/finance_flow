@@ -6,6 +6,7 @@ import { useTransactions } from '../../../src/hooks/useTransactions';
 import { createAccount } from '../../../src/data/repositories/accounts';
 import { toNumber, formatINR } from '../../../src/domain/money';
 import { transactionSign } from '../../../src/data/repositories/transactions';
+import { monthRange } from '../../../src/domain/dateRange';
 import type { AccountType } from '../../../src/data/types';
 import { Button, Card, Input, K, Muted, Seg, Tag } from '../../../src/ui/primitives';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
@@ -16,13 +17,6 @@ const TYPE_LABEL: Record<AccountType, string> = {
   CREDIT_CARD: 'Credit card',
   WALLET: 'Wallet',
 };
-
-function monthRange(today: Date) {
-  return {
-    from: new Date(today.getFullYear(), today.getMonth(), 1).toISOString(),
-    to: new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString(),
-  };
-}
 
 export default function Accounts() {
   const router = useRouter();

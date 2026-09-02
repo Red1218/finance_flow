@@ -6,6 +6,7 @@ import { useTransactions } from '../../../src/hooks/useTransactions';
 import { useCategories } from '../../../src/hooks/useCategories';
 import { useAccounts } from '../../../src/hooks/useAccounts';
 import { groupByDay } from '../../../src/domain/dashboard';
+import { monthRange } from '../../../src/domain/dateRange';
 import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
 import { formatINR, toNumber } from '../../../src/domain/money';
 import { Chip, Input, K, Muted, ScreenHeader } from '../../../src/ui/primitives';
@@ -14,12 +15,6 @@ import { colors, shadow, spacing } from '../../../src/theme/tokens';
 
 type Filter = 'All' | 'Expenses' | 'Income' | 'Transfers';
 const FILTERS: Filter[] = ['All', 'Expenses', 'Income', 'Transfers'];
-
-function monthRange(today: Date) {
-  const from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-  const to = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString();
-  return { from, to };
-}
 
 export default function TransactionsList() {
   const router = useRouter();

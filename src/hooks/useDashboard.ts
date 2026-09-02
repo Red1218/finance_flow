@@ -6,13 +6,8 @@ import { useAccounts } from './useAccounts';
 import { toNumber } from '../domain/money';
 import { budgetProgress } from '../domain/budget';
 import { monthProgress, dailyAllowance, last7DaysTotals } from '../domain/dashboard';
+import { monthRange } from '../domain/dateRange';
 import { buildTransactionRowVM, indexById } from '../domain/transactionView';
-
-function monthRange(today: Date) {
-  const from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-  const to = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString();
-  return { from, to };
-}
 
 export function useDashboard(recentLimit = 6) {
   const today = useMemo(() => new Date(), []);

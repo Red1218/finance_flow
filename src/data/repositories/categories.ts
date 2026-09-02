@@ -9,6 +9,12 @@ export async function listCategories(kind?: CategoryKind): Promise<Category[]> {
   return data as Category[];
 }
 
+export async function getCategoryById(id: string): Promise<Category | null> {
+  const { data, error } = await supabase.from('categories').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data as Category | null;
+}
+
 export async function createCategory(name: string, kind: CategoryKind = 'EXPENSE'): Promise<Category> {
   const { data: userRes } = await supabase.auth.getUser();
   const user_id = userRes.user?.id;

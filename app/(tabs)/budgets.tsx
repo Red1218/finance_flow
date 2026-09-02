@@ -9,22 +9,17 @@ import { useCategories } from '../../src/hooks/useCategories';
 import { setBudget } from '../../src/data/repositories/budgets';
 import { toNumber, formatINR } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
+import { monthRange } from '../../src/domain/dateRange';
 import { Bar, Button, Input, K, Muted, Num, ScreenHeader, Tag } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
-
-function monthRange(today: Date) {
-  const from = new Date(today.getFullYear(), today.getMonth(), 1);
-  const to = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  return { from, to };
-}
 
 export default function Budgets() {
   const router = useRouter();
   const today = useMemo(() => new Date(), []);
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
-  const tx = useTransactions({ from: from.toISOString(), to: to.toISOString() });
+  const tx = useTransactions({ from, to });
   const budgets = useBudgets();
   const categories = useCategories('EXPENSE');
 
@@ -95,8 +90,8 @@ export default function Budgets() {
         category_id: formCategoryId,
         amount,
         currency_code: 'INR',
-        start_date: from.toISOString(),
-        end_date: to.toISOString(),
+        start_date: from,
+        end_date: to,
       });
       setAddOpen(false);
       refetch();
@@ -106,7 +101,7 @@ export default function Budgets() {
   };
 
   const saveOverall = async (amount: number) => {
-    await setBudget({ category_id: null, amount, currency_code: 'INR', start_date: from.toISOString(), end_date: to.toISOString() });
+    await setBudget({ category_id: null, amount, currency_code: 'INR', start_date: from, end_date: to });
     refetch();
   };
 

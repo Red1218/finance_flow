@@ -1,6 +1,7 @@
 import { useLiveQuery } from './useLiveQuery';
-import { listTransactions, type ListTransactionsParams } from '../data/repositories/transactions';
+import { getTransactions } from '../application/transactions';
+import type { TransactionFilter } from '../application/transactions/ports';
 
-export function useTransactions(params: ListTransactionsParams = {}) {
-  return useLiveQuery(() => listTransactions(params), [params.from, params.to, params.search]);
+export function useTransactions(params: TransactionFilter = {}) {
+  return useLiveQuery(() => getTransactions(params), [params.from, params.to, params.search]);
 }

@@ -4,7 +4,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAccounts } from '../../src/hooks/useAccounts';
 import { useCategories } from '../../src/hooks/useCategories';
-import { createTransaction, createTransfer } from '../../src/data/repositories/transactions';
+import { usePreferences } from '../../src/hooks/usePreferences';
+import { createTransaction, createTransfer } from '../../src/application/transactions';
+import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
+import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
@@ -12,16 +15,37 @@ import { colors, fonts, spacing } from '../../src/theme/tokens';
 type Kind = 'Expense' | 'Income' | 'Transfer';
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'];
 
+function todayInputValue(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Plain YYYY-MM-DD text entry, matching the existing date-input convention
+// already used in this codebase (Recurring's "Next due" field) rather than
+// introducing a new native date-picker dependency.
+function parseDateInput(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const d = new Date(year, month - 1, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+  return d;
+}
+
 export default function NewTransaction() {
   const router = useRouter();
   const accounts = useAccounts();
   const categories = useCategories(undefined);
+  const prefs = usePreferences();
+  const precision = prefs.data?.decimal_precision ?? 2;
 
   const [kind, setKind] = useState<Kind>('Expense');
   const [amount, setAmount] = useState('0');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [toAccountId, setToAccountId] = useState<string | null>(null);
+  const [dateText, setDateText] = useState(() => todayInputValue());
   const [note, setNote] = useState('');
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
   const [toAccountPickerOpen, setToAccountPickerOpen] = useState(false);
@@ -47,46 +71,61 @@ export default function NewTransaction() {
   const numeric = parseFloat(amount) || 0;
   const account = accounts.data?.find((a) => a.id === accountId);
   const toAccount = accounts.data?.find((a) => a.id === toAccountId);
+  const pickedDate = parseDateInput(dateText);
 
   const canSave =
     numeric > 0 &&
     !saving &&
+    pickedDate !== null &&
     (kind === 'Transfer' ? !!accountId && !!toAccountId && accountId !== toAccountId : !!accountId);
 
   const tapKey = (key: string) => {
     setAmount((prev) => {
       if (key === '⌫') return prev.length <= 1 ? '0' : prev.slice(0, -1);
-      if (key === '.' && prev.includes('.')) return prev;
+      if (key === '.') {
+        if (precision === 0 || prev.includes('.')) return prev;
+        return prev + key;
+      }
+      const decimalIndex = prev.indexOf('.');
+      // Precision guard: once `precision` digits after the decimal point are
+      // typed, further digits are ignored — reject excess precision rather
+      // than silently rounding it away later.
+      if (decimalIndex !== -1 && prev.length - decimalIndex - 1 >= precision) return prev;
       if (prev.length > 8) return prev;
       return prev === '0' && key !== '.' ? key : prev + key;
     });
   };
 
   const save = async () => {
+    if (!pickedDate) {
+      setError('Enter a valid date');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
+      const occurredAt = combineLocalDateWithCurrentTime(pickedDate);
       if (kind === 'Transfer') {
         await createTransfer({
-          from_account_id: accountId!,
-          to_account_id: toAccountId!,
+          fromAccountId: accountId!,
+          toAccountId: toAccountId!,
           amount: numeric,
-          currency_code: 'INR',
           description: note || null,
+          occurredAt,
         });
       } else {
         await createTransaction({
-          account_id: accountId!,
-          category_id: categoryId,
+          accountId: accountId!,
+          categoryId,
           type: kind === 'Income' ? 'INCOME' : 'EXPENSE',
           amount: numeric,
-          currency_code: 'INR',
           description: note || null,
+          occurredAt,
         });
       }
       router.back();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(transactionErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -130,6 +169,17 @@ export default function NewTransaction() {
             </View>
           </View>
         ) : null}
+
+        <View style={styles.field}>
+          <K style={styles.fieldLabel}>Date</K>
+          <Input
+            value={dateText}
+            onChangeText={setDateText}
+            placeholder="YYYY-MM-DD"
+            accessibilityLabel="Transaction date, year-month-day"
+            style={{ marginTop: 6, maxWidth: 160 }}
+          />
+        </View>
 
         <View style={styles.field}>
           <Input placeholder="Add a note (optional)" value={note} onChangeText={setNote} />
