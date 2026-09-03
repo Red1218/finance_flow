@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { usePreferences } from '../../../src/hooks/usePreferences';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
+import { useAuth } from '../../../src/data/AuthContext';
 import { K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
@@ -9,7 +11,9 @@ import { colors, fonts, spacing } from '../../../src/theme/tokens';
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'];
 
 export default function Settings() {
+  const router = useRouter();
   const prefs = usePreferences();
+  const { identityKind, session, signOut } = useAuth();
   const [currencyOpen, setCurrencyOpen] = useState(false);
 
   const setPref = async (patch: Parameters<typeof updatePreferences>[0]) => {
@@ -17,17 +21,56 @@ export default function Settings() {
     prefs.refetch();
   };
 
+  const onSignOutPress = () => {
+    if (identityKind === 'anonymous') {
+      Alert.alert(
+        'Sign out?',
+        "You haven't created an account — signing out will make this device's data permanently unreachable.",
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+        ]
+      );
+    } else {
+      signOut();
+    }
+  };
+
+  const email = session?.user.email;
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.profile}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>A</Text>
+            <Text style={styles.avatarText}>{identityKind === 'permanent' && email ? email[0].toUpperCase() : 'A'}</Text>
           </View>
           <View>
-            <Text style={styles.name}>This device</Text>
-            <Muted style={{ fontSize: 12.5 }}>Anonymous account · data stays tied to this device</Muted>
+            <Text style={styles.name}>{identityKind === 'permanent' ? email : 'This device'}</Text>
+            <Muted style={{ fontSize: 12.5 }}>
+              {identityKind === 'permanent' ? 'Account · synced to this email' : 'Anonymous account · data stays tied to this device'}
+            </Muted>
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <K style={styles.sectionLabel}>Account</K>
+          {identityKind === 'anonymous' && (
+            <Pressable style={styles.row} onPress={() => router.push('/account/create')}>
+              <Text style={styles.rowLabel}>Create an account</Text>
+              <Text style={styles.rowValue}>Protect this device&rsquo;s data ›</Text>
+            </Pressable>
+          )}
+          {identityKind === 'anonymous' && (
+            <Pressable style={styles.row} onPress={() => router.push('/account/sign-in')}>
+              <Text style={styles.rowLabel}>Sign in</Text>
+              <Text style={styles.rowValue}>Already have an account? ›</Text>
+            </Pressable>
+          )}
+          <Pressable style={[styles.row, { borderBottomWidth: 0 }]} onPress={onSignOutPress}>
+            <Text style={[styles.rowLabel, { color: colors.accent2_700 }]}>Sign out</Text>
+            <Text style={styles.rowValue}>›</Text>
+          </Pressable>
         </View>
 
         <View style={styles.section}>
