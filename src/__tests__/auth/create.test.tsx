@@ -1,9 +1,8 @@
 // src/__tests__/auth/create.test.tsx
 import React from 'react';
-import { Alert } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import CreateAccount from '../../../app/account/create';
-import { EmailAlreadyRegisteredError, InvalidOtpError, WeakPasswordError } from '../../data/repositories/authErrors';
+import { EmailAlreadyRegisteredError, InvalidOtpError, WeakPasswordError, RateLimitedError } from '../../data/repositories/authErrors';
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -17,12 +16,10 @@ jest.mock('react-native-safe-area-context', () => {
 
 const mockStartEmailUpgrade = jest.fn();
 const mockVerifyUpgradeOtp = jest.fn();
-const mockCompleteUpgrade = jest.fn();
 jest.mock('../../data/AuthContext', () => ({
   useAuth: () => ({
-    startEmailUpgrade: (email: string) => mockStartEmailUpgrade(email),
+    startEmailUpgrade: (email: string, password: string) => mockStartEmailUpgrade(email, password),
     verifyUpgradeOtp: (email: string, token: string) => mockVerifyUpgradeOtp(email, token),
-    completeUpgrade: (password: string) => mockCompleteUpgrade(password),
   }),
 }));
 
@@ -30,37 +27,42 @@ describe('Create account screen', () => {
   beforeEach(() => {
     mockStartEmailUpgrade.mockReset();
     mockVerifyUpgradeOtp.mockReset();
-    mockCompleteUpgrade.mockReset();
     mockPush.mockClear();
+    mockBack.mockClear();
   });
 
-  it('walks email -> OTP -> password -> done on the happy path', async () => {
+  it('walks email+password -> OTP -> done on the happy path', async () => {
     mockStartEmailUpgrade.mockResolvedValue(undefined);
     mockVerifyUpgradeOtp.mockResolvedValue(undefined);
-    mockCompleteUpgrade.mockResolvedValue(undefined);
 
     render(<CreateAccount />);
     await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'S3cur3-Passw0rd');
     await userEvent.press(screen.getByText('Continue'));
-    expect(mockStartEmailUpgrade).toHaveBeenCalledWith('a@b.com');
+    expect(mockStartEmailUpgrade).toHaveBeenCalledWith('a@b.com', 'S3cur3-Passw0rd');
 
     expect(await screen.findByPlaceholderText('6-digit code')).toBeTruthy();
     await userEvent.type(screen.getByPlaceholderText('6-digit code'), '123456');
     await userEvent.press(screen.getByText('Verify'));
     expect(mockVerifyUpgradeOtp).toHaveBeenCalledWith('a@b.com', '123456');
 
-    expect(await screen.findByPlaceholderText('Password')).toBeTruthy();
-    await userEvent.type(screen.getByPlaceholderText('Password'), 'S3cur3-Passw0rd');
-    await userEvent.press(screen.getByText('Set password'));
-    expect(mockCompleteUpgrade).toHaveBeenCalledWith('S3cur3-Passw0rd');
-
     expect(await screen.findByText(/Account created/i)).toBeTruthy();
+  });
+
+  it('requires a password before submitting', async () => {
+    render(<CreateAccount />);
+    await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.press(screen.getByText('Continue'));
+
+    expect(await screen.findByText('Enter a password')).toBeTruthy();
+    expect(mockStartEmailUpgrade).not.toHaveBeenCalled();
   });
 
   it('offers sign-in instead when the email is already registered', async () => {
     mockStartEmailUpgrade.mockRejectedValue(new EmailAlreadyRegisteredError());
     render(<CreateAccount />);
     await userEvent.type(screen.getByPlaceholderText('Email'), 'taken@b.com');
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'S3cur3-Passw0rd');
     await userEvent.press(screen.getByText('Continue'));
 
     expect(await screen.findByText('This email already has an account — sign in instead')).toBeTruthy();
@@ -68,11 +70,23 @@ describe('Create account screen', () => {
     expect(mockPush).toHaveBeenCalledWith('/account/sign-in');
   });
 
+  it('shows an inline error and stays on the email+password step for a weak password', async () => {
+    mockStartEmailUpgrade.mockRejectedValue(new WeakPasswordError('Password should be at least 6 characters'));
+    render(<CreateAccount />);
+    await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'abc');
+    await userEvent.press(screen.getByText('Continue'));
+
+    expect(await screen.findByText('Password should be at least 6 characters')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Password')).toBeTruthy();
+  });
+
   it('shows an inline error and stays on the OTP step for an invalid code', async () => {
     mockStartEmailUpgrade.mockResolvedValue(undefined);
     mockVerifyUpgradeOtp.mockRejectedValue(new InvalidOtpError());
     render(<CreateAccount />);
     await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'S3cur3-Passw0rd');
     await userEvent.press(screen.getByText('Continue'));
     await screen.findByPlaceholderText('6-digit code');
     await userEvent.type(screen.getByPlaceholderText('6-digit code'), '000000');
@@ -82,52 +96,37 @@ describe('Create account screen', () => {
     expect(screen.getByPlaceholderText('6-digit code')).toBeTruthy();
   });
 
-  it('shows an inline error and stays on the password step for a weak password', async () => {
+  it('resends the code by re-invoking the same combined upgrade call', async () => {
     mockStartEmailUpgrade.mockResolvedValue(undefined);
-    mockVerifyUpgradeOtp.mockResolvedValue(undefined);
-    mockCompleteUpgrade.mockRejectedValue(new WeakPasswordError('Password should be at least 6 characters'));
     render(<CreateAccount />);
     await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'S3cur3-Passw0rd');
     await userEvent.press(screen.getByText('Continue'));
     await screen.findByPlaceholderText('6-digit code');
-    await userEvent.type(screen.getByPlaceholderText('6-digit code'), '123456');
-    await userEvent.press(screen.getByText('Verify'));
-    await screen.findByPlaceholderText('Password');
-    await userEvent.type(screen.getByPlaceholderText('Password'), 'abc');
-    await userEvent.press(screen.getByText('Set password'));
+    expect(mockStartEmailUpgrade).toHaveBeenCalledTimes(1);
 
-    expect(await screen.findByText('Password should be at least 6 characters')).toBeTruthy();
+    await userEvent.press(screen.getByText("Didn't get a code? Resend"));
+    expect(mockStartEmailUpgrade).toHaveBeenCalledTimes(2);
+    expect(mockStartEmailUpgrade).toHaveBeenLastCalledWith('a@b.com', 'S3cur3-Passw0rd');
+    expect(await screen.findByText('A new code is on its way.')).toBeTruthy();
   });
 
-  it('warns before leaving the password step instead of navigating back immediately', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    mockStartEmailUpgrade.mockResolvedValue(undefined);
-    mockVerifyUpgradeOtp.mockResolvedValue(undefined);
+  it('shows a rate-limit error on resend without leaving the OTP step', async () => {
+    mockStartEmailUpgrade.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new RateLimitedError());
     render(<CreateAccount />);
     await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'S3cur3-Passw0rd');
     await userEvent.press(screen.getByText('Continue'));
     await screen.findByPlaceholderText('6-digit code');
-    await userEvent.type(screen.getByPlaceholderText('6-digit code'), '123456');
-    await userEvent.press(screen.getByText('Verify'));
-    await screen.findByPlaceholderText('Password');
 
-    await userEvent.press(screen.getByText('← Cancel'));
-
-    expect(alertSpy).toHaveBeenCalled();
-    expect(mockBack).not.toHaveBeenCalled();
-
-    alertSpy.mockRestore();
+    await userEvent.press(screen.getByText("Didn't get a code? Resend"));
+    expect(await screen.findByText('Too many attempts — wait a minute and try again')).toBeTruthy();
+    expect(screen.getByPlaceholderText('6-digit code')).toBeTruthy();
   });
 
-  it('cancels immediately with no warning on the email step', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  it('cancels immediately with no confirmation guard, on any step', async () => {
     render(<CreateAccount />);
-
     await userEvent.press(screen.getByText('← Cancel'));
-
-    expect(alertSpy).not.toHaveBeenCalled();
     expect(mockBack).toHaveBeenCalled();
-
-    alertSpy.mockRestore();
   });
 });

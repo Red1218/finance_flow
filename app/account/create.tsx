@@ -1,7 +1,7 @@
 // app/account/create.tsx
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/data/AuthContext';
 import { authErrorMessage } from '../../src/ui/authErrorMessages';
@@ -9,32 +9,38 @@ import { EmailAlreadyRegisteredError } from '../../src/data/repositories/authErr
 import { Body, Button, Heading, Input, K, Muted } from '../../src/ui/primitives';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
 
-type Step = 'email' | 'otp' | 'password' | 'done';
+type Step = 'emailPassword' | 'otp' | 'done';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CreateAccount() {
   const router = useRouter();
-  const { startEmailUpgrade, verifyUpgradeOtp, completeUpgrade } = useAuth();
+  const { startEmailUpgrade, verifyUpgradeOtp } = useAuth();
 
-  const [step, setStep] = useState<Step>('email');
+  const [step, setStep] = useState<Step>('emailPassword');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [emailTaken, setEmailTaken] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  const submitEmail = async () => {
+  const submitEmailPassword = async () => {
     setError(null);
     setEmailTaken(false);
     if (!EMAIL_RE.test(email)) {
       setError('Enter a valid email address');
       return;
     }
+    if (!password) {
+      setError('Enter a password');
+      return;
+    }
     setLoading(true);
     try {
-      await startEmailUpgrade(email);
+      await startEmailUpgrade(email, password);
       setStep('otp');
     } catch (e) {
       if (e instanceof EmailAlreadyRegisteredError) setEmailTaken(true);
@@ -49,19 +55,6 @@ export default function CreateAccount() {
     setLoading(true);
     try {
       await verifyUpgradeOtp(email, otp);
-      setStep('password');
-    } catch (e) {
-      setError(authErrorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const submitPassword = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      await completeUpgrade(password);
       setStep('done');
     } catch (e) {
       setError(authErrorMessage(e));
@@ -70,25 +63,24 @@ export default function CreateAccount() {
     }
   };
 
-  const onCancelPress = () => {
-    if (step === 'password') {
-      Alert.alert(
-        'Leave without a password?',
-        "You've created an account but haven't set a password yet. If you leave now, you won't be able to sign back in until you request a password reset. Leave anyway?",
-        [
-          { text: 'Stay', style: 'cancel' },
-          { text: 'Leave', style: 'destructive', onPress: () => router.back() },
-        ]
-      );
-    } else {
-      router.back();
+  const resendCode = async () => {
+    setError(null);
+    setResendMessage(null);
+    setResending(true);
+    try {
+      await startEmailUpgrade(email, password);
+      setResendMessage('A new code is on its way.');
+    } catch (e) {
+      setError(authErrorMessage(e));
+    } finally {
+      setResending(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.topBar}>
-        <Pressable onPress={onCancelPress}>
+        <Pressable onPress={() => router.back()}>
           <Text style={styles.link}>← Cancel</Text>
         </Pressable>
         <K>Create an account</K>
@@ -96,7 +88,7 @@ export default function CreateAccount() {
       </View>
 
       <View style={styles.content}>
-        {step === 'email' && (
+        {step === 'emailPassword' && (
           <>
             <Heading style={styles.title}>Protect this device&rsquo;s data</Heading>
             <Body style={styles.sub}>
@@ -104,13 +96,14 @@ export default function CreateAccount() {
               lose this device, or reinstall the app.
             </Body>
             <Input placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={styles.input} />
+            <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={styles.input} />
             {error && <Text style={styles.error}>{error}</Text>}
             {emailTaken && (
               <Pressable onPress={() => router.push('/account/sign-in')}>
                 <Text style={styles.link}>Sign in</Text>
               </Pressable>
             )}
-            <Button title="Continue" onPress={submitEmail} loading={loading} block />
+            <Button title="Continue" onPress={submitEmailPassword} loading={loading} block />
           </>
         )}
 
@@ -120,17 +113,11 @@ export default function CreateAccount() {
             <Body style={styles.sub}>We sent a 6-digit code to {email}.</Body>
             <Input placeholder="6-digit code" keyboardType="number-pad" value={otp} onChangeText={setOtp} style={styles.input} />
             {error && <Text style={styles.error}>{error}</Text>}
+            {resendMessage && <Muted style={styles.resendMessage}>{resendMessage}</Muted>}
             <Button title="Verify" onPress={submitOtp} loading={loading} block />
-          </>
-        )}
-
-        {step === 'password' && (
-          <>
-            <Heading style={styles.title}>Set a password</Heading>
-            <Body style={styles.sub}>Last step.</Body>
-            <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={styles.input} />
-            {error && <Text style={styles.error}>{error}</Text>}
-            <Button title="Set password" onPress={submitPassword} loading={loading} block />
+            <Pressable onPress={resendCode} disabled={resending}>
+              <Text style={styles.link}>{resending ? 'Resending…' : "Didn't get a code? Resend"}</Text>
+            </Pressable>
           </>
         )}
 
@@ -161,4 +148,5 @@ const styles = StyleSheet.create({
   sub: { maxWidth: 320 },
   input: { marginTop: 4 },
   error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent2_700 },
+  resendMessage: { fontSize: 12.5 },
 });
