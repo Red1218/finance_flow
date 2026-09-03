@@ -12,7 +12,7 @@ jest.mock('react-native-safe-area-context', () => {
 });
 
 let mockUrl: string | null = 'financeflow://reset-password#access_token=AAA&refresh_token=BBB&type=recovery';
-jest.mock('expo-linking', () => ({ useURL: () => mockUrl }));
+jest.mock('expo-linking', () => ({ useLinkingURL: () => mockUrl }));
 
 const mockCompletePasswordReset = jest.fn();
 jest.mock('../../data/AuthContext', () => ({

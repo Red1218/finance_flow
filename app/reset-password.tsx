@@ -11,7 +11,7 @@ import { colors, fonts, spacing } from '../src/theme/tokens';
 export default function ResetPassword() {
   const router = useRouter();
   const { completePasswordReset } = useAuth();
-  const url = Linking.useURL();
+  const url = Linking.useLinkingURL();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
