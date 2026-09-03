@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
-import { render, screen, waitFor, act } from '@testing-library/react-native';
+import { Text, Pressable } from 'react-native';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from './AuthContext';
 
 const mockEnsureAnonymousSession = jest.fn();
@@ -8,6 +8,21 @@ const mockSignOutUser = jest.fn();
 jest.mock('./repositories/auth', () => ({
   ensureAnonymousSession: () => mockEnsureAnonymousSession(),
   signOutUser: () => mockSignOutUser(),
+}));
+
+const mockLinkEmail = jest.fn();
+const mockVerifyEmailOtp = jest.fn();
+const mockSetPassword = jest.fn();
+const mockSignInWithPassword = jest.fn();
+const mockSendPasswordResetEmail = jest.fn();
+const mockEstablishRecoverySession = jest.fn();
+jest.mock('./repositories/authCredentials', () => ({
+  linkEmail: (email: string) => mockLinkEmail(email),
+  verifyEmailOtp: (email: string, token: string) => mockVerifyEmailOtp(email, token),
+  setPassword: (password: string) => mockSetPassword(password),
+  signInWithPassword: (email: string, password: string) => mockSignInWithPassword(email, password),
+  sendPasswordResetEmail: (email: string) => mockSendPasswordResetEmail(email),
+  establishRecoverySession: (url: string) => mockEstablishRecoverySession(url),
 }));
 
 let authStateCallback: ((event: string, session: unknown) => void) | null = null;
@@ -23,8 +38,12 @@ jest.mock('./supabaseClient', () => ({
   },
 }));
 
-function fakeSession(id = 'user-1') {
-  return { user: { id }, access_token: `token-${id}` } as never;
+function fakeSession(id = 'user-1', isAnonymous = true) {
+  return { user: { id, is_anonymous: isAnonymous }, access_token: `token-${id}` } as never;
+}
+
+function userEventClick(text: string) {
+  fireEvent.press(screen.getByText(text));
 }
 
 // Exposes the raw status so tests can assert on it directly instead of
@@ -104,5 +123,90 @@ describe('AuthProvider readiness gating', () => {
     );
 
     await waitFor(() => expect(screen.getByText('status:error')).toBeTruthy());
+  });
+});
+
+// Exposes identityKind + orchestration for the new tests below.
+function IdentityProbe() {
+  const { status, identityKind, startEmailUpgrade, verifyUpgradeOtp, signIn } = useAuth();
+  return (
+    <>
+      <Text>status:{status}</Text>
+      <Text>identity:{identityKind ?? 'null'}</Text>
+      <Pressable onPress={() => startEmailUpgrade('a@b.com')}><Text>upgrade</Text></Pressable>
+      <Pressable onPress={() => verifyUpgradeOtp('a@b.com', '123456')}><Text>verify</Text></Pressable>
+      <Pressable onPress={() => signIn('a@b.com', 'pw')}><Text>signin</Text></Pressable>
+    </>
+  );
+}
+
+describe('AuthProvider identityKind and credential orchestration', () => {
+  beforeEach(() => {
+    mockEnsureAnonymousSession.mockReset().mockResolvedValue(fakeSession());
+    mockSignOutUser.mockReset();
+    mockLinkEmail.mockReset();
+    mockVerifyEmailOtp.mockReset();
+    mockSetPassword.mockReset();
+    mockSignInWithPassword.mockReset();
+    mockSendPasswordResetEmail.mockReset();
+    mockEstablishRecoverySession.mockReset();
+    authStateCallback = null;
+  });
+
+  it('derives identityKind: null while initializing, "anonymous" for an anonymous session', async () => {
+    render(
+      <AuthProvider>
+        <IdentityProbe />
+      </AuthProvider>
+    );
+    expect(screen.getByText('identity:null')).toBeTruthy();
+
+    await act(async () => authStateCallback?.('INITIAL_SESSION', fakeSession('u1', true)));
+    await waitFor(() => expect(screen.getByText('status:authenticated')).toBeTruthy());
+    expect(screen.getByText('identity:anonymous')).toBeTruthy();
+  });
+
+  it('derives identityKind: "permanent" after verifyUpgradeOtp resolves a non-anonymous session', async () => {
+    render(
+      <AuthProvider>
+        <IdentityProbe />
+      </AuthProvider>
+    );
+    await act(async () => authStateCallback?.('INITIAL_SESSION', fakeSession('u1', true)));
+    await waitFor(() => expect(screen.getByText('identity:anonymous')).toBeTruthy());
+
+    mockVerifyEmailOtp.mockResolvedValue(fakeSession('u1', false));
+    await act(async () => userEventClick('verify'));
+    await waitFor(() => expect(screen.getByText('identity:permanent')).toBeTruthy());
+  });
+
+  it('signIn replaces the session and flips identityKind to permanent', async () => {
+    render(
+      <AuthProvider>
+        <IdentityProbe />
+      </AuthProvider>
+    );
+    await act(async () => authStateCallback?.('INITIAL_SESSION', fakeSession('anon-1', true)));
+    await waitFor(() => expect(screen.getByText('identity:anonymous')).toBeTruthy());
+
+    mockSignInWithPassword.mockResolvedValue(fakeSession('permanent-1', false));
+    await act(async () => userEventClick('signin'));
+    await waitFor(() => expect(screen.getByText('identity:permanent')).toBeTruthy());
+    expect(mockSignInWithPassword).toHaveBeenCalledWith('a@b.com', 'pw');
+  });
+
+  it('startEmailUpgrade calls linkEmail and does not itself change identityKind', async () => {
+    mockLinkEmail.mockResolvedValue(undefined);
+    render(
+      <AuthProvider>
+        <IdentityProbe />
+      </AuthProvider>
+    );
+    await act(async () => authStateCallback?.('INITIAL_SESSION', fakeSession('u1', true)));
+    await waitFor(() => expect(screen.getByText('identity:anonymous')).toBeTruthy());
+
+    await act(async () => userEventClick('upgrade'));
+    expect(mockLinkEmail).toHaveBeenCalledWith('a@b.com');
+    expect(screen.getByText('identity:anonymous')).toBeTruthy();
   });
 });
