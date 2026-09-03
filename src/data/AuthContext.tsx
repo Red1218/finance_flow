@@ -21,15 +21,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
+  // ensureAnonymousSession() resolving only means a session object was found
+  // or created — it says nothing about whether supabase-js's own auth
+  // listener (which is what the PostgREST client's request headers sync off
+  // of) has caught up. On a warm relaunch the local session lookup resolves
+  // fast enough to outrun that sync, so the first screen's queries can go out
+  // before the client is actually ready to authenticate them and RLS quietly
+  // returns nothing. Gating on both signals — regardless of which arrives
+  // first — closes that window without guessing at SDK internals or timers.
+  const [sessionResolved, setSessionResolved] = useState(false);
+  const [authListenerSeen, setAuthListenerSeen] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     setStatus('initializing');
     setError(null);
+    setSessionResolved(false);
+    setAuthListenerSeen(false);
     ensureAnonymousSession()
       .then((s) => {
         if (cancelled) return;
         setSession(s);
-        setStatus('authenticated');
+        setSessionResolved(true);
       })
       .catch((e) => {
         if (cancelled) return;
@@ -43,11 +56,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [attempt]);
 
   useEffect(() => {
+    // Every event type is accepted here, not just SIGNED_IN — a restored
+    // session fires INITIAL_SESSION rather than SIGNED_IN, and filtering to
+    // SIGNED_IN only would mean this listener never fires on a warm relaunch,
+    // permanently stalling readiness instead of fixing the race.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
+      if (next) setAuthListenerSeen(true);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (sessionResolved && authListenerSeen) setStatus('authenticated');
+  }, [sessionResolved, authListenerSeen]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 

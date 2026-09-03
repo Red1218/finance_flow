@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAccounts } from '../../../src/hooks/useAccounts';
 import { useTransactions } from '../../../src/hooks/useTransactions';
 import { createAccount } from '../../../src/data/repositories/accounts';
@@ -9,6 +9,7 @@ import { transactionSign } from '../../../src/data/repositories/transactions';
 import { monthRange } from '../../../src/domain/dateRange';
 import type { AccountType } from '../../../src/data/types';
 import { Button, Card, Input, K, Muted, Seg, Tag } from '../../../src/ui/primitives';
+import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
 const TYPE_LABEL: Record<AccountType, string> = {
@@ -127,34 +128,30 @@ export default function Accounts() {
         </View>
       </ScrollView>
 
-      <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setAddOpen(false)}>
-          <View style={styles.sheet}>
-            <K>Account name</K>
-            <Input value={name} onChangeText={setName} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-            <K>Type</K>
-            <View style={{ marginTop: 6, marginBottom: spacing.s2 }}>
-              <Seg
-                options={[
-                  { label: 'Bank', value: 'BANK' as AccountType },
-                  { label: 'Cash', value: 'CASH' as AccountType },
-                  { label: 'Card', value: 'CREDIT_CARD' as AccountType },
-                  { label: 'Wallet', value: 'WALLET' as AccountType },
-                ]}
-                value={type}
-                onChange={setType}
-              />
-            </View>
-            <K>Opening balance</K>
-            <Input value={opening} onChangeText={setOpening} keyboardType="decimal-pad" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-            <K>Last 4 digits (optional)</K>
-            <Input value={mask} onChangeText={setMask} maxLength={4} keyboardType="number-pad" style={{ marginTop: 6 }} />
-            <View style={{ marginTop: spacing.s3 }}>
-              <Button title="Add account" onPress={save} loading={saving} block />
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+      <FormModal visible={addOpen} onClose={() => setAddOpen(false)}>
+        <K>Account name</K>
+        <Input value={name} onChangeText={setName} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <K>Type</K>
+        <View style={{ marginTop: 6, marginBottom: spacing.s2 }}>
+          <Seg
+            options={[
+              { label: 'Bank', value: 'BANK' as AccountType },
+              { label: 'Cash', value: 'CASH' as AccountType },
+              { label: 'Card', value: 'CREDIT_CARD' as AccountType },
+              { label: 'Wallet', value: 'WALLET' as AccountType },
+            ]}
+            value={type}
+            onChange={setType}
+          />
+        </View>
+        <K>Opening balance</K>
+        <Input value={opening} onChangeText={setOpening} keyboardType="decimal-pad" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <K>Last 4 digits (optional)</K>
+        <Input value={mask} onChangeText={setMask} maxLength={4} keyboardType="number-pad" style={{ marginTop: 6 }} />
+        <View style={{ marginTop: spacing.s3 }}>
+          <Button title="Add account" onPress={save} loading={saving} block />
+        </View>
+      </FormModal>
     </View>
   );
 }
@@ -170,6 +167,4 @@ const styles = StyleSheet.create({
   accountName: { fontFamily: fonts.heading, fontSize: 15.5, color: colors.text },
   tags: { flexDirection: 'row', gap: 6, marginTop: 6 },
   balance: { fontFamily: fonts.heading, fontSize: 18, color: colors.text },
-  backdrop: { flex: 1, backgroundColor: 'rgba(32,30,29,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 6, borderTopRightRadius: 6, padding: spacing.s4 },
 });

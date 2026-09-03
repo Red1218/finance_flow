@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useFonts, SourceSerif4_400Regular, SourceSerif4_600SemiBold, SourceSerif4_400Regular_Italic } from '@expo-google-fonts/source-serif-4';
 import { Stack } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -35,12 +36,24 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+// Isolated so a failed font load can be retried by remounting just this
+// component (via the `key` bump in RootLayout below) without restarting the
+// whole app.
+function FontGate({ onRetry }: { onRetry: () => void }) {
+  const [fontsLoaded, fontError] = useFonts({
     SourceSerif4_400Regular,
     SourceSerif4_600SemiBold,
     SourceSerif4_400Regular_Italic,
   });
+
+  if (fontError) {
+    return (
+      <View style={styles.loading}>
+        <Body style={styles.errorText}>Something went wrong loading the app. Please try again.</Body>
+        <Button title="Retry" onPress={onRetry} />
+      </View>
+    );
+  }
 
   if (!fontsLoaded) {
     return (
@@ -55,6 +68,11 @@ export default function RootLayout() {
       <RootNavigator />
     </AuthProvider>
   );
+}
+
+export default function RootLayout() {
+  const [attempt, setAttempt] = useState(0);
+  return <FontGate key={attempt} onRetry={() => setAttempt((a) => a + 1)} />;
 }
 
 const styles = StyleSheet.create({

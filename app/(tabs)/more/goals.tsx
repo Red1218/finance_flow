@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useGoals } from '../../../src/hooks/useGoals';
 import { createGoal, contributeToGoal, setGoalPaused } from '../../../src/data/repositories/goals';
 import { toNumber, formatINR } from '../../../src/domain/money';
 import { budgetProgress } from '../../../src/domain/budget';
 import { Bar, Button, Input, K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
+import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
 export default function Goals() {
@@ -123,36 +124,28 @@ export default function Goals() {
         )}
       </ScrollView>
 
-      <Modal visible={newOpen} transparent animationType="fade" onRequestClose={() => setNewOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setNewOpen(false)}>
-          <View style={styles.sheet}>
-            <K>Goal name</K>
-            <Input value={name} onChangeText={setName} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-            <K>Target amount</K>
-            <Input value={target} onChangeText={setTarget} keyboardType="decimal-pad" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-            <K>Monthly target (optional)</K>
-            <Input value={monthlyTarget} onChangeText={setMonthlyTarget} keyboardType="decimal-pad" style={{ marginTop: 6 }} />
-            <View style={{ marginTop: spacing.s3 }}>
-              <Button title="Create goal" onPress={saveGoal} loading={saving} block />
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+      <FormModal visible={newOpen} onClose={() => setNewOpen(false)}>
+        <K>Goal name</K>
+        <Input value={name} onChangeText={setName} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <K>Target amount</K>
+        <Input value={target} onChangeText={setTarget} keyboardType="decimal-pad" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <K>Monthly target (optional)</K>
+        <Input value={monthlyTarget} onChangeText={setMonthlyTarget} keyboardType="decimal-pad" style={{ marginTop: 6 }} />
+        <View style={{ marginTop: spacing.s3 }}>
+          <Button title="Create goal" onPress={saveGoal} loading={saving} block />
+        </View>
+      </FormModal>
 
-      <Modal visible={contributeOpen} transparent animationType="fade" onRequestClose={() => setContributeOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setContributeOpen(false)}>
-          <View style={styles.sheet}>
-            <Pressable onPress={() => setPickGoalOpen(true)}>
-              <Text style={styles.link}>{goals.data?.find((g) => g.id === selectedGoalId)?.name ?? 'Choose goal'}</Text>
-            </Pressable>
-            <K style={{ marginTop: spacing.s2 }}>Amount</K>
-            <Input value={contributeAmount} onChangeText={setContributeAmount} keyboardType="decimal-pad" style={{ marginTop: 6 }} />
-            <View style={{ marginTop: spacing.s3 }}>
-              <Button title="Move money" onPress={submitContribution} loading={saving} block />
-            </View>
-          </View>
+      <FormModal visible={contributeOpen} onClose={() => setContributeOpen(false)}>
+        <Pressable onPress={() => setPickGoalOpen(true)}>
+          <Text style={styles.link}>{goals.data?.find((g) => g.id === selectedGoalId)?.name ?? 'Choose goal'}</Text>
         </Pressable>
-      </Modal>
+        <K style={{ marginTop: spacing.s2 }}>Amount</K>
+        <Input value={contributeAmount} onChangeText={setContributeAmount} keyboardType="decimal-pad" style={{ marginTop: 6 }} />
+        <View style={{ marginTop: spacing.s3 }}>
+          <Button title="Move money" onPress={submitContribution} loading={saving} block />
+        </View>
+      </FormModal>
 
       <SelectModal
         visible={pickGoalOpen}
@@ -179,6 +172,4 @@ const styles = StyleSheet.create({
   goalAmountRow: { flexDirection: 'row', alignItems: 'baseline' },
   goalAmount: { fontFamily: fonts.heading, fontSize: 22, color: colors.text },
   goalFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(32,30,29,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 6, borderTopRightRadius: 6, padding: spacing.s4 },
 });
