@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 import { ensureAnonymousSession, signOutUser } from './repositories/auth';
 import {
-  linkEmail,
+  linkEmailWithPassword,
   verifyEmailOtp,
   setPassword,
   signInWithPassword,
@@ -21,9 +21,8 @@ interface AuthState {
   retry: () => void;
   signOut: () => Promise<void>;
   identityKind: IdentityKind | null;
-  startEmailUpgrade: (email: string) => Promise<void>;
+  startEmailUpgrade: (email: string, password: string) => Promise<void>;
   verifyUpgradeOtp: (email: string, token: string) => Promise<void>;
-  completeUpgrade: (password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   completePasswordReset: (url: string, password: string) => Promise<void>;
@@ -115,17 +114,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // one; none inspects a Supabase error — every rejection here is already
   // one of the typed classes from ./repositories/authErrors. ---
 
-  const startEmailUpgrade = useCallback(async (email: string) => {
-    await linkEmail(email);
+  const startEmailUpgrade = useCallback(async (email: string, password: string) => {
+    await linkEmailWithPassword(email, password);
   }, []);
 
   const verifyUpgradeOtp = useCallback(async (email: string, token: string) => {
     const next = await verifyEmailOtp(email, token);
     setSession(next);
-  }, []);
-
-  const completeUpgrade = useCallback(async (password: string) => {
-    await setPassword(password);
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -154,7 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         identityKind,
         startEmailUpgrade,
         verifyUpgradeOtp,
-        completeUpgrade,
         signIn,
         requestPasswordReset,
         completePasswordReset,

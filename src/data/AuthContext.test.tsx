@@ -10,14 +10,14 @@ jest.mock('./repositories/auth', () => ({
   signOutUser: () => mockSignOutUser(),
 }));
 
-const mockLinkEmail = jest.fn();
+const mockLinkEmailWithPassword = jest.fn();
 const mockVerifyEmailOtp = jest.fn();
 const mockSetPassword = jest.fn();
 const mockSignInWithPassword = jest.fn();
 const mockSendPasswordResetEmail = jest.fn();
 const mockEstablishRecoverySession = jest.fn();
 jest.mock('./repositories/authCredentials', () => ({
-  linkEmail: (email: string) => mockLinkEmail(email),
+  linkEmailWithPassword: (email: string, password: string) => mockLinkEmailWithPassword(email, password),
   verifyEmailOtp: (email: string, token: string) => mockVerifyEmailOtp(email, token),
   setPassword: (password: string) => mockSetPassword(password),
   signInWithPassword: (email: string, password: string) => mockSignInWithPassword(email, password),
@@ -133,7 +133,7 @@ function IdentityProbe() {
     <>
       <Text>status:{status}</Text>
       <Text>identity:{identityKind ?? 'null'}</Text>
-      <Pressable onPress={() => startEmailUpgrade('a@b.com')}><Text>upgrade</Text></Pressable>
+      <Pressable onPress={() => startEmailUpgrade('a@b.com', 'S3cur3-Passw0rd')}><Text>upgrade</Text></Pressable>
       <Pressable onPress={() => verifyUpgradeOtp('a@b.com', '123456')}><Text>verify</Text></Pressable>
       <Pressable onPress={() => signIn('a@b.com', 'pw')}><Text>signin</Text></Pressable>
     </>
@@ -144,7 +144,7 @@ describe('AuthProvider identityKind and credential orchestration', () => {
   beforeEach(() => {
     mockEnsureAnonymousSession.mockReset().mockResolvedValue(fakeSession());
     mockSignOutUser.mockReset();
-    mockLinkEmail.mockReset();
+    mockLinkEmailWithPassword.mockReset();
     mockVerifyEmailOtp.mockReset();
     mockSetPassword.mockReset();
     mockSignInWithPassword.mockReset();
@@ -208,8 +208,8 @@ describe('AuthProvider identityKind and credential orchestration', () => {
     expect(mockSignInWithPassword).toHaveBeenCalledWith('a@b.com', 'pw');
   });
 
-  it('startEmailUpgrade calls linkEmail and does not itself change identityKind', async () => {
-    mockLinkEmail.mockResolvedValue(undefined);
+  it('startEmailUpgrade calls linkEmailWithPassword and does not itself change identityKind', async () => {
+    mockLinkEmailWithPassword.mockResolvedValue(undefined);
     render(
       <AuthProvider>
         <IdentityProbe />
@@ -219,7 +219,7 @@ describe('AuthProvider identityKind and credential orchestration', () => {
     await waitFor(() => expect(screen.getByText('identity:anonymous')).toBeTruthy());
 
     await act(async () => userEventClick('upgrade'));
-    expect(mockLinkEmail).toHaveBeenCalledWith('a@b.com');
+    expect(mockLinkEmailWithPassword).toHaveBeenCalledWith('a@b.com', 'S3cur3-Passw0rd');
     expect(screen.getByText('identity:anonymous')).toBeTruthy();
   });
 });
