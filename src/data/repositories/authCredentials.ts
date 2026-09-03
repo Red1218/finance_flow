@@ -62,13 +62,20 @@ function translateAuthError(error: RawAuthError): never {
   }
 }
 
-export async function linkEmail(email: string): Promise<void> {
-  const { error } = await supabase.auth.updateUser({ email });
+// Sets the password in the SAME request that starts the email change,
+// rather than as a later step after OTP verification. GoTrue rejects a
+// password-only updateUser() for an anonymous user with no email/phone
+// (422 validation_failed) -- confirmed empirically against the live
+// project -- so this combined call is the only way to have a password on
+// the account before the email is confirmed. This closes the
+// permanent-but-passwordless state the original design could land in.
+export async function linkEmailWithPassword(email: string, password: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ email, password });
   if (error) translateAuthError(error);
 }
 
 export async function verifyEmailOtp(email: string, token: string): Promise<Session> {
-  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email_change' });
   if (error) translateAuthError(error);
   if (!data.session) throw new AuthNetworkError();
   return data.session;

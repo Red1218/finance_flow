@@ -1,5 +1,5 @@
 import {
-  linkEmail,
+  linkEmailWithPassword,
   verifyEmailOtp,
   setPassword,
   signInWithPassword,
@@ -36,38 +36,43 @@ function authError(code: string, message = 'boom', status = 400) {
   return { code, message, status };
 }
 
-describe('linkEmail', () => {
+describe('linkEmailWithPassword', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('calls updateUser with the email', async () => {
+  it('calls updateUser with the email and password together', async () => {
     (supabase.auth.updateUser as jest.Mock).mockResolvedValue({ error: null });
-    await linkEmail('a@b.com');
-    expect(supabase.auth.updateUser).toHaveBeenCalledWith({ email: 'a@b.com' });
+    await linkEmailWithPassword('a@b.com', 'S3cur3-Passw0rd');
+    expect(supabase.auth.updateUser).toHaveBeenCalledWith({ email: 'a@b.com', password: 'S3cur3-Passw0rd' });
   });
 
   it('throws InvalidEmailError for email_address_invalid', async () => {
     (supabase.auth.updateUser as jest.Mock).mockResolvedValue({ error: authError('email_address_invalid') });
-    await expect(linkEmail('bad')).rejects.toBeInstanceOf(InvalidEmailError);
+    await expect(linkEmailWithPassword('bad', 'pw')).rejects.toBeInstanceOf(InvalidEmailError);
   });
 
   it('throws EmailAlreadyRegisteredError for email_exists', async () => {
     (supabase.auth.updateUser as jest.Mock).mockResolvedValue({ error: authError('email_exists') });
-    await expect(linkEmail('taken@b.com')).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
+    await expect(linkEmailWithPassword('taken@b.com', 'pw')).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
   });
 
   it('throws EmailAlreadyRegisteredError for user_already_exists', async () => {
     (supabase.auth.updateUser as jest.Mock).mockResolvedValue({ error: authError('user_already_exists') });
-    await expect(linkEmail('taken@b.com')).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
+    await expect(linkEmailWithPassword('taken@b.com', 'pw')).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
+  });
+
+  it('throws WeakPasswordError for weak_password', async () => {
+    (supabase.auth.updateUser as jest.Mock).mockResolvedValue({ error: authError('weak_password', 'Password should be at least 6 characters') });
+    await expect(linkEmailWithPassword('a@b.com', 'abc')).rejects.toBeInstanceOf(WeakPasswordError);
   });
 
   it('throws RateLimitedError for over_email_send_rate_limit', async () => {
     (supabase.auth.updateUser as jest.Mock).mockResolvedValue({ error: authError('over_email_send_rate_limit') });
-    await expect(linkEmail('a@b.com')).rejects.toBeInstanceOf(RateLimitedError);
+    await expect(linkEmailWithPassword('a@b.com', 'pw')).rejects.toBeInstanceOf(RateLimitedError);
   });
 
   it('falls back to AuthNetworkError for an unrecognized code', async () => {
     (supabase.auth.updateUser as jest.Mock).mockResolvedValue({ error: authError('unexpected_failure') });
-    await expect(linkEmail('a@b.com')).rejects.toBeInstanceOf(AuthNetworkError);
+    await expect(linkEmailWithPassword('a@b.com', 'pw')).rejects.toBeInstanceOf(AuthNetworkError);
   });
 });
 
@@ -78,7 +83,7 @@ describe('verifyEmailOtp', () => {
     const session = { user: { id: 'u1', is_anonymous: false } };
     (supabase.auth.verifyOtp as jest.Mock).mockResolvedValue({ data: { session }, error: null });
     const result = await verifyEmailOtp('a@b.com', '123456');
-    expect(supabase.auth.verifyOtp).toHaveBeenCalledWith({ email: 'a@b.com', token: '123456', type: 'email' });
+    expect(supabase.auth.verifyOtp).toHaveBeenCalledWith({ email: 'a@b.com', token: '123456', type: 'email_change' });
     expect(result).toBe(session);
   });
 
