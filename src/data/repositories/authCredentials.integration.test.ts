@@ -15,7 +15,12 @@ describe('authCredentials (integration)', () => {
     await ensureAnonymousSession();
   });
 
-  it('updateUser(email) succeeds against the live project and preserves the anonymous user id', async () => {
+  // Sends a real email every run. This is what exhausted this project's
+  // shared, tightly-limited built-in GoTrue email quota during this plan's
+  // implementation (see progress.md's final whole-branch review) — skipped
+  // by default so it doesn't recur on every `npm run test:integration`.
+  // Opt in with: RUN_EMAIL_TESTS=1 npm run test:integration -- authCredentials.integration.test.ts
+  (process.env.RUN_EMAIL_TESTS ? it : it.skip)('updateUser(email) succeeds against the live project and preserves the anonymous user id', async () => {
     const { data: before } = await supabase.auth.getUser();
     const idBefore = before.user?.id;
     expect(idBefore).toBeTruthy();

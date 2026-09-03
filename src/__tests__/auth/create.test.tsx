@@ -1,5 +1,6 @@
 // src/__tests__/auth/create.test.tsx
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import CreateAccount from '../../../app/account/create';
 import { EmailAlreadyRegisteredError, InvalidOtpError, WeakPasswordError } from '../../data/repositories/authErrors';
@@ -96,5 +97,37 @@ describe('Create account screen', () => {
     await userEvent.press(screen.getByText('Set password'));
 
     expect(await screen.findByText('Password should be at least 6 characters')).toBeTruthy();
+  });
+
+  it('warns before leaving the password step instead of navigating back immediately', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockStartEmailUpgrade.mockResolvedValue(undefined);
+    mockVerifyUpgradeOtp.mockResolvedValue(undefined);
+    render(<CreateAccount />);
+    await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.com');
+    await userEvent.press(screen.getByText('Continue'));
+    await screen.findByPlaceholderText('6-digit code');
+    await userEvent.type(screen.getByPlaceholderText('6-digit code'), '123456');
+    await userEvent.press(screen.getByText('Verify'));
+    await screen.findByPlaceholderText('Password');
+
+    await userEvent.press(screen.getByText('← Cancel'));
+
+    expect(alertSpy).toHaveBeenCalled();
+    expect(mockBack).not.toHaveBeenCalled();
+
+    alertSpy.mockRestore();
+  });
+
+  it('cancels immediately with no warning on the email step', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    render(<CreateAccount />);
+
+    await userEvent.press(screen.getByText('← Cancel'));
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(mockBack).toHaveBeenCalled();
+
+    alertSpy.mockRestore();
   });
 });

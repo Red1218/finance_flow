@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // is no separate state to fall out of sync with it. null only while
   // status isn't 'authenticated' yet (screens that read this are only
   // reachable once it is).
-  const identityKind: IdentityKind | null = session ? (session.user.is_anonymous ? 'anonymous' : 'permanent') : null;
+  const identityKind: IdentityKind | null = session ? (session.user.is_anonymous === false ? 'permanent' : 'anonymous') : null;
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 

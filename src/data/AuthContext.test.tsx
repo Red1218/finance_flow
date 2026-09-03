@@ -166,6 +166,19 @@ describe('AuthProvider identityKind and credential orchestration', () => {
     expect(screen.getByText('identity:anonymous')).toBeTruthy();
   });
 
+  it('derives identityKind: "anonymous" (fail-safe) when is_anonymous is absent from the session', async () => {
+    mockEnsureAnonymousSession.mockReset().mockResolvedValue(fakeSession());
+    render(
+      <AuthProvider>
+        <IdentityProbe />
+      </AuthProvider>
+    );
+    const sessionWithoutIsAnonymous = { user: { id: 'u1' }, access_token: 'token-u1' } as never;
+    await act(async () => authStateCallback?.('INITIAL_SESSION', sessionWithoutIsAnonymous));
+    await waitFor(() => expect(screen.getByText('status:authenticated')).toBeTruthy());
+    expect(screen.getByText('identity:anonymous')).toBeTruthy();
+  });
+
   it('derives identityKind: "permanent" after verifyUpgradeOtp resolves a non-anonymous session', async () => {
     render(
       <AuthProvider>

@@ -1,7 +1,7 @@
 // app/account/create.tsx
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/data/AuthContext';
 import { authErrorMessage } from '../../src/ui/authErrorMessages';
@@ -70,10 +70,25 @@ export default function CreateAccount() {
     }
   };
 
+  const onCancelPress = () => {
+    if (step === 'password') {
+      Alert.alert(
+        'Leave without a password?',
+        "You've created an account but haven't set a password yet. If you leave now, you won't be able to sign back in until you request a password reset. Leave anyway?",
+        [
+          { text: 'Stay', style: 'cancel' },
+          { text: 'Leave', style: 'destructive', onPress: () => router.back() },
+        ]
+      );
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={onCancelPress}>
           <Text style={styles.link}>← Cancel</Text>
         </Pressable>
         <K>Create an account</K>
