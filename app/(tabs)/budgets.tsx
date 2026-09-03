@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { useTransactions } from '../../src/hooks/useTransactions';
@@ -12,6 +12,7 @@ import { budgetProgress } from '../../src/domain/budget';
 import { monthRange } from '../../src/domain/dateRange';
 import { Bar, Button, Input, K, Muted, Num, ScreenHeader, Tag } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
+import { FormModal } from '../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
 
 export default function Budgets() {
@@ -194,39 +195,31 @@ export default function Budgets() {
         onClose={() => setCategoryPickerOpen(false)}
       />
 
-      <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setAddOpen(false)}>
-          <View style={styles.sheet}>
-            <K>Monthly budget amount</K>
-            <Input value={formAmount} onChangeText={setFormAmount} keyboardType="decimal-pad" style={{ marginTop: 8 }} />
-            <View style={{ marginTop: spacing.s3 }}>
-              <Button title="Save budget" onPress={saveBudget} loading={saving} block />
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+      <FormModal visible={addOpen} onClose={() => setAddOpen(false)}>
+        <K>Monthly budget amount</K>
+        <Input value={formAmount} onChangeText={setFormAmount} keyboardType="decimal-pad" style={{ marginTop: 8 }} />
+        <View style={{ marginTop: spacing.s3 }}>
+          <Button title="Save budget" onPress={saveBudget} loading={saving} block />
+        </View>
+      </FormModal>
 
-      <Modal visible={overallEditOpen} transparent animationType="fade" onRequestClose={() => setOverallEditOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOverallEditOpen(false)}>
-          <View style={styles.sheet}>
-            <K>Overall monthly budget</K>
-            <Input value={overallAmount} onChangeText={setOverallAmount} keyboardType="decimal-pad" style={{ marginTop: 8 }} />
-            <View style={{ marginTop: spacing.s3 }}>
-              <Button
-                title="Save"
-                onPress={async () => {
-                  const amount = parseFloat(overallAmount) || 0;
-                  if (amount > 0) {
-                    await saveOverall(amount);
-                    setOverallEditOpen(false);
-                  }
-                }}
-                block
-              />
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+      <FormModal visible={overallEditOpen} onClose={() => setOverallEditOpen(false)}>
+        <K>Overall monthly budget</K>
+        <Input value={overallAmount} onChangeText={setOverallAmount} keyboardType="decimal-pad" style={{ marginTop: 8 }} />
+        <View style={{ marginTop: spacing.s3 }}>
+          <Button
+            title="Save"
+            onPress={async () => {
+              const amount = parseFloat(overallAmount) || 0;
+              if (amount > 0) {
+                await saveOverall(amount);
+                setOverallEditOpen(false);
+              }
+            }}
+            block
+          />
+        </View>
+      </FormModal>
     </SafeAreaView>
   );
 }
@@ -246,6 +239,4 @@ const styles = StyleSheet.create({
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   rowName: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
   rowStatus: { fontFamily: fonts.body, fontSize: 12.5, color: colors.neutral700 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(32,30,29,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 6, borderTopRightRadius: 6, padding: spacing.s4 },
 });

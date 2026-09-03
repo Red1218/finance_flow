@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useRecurring } from '../../../src/hooks/useRecurring';
 import { useCategories } from '../../../src/hooks/useCategories';
 import { useAccounts } from '../../../src/hooks/useAccounts';
@@ -7,6 +7,7 @@ import { createRecurring, setRecurringPaused } from '../../../src/data/repositor
 import { toNumber, formatINR } from '../../../src/domain/money';
 import { Button, Input, K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
+import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
 function dueLabel(iso: string, today: Date): string {
@@ -125,26 +126,22 @@ export default function Recurring() {
         </View>
       </ScrollView>
 
-      <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setAddOpen(false)}>
-          <View style={styles.sheet}>
-            <K>Name</K>
-            <Input value={name} onChangeText={setName} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-            <K>Amount</K>
-            <Input value={amount} onChangeText={setAmount} keyboardType="decimal-pad" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-            <K>Next due (YYYY-MM-DD)</K>
-            <Input value={dueDate} onChangeText={setDueDate} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-            <Pressable onPress={() => setAccountPickerOpen(true)}>
-              <Text style={styles.link}>
-                {accountId ? accounts.data?.find((a) => a.id === accountId)?.name : 'Choose account'}
-              </Text>
-            </Pressable>
-            <View style={{ marginTop: spacing.s3 }}>
-              <Button title="Add recurring item" onPress={save} loading={saving} block />
-            </View>
-          </View>
+      <FormModal visible={addOpen} onClose={() => setAddOpen(false)}>
+        <K>Name</K>
+        <Input value={name} onChangeText={setName} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <K>Amount</K>
+        <Input value={amount} onChangeText={setAmount} keyboardType="decimal-pad" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <K>Next due (YYYY-MM-DD)</K>
+        <Input value={dueDate} onChangeText={setDueDate} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <Pressable onPress={() => setAccountPickerOpen(true)}>
+          <Text style={styles.link}>
+            {accountId ? accounts.data?.find((a) => a.id === accountId)?.name : 'Choose account'}
+          </Text>
         </Pressable>
-      </Modal>
+        <View style={{ marginTop: spacing.s3 }}>
+          <Button title="Add recurring item" onPress={save} loading={saving} block />
+        </View>
+      </FormModal>
 
       <SelectModal
         visible={accountPickerOpen}
@@ -179,6 +176,4 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
   paused: { textDecorationLine: 'line-through', color: colors.neutral600 },
   amount: { fontFamily: fonts.heading, fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
-  backdrop: { flex: 1, backgroundColor: 'rgba(32,30,29,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 6, borderTopRightRadius: 6, padding: spacing.s4 },
 });
