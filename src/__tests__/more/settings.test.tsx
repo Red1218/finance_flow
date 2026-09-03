@@ -1,11 +1,17 @@
+// Lives outside app/ deliberately — Expo Router's file-based route scanner
+// has no built-in exclusion for *.test.tsx (confirmed by reading its source:
+// no filtering by filename convention), so a test file co-located inside
+// app/ gets pulled into the production route/bundle graph, dragging
+// @testing-library/react-native into the shipped app and breaking the
+// Metro/Android build. Tests for app/ screens live here instead.
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import Settings from './settings';
+import Settings from '../../../app/(tabs)/more/settings';
 
-jest.mock('../../../src/hooks/usePreferences', () => ({
+jest.mock('../../hooks/usePreferences', () => ({
   usePreferences: () => ({ data: { currency_code: 'INR', week_start: 'MONDAY', budget_alerts_enabled: true, daily_reminder_enabled: false }, refetch: jest.fn() }),
 }));
-jest.mock('../../../src/data/repositories/preferences', () => ({ updatePreferences: jest.fn() }));
+jest.mock('../../data/repositories/preferences', () => ({ updatePreferences: jest.fn() }));
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -19,7 +25,7 @@ const mockSignOut = jest.fn();
 // out-of-scope variables." This is a pure rename; test semantics are unchanged.
 let mockIdentityKind: 'anonymous' | 'permanent' = 'anonymous';
 let mockSessionEmail: string | undefined;
-jest.mock('../../../src/data/AuthContext', () => ({
+jest.mock('../../data/AuthContext', () => ({
   useAuth: () => ({ identityKind: mockIdentityKind, session: { user: { email: mockSessionEmail } }, signOut: mockSignOut }),
 }));
 
