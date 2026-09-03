@@ -278,7 +278,7 @@ describe('verifyEmailOtp', () => {
     expect(result).toBe(session);
   });
 
-  it('throws InvalidOtpError for a 403 with "Token" in the message and no code', async () => {
+  it('throws InvalidOtpError for a 403 with "Token" in the message and no code (GoTrue\'s generic wrong/expired-code response)', async () => {
     (supabase.auth.verifyOtp as jest.Mock).mockResolvedValue({
       data: { session: null },
       error: { message: 'Token has expired or is invalid', status: 403 },
@@ -438,8 +438,15 @@ function translateAuthError(error: RawAuthError): never {
     case 'over_sms_send_rate_limit':
       throw new RateLimitedError();
     default:
+      // A wrong OTP token and an actually-expired one return the SAME
+      // generic message from GoTrue's /verify endpoint ("Token has expired
+      // or is invalid") — the text itself is not a reliable signal to
+      // split on (both words appear regardless of which case it is), so
+      // this 403 fallback always reports InvalidOtpError. The distinct,
+      // structured 'otp_expired' code above (a different, code-carrying
+      // response) is the only reliable expired-vs-invalid signal.
       if (error.status === 403 && /token/i.test(error.message)) {
-        throw /expired/i.test(error.message) ? new ExpiredOtpError() : new InvalidOtpError();
+        throw new InvalidOtpError();
       }
       throw new AuthNetworkError(error);
   }
