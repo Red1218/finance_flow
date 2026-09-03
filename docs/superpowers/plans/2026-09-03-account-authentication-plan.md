@@ -1997,7 +1997,14 @@ describe('authCredentials (integration)', () => {
     const idBefore = before.user?.id;
     expect(idBefore).toBeTruthy();
 
-    const email = `__integration_test_${Date.now()}@example.com`;
+    // NOT @example.com: this live project's PUT /user (email-change) endpoint
+    // rejects the RFC 2606 placeholder domain specifically — confirmed via
+    // GoTrue audit log during Task 11's implementation (email_address_invalid),
+    // and consistent with the investigation phase's own probe, which only
+    // succeeded after switching off example.com. POST /recover (used by
+    // sendPasswordResetEmail below) does not reject it, so only this one
+    // fixture needs a real-looking domain.
+    const email = `__integration_test_${Date.now()}@gmail.com`;
     await expect(linkEmail(email)).resolves.toBeUndefined();
 
     const { data: after } = await supabase.auth.getUser();
