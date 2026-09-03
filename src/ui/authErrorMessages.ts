@@ -7,6 +7,7 @@ import {
   InvalidEmailError,
   EmailAlreadyRegisteredError,
   WeakPasswordError,
+  SamePasswordError,
   InvalidCredentialsError,
   InvalidOtpError,
   ExpiredOtpError,
@@ -18,6 +19,7 @@ export function authErrorMessage(error: unknown): string {
   if (error instanceof InvalidEmailError) return 'Enter a valid email address';
   if (error instanceof EmailAlreadyRegisteredError) return 'This email already has an account — sign in instead';
   if (error instanceof WeakPasswordError) return error.message;
+  if (error instanceof SamePasswordError) return 'Your new password must be different from your current one';
   if (error instanceof InvalidCredentialsError) return 'Incorrect email or password';
   if (error instanceof InvalidOtpError) return "That code isn't right — check and try again";
   if (error instanceof ExpiredOtpError) return 'That code expired — request a new one';

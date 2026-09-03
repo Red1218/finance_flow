@@ -3,6 +3,7 @@ import {
   InvalidEmailError,
   EmailAlreadyRegisteredError,
   WeakPasswordError,
+  SamePasswordError,
   InvalidCredentialsError,
   InvalidOtpError,
   ExpiredOtpError,
@@ -20,6 +21,7 @@ describe('authErrorMessage', () => {
     expect(authErrorMessage(new WeakPasswordError('Password should be at least 6 characters'))).toBe(
       'Password should be at least 6 characters'
     );
+    expect(authErrorMessage(new SamePasswordError())).toBe('Your new password must be different from your current one');
     expect(authErrorMessage(new InvalidCredentialsError())).toBe('Incorrect email or password');
     expect(authErrorMessage(new InvalidOtpError())).toBe("That code isn't right — check and try again");
     expect(authErrorMessage(new ExpiredOtpError())).toBe('That code expired — request a new one');

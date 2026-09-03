@@ -12,6 +12,7 @@ import {
   InvalidEmailError,
   EmailAlreadyRegisteredError,
   WeakPasswordError,
+  SamePasswordError,
   InvalidCredentialsError,
   InvalidOtpError,
   ExpiredOtpError,
@@ -113,6 +114,13 @@ describe('setPassword', () => {
   it('throws WeakPasswordError for weak_password', async () => {
     (supabase.auth.updateUser as jest.Mock).mockResolvedValue({ error: authError('weak_password', 'Password should be at least 6 characters') });
     await expect(setPassword('abc')).rejects.toBeInstanceOf(WeakPasswordError);
+  });
+
+  it('throws SamePasswordError for same_password', async () => {
+    (supabase.auth.updateUser as jest.Mock).mockResolvedValue({
+      error: authError('same_password', 'New password should be different from the old password.', 422),
+    });
+    await expect(setPassword('S3cur3-Passw0rd')).rejects.toBeInstanceOf(SamePasswordError);
   });
 });
 

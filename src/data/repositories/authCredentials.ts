@@ -10,6 +10,7 @@ import {
   InvalidEmailError,
   EmailAlreadyRegisteredError,
   WeakPasswordError,
+  SamePasswordError,
   InvalidCredentialsError,
   InvalidOtpError,
   ExpiredOtpError,
@@ -39,6 +40,8 @@ function translateAuthError(error: RawAuthError): never {
       throw new EmailAlreadyRegisteredError();
     case 'weak_password':
       throw new WeakPasswordError(error.message);
+    case 'same_password':
+      throw new SamePasswordError();
     case 'invalid_credentials':
       throw new InvalidCredentialsError();
     case 'otp_expired':

@@ -27,6 +27,13 @@ export class WeakPasswordError extends Error {
   }
 }
 
+export class SamePasswordError extends Error {
+  constructor() {
+    super('New password must be different from the current password');
+    this.name = 'SamePasswordError';
+  }
+}
+
 export class InvalidCredentialsError extends Error {
   constructor() {
     super('Incorrect email or password');
