@@ -32,6 +32,10 @@ function RootNavigator() {
       <Stack.Screen name="transaction/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal' }} />
       <Stack.Screen name="onboarding/link-bank" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="account/create" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="account/sign-in" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="account/forgot-password" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="reset-password" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
