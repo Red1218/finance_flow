@@ -1,27 +1,29 @@
 # Testing — Core Transaction Loop and subsequent reliability fixes
 
 Verified results as of the latest documentation synchronization pass
-(2026-09-03), covering the original Core Transaction Loop freeze
-(2026-09-02) plus three subsequent checkpoints: the Release APK Startup
-Fix (`31b0582`), the Transaction Update Mapping Fix (`1604d8e`), and the
-Mobile UX Reliability Fixes (`1f3a4f6`). All commands were run against the
-actual repository state on the date noted; see [`status.md`](status.md)
-for the freeze record of each checkpoint.
+(2026-09-04), covering the original Core Transaction Loop freeze
+(2026-09-02), three subsequent checkpoints — the Release APK Startup Fix
+(`31b0582`), the Transaction Update Mapping Fix (`1604d8e`), and the
+Mobile UX Reliability Fixes (`1f3a4f6`) — and the Account Authentication &
+Anonymous Account Upgrade feature (built on `worktree-account-auth`, not
+yet merged). All commands were run against the actual repository state on
+the date noted; see [`status.md`](status.md) for the freeze record of each
+checkpoint.
 
-## Results (current, 2026-09-03)
+## Results (current, 2026-09-04, `worktree-account-auth`)
 
 | Check | Command | Result |
 |---|---|---|
 | TypeScript | `npx tsc --noEmit` | PASS — 0 errors |
 | ESLint | `npx expo lint` | PASS — exit 0, no warnings |
-| Unit / component tests | `npm test` | PASS — 101/101 tests, 14 suites |
-| Integration tests | `npm run test:integration` | PASS — 20/20 tests, 3 suites, against the real Supabase project |
-| Android release build | `./gradlew assembleRelease` | PASS — release APK built and installed on the Pixel_8a emulator for native QA (see the Mobile UX Reliability Fixes and Release APK Startup Fix sections below) |
+| Unit / component tests | `npm test` | PASS — 148/148 tests, 21 suites |
+| Integration tests | `npm run test:integration` | PASS (Core Transaction Loop suites, 20/20 tests, 3 suites, real Supabase project) — see the Account Authentication section below for `authCredentials.integration.test.ts`'s separate, email-quota-sensitive status |
+| Android release build | `./gradlew assembleRelease` | PASS — release APK built and installed on a real Android device for native QA (see the Account Authentication, Mobile UX Reliability Fixes, and Release APK Startup Fix sections below) |
 | Manual transfer UI flow | End-to-end on the Android emulator (Pixel_8a), not via the integration tests | PASS — see below |
 | Accessibility | Source inspection of the required controls | `accessibilityLabel`/`accessibilityRole` present on the date input (`app/transaction/new.tsx`, `app/transaction/[id].tsx`) and the transfer "View other side" control (`app/transaction/[id].tsx`). These are not currently exercised by a dedicated automated accessibility test suite — none exists in this project; the component tests query by visible text, not by accessibility label. |
 
 The unit/component and integration totals grew from the original freeze
-(92/92 unit, 12 suites; 17/17 integration, 2 suites) by two later
+(92/92 unit, 12 suites; 17/17 integration, 2 suites) by three later
 checkpoints:
 
 - **Transaction Update Mapping Fix** (`1604d8e`) added
@@ -30,6 +32,14 @@ checkpoints:
 - **Mobile UX Reliability Fixes** (`1f3a4f6`) added
   `src/ui/FormModal.test.tsx` (5 tests) and `src/data/AuthContext.test.tsx`
   (4 tests) — 9 unit/component tests, 2 new unit/component suites.
+- **Account Authentication & Anonymous Account Upgrade** added 7 new
+  unit/component suites — `authCredentials.test.ts` (22),
+  `authErrorMessages.test.ts` (2), `create.test.tsx` (8), `sign-in.test.tsx`
+  (3), `forgot-password.test.tsx` (1), `reset-password.test.tsx` (3),
+  `settings.test.tsx` (3), 42 tests total — and grew the existing
+  `AuthContext.test.tsx` from 4 to 9 tests (+5, covering `identityKind`
+  derivation and the new credential-orchestration methods). 101 (prior
+  baseline) + 42 + 5 = 148 tests, 14 + 7 = 21 suites.
 
 The Android-export check and the legacy-Supabase-reference grep recorded
 in the original freeze were checkpoint-specific one-time verifications for
@@ -158,6 +168,55 @@ possibly-stale cached screen (see the Known risks entry below). No
 regression found relative to the original Core Transaction Loop manual
 flow above.
 
+## Account Authentication & Anonymous Account Upgrade — validation
+
+Built and validated entirely on `worktree-account-auth`, not yet merged.
+See [`status.md`](status.md) for the full corrective-evolution narrative
+(three defects found and fixed via real-device testing after the original
+implementation) and [`architecture/authentication.md`](architecture/authentication.md)
+for the mechanics.
+
+**Automated:** 42 new unit/component tests across 7 new suites plus 5 new
+tests in the existing `AuthContext.test.tsx` (identityKind derivation,
+credential orchestration) — see the breakdown above. TypeScript and ESLint
+clean. `authCredentials.integration.test.ts` (3 tests: `signInWithPassword`
+against a nonexistent account, `sendPasswordResetEmail` not throwing, and
+an `updateUser(email, password)` real-send test gated behind
+`RUN_EMAIL_TESTS=1`, opt-in only) was exercised selectively during
+development rather than as a standing part of `npm run test:integration`,
+because this project's built-in Supabase email quota is easily exhausted
+(hit directly during this feature's own empirical pre-flight testing) —
+see the file's own header comment.
+
+**Live Android device E2E, against the real `finance-tracker-v2`
+Supabase project (not a simulator, not mocked):**
+
+1. **Anonymous → permanent upgrade.** Created account with email +
+   password on one screen, received a genuine 6-digit OTP (not a
+   confirmation link) after the corrective template fix, verified it.
+   Confirmed via direct read-only `auth.users` query: same `id` as the
+   pre-upgrade anonymous session, `is_anonymous` flipped `true → false`,
+   `email_confirmed_at` set, `encrypted_password` non-empty — the
+   password was set in the same request as the email, not a later step,
+   so no permanent-but-passwordless state was ever reachable.
+2. **Force-stop / relaunch.** Session and authentication state persisted
+   correctly across a cold relaunch (frozen dual-signal gate unaffected
+   by this feature, confirmed both by this test and by source diff).
+3. **Password recovery, end to end.** Requested reset, opened the email
+   only on the Android device (an earlier attempt opened on a desktop
+   browser first and burned the single-use token before the phone got
+   it — see `status.md`'s corrective-evolution notes), tapped the link
+   once, reached the "Set a new password" screen (proving the
+   `useLinkingURL()` fix), submitted a genuinely different password
+   (proving the `same_password` fix doesn't block a real change), signed
+   out, signed back in with the new password, confirmed existing
+   financial data was still visible and tied to the same account.
+
+Each of the three corrective fixes was verified against real Supabase
+Auth/edge logs before being implemented (structured error codes and
+timestamps, not guesswork) and re-verified live on-device afterward — see
+`status.md` for the specific evidence each fix was based on.
+
 ## Known risks
 
 Only verified, observed risks are recorded here.
@@ -183,6 +242,14 @@ Only verified, observed risks are recorded here.
   test-environment cost. All test-created transaction/account data itself
   (prefixed `__it_`) is verified archived/cleaned after each integration
   test run. This does not affect production usage.
+- **Built-in Supabase email quota.** The project's default GoTrue mailer
+  is tightly rate-limited (observed exhaustion after a handful of sends in
+  under an hour during this feature's own testing). Custom SMTP (Gmail) is
+  configured for reliable manual testing of the account-authentication
+  flows; `authCredentials.integration.test.ts`'s real-send test stays
+  opt-in (`RUN_EMAIL_TESTS=1`) specifically to avoid re-exhausting it on
+  every `npm run test:integration`. Introduced by the Account
+  Authentication & Anonymous Account Upgrade checkpoint (2026-09-04).
 - **`FormModal` sheet does not layer above the tab bar (cosmetic).**
   Introduced by the Mobile UX Reliability Fixes checkpoint (`1f3a4f6`).
   `FormModal` renders inline in the screen's own component tree instead of

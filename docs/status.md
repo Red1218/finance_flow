@@ -92,3 +92,90 @@ and
 Known cosmetic trade-off (not an open defect): the inline `FormModal`
 sheet no longer layers above the bottom tab bar the way the native
 `Modal` did. See [`testing.md`](testing.md)'s Known risks.
+
+## Account Authentication & Anonymous Account Upgrade
+
+- **Design:** Approved & Frozen — 2026-09-03, corrective amendment
+  Approved & Frozen — 2026-09-04
+- **Implementation:** Approved & Frozen — 2026-09-04
+
+Lets a user turn their existing anonymous Supabase identity into a
+permanent email/password account, preserving the same `auth.users.id` (and
+therefore all existing accounts/transactions/budgets/preferences tied to
+it) with zero data migration, while anonymous use remains fully supported.
+Adds email/password sign-in and a native-deep-link password-recovery flow.
+Built on `worktree-account-auth`, isolated from `main`; not yet merged.
+
+All new logic is additive around the frozen `AuthContext` dual-signal
+readiness gate (`1f3a4f6`) — confirmed byte-identical across the whole
+feature (`git diff 1f3a4f6 HEAD -- src/data/AuthContext.tsx` shows no `-`
+lines inside the gate itself, `src/data/repositories/auth.ts` and
+`src/data/supabaseClient.ts` untouched). No Domain or Application-layer
+files were added; Infrastructure (`src/data/repositories/authCredentials.ts`,
+`authErrors.ts`), orchestration (`AuthContext.tsx`), and Presentation
+(`app/account/*`, `app/reset-password.tsx`, error-message mapping in
+`src/ui/authErrorMessages.ts`) are the only layers touched.
+
+**The corrective evolution (real-device testing found and fixed three
+distinct defects after the original implementation):**
+
+1. **OTP/email-template mismatch.** The original design assumed the
+   default Supabase "Change Email Address" template would deliver a
+   6-digit OTP; it delivered a confirmation link instead, and `verifyOtp`
+   used `type: 'email'` rather than `type: 'email_change'`. Root-caused via
+   real-device testing and Supabase Auth/edge logs, not assumption.
+   Corrected by configuring the email template to expose `{{ .Token }}`
+   (dashboard, no code change) and combining the email and password into
+   one `updateUser({ email, password })` call — verified empirically
+   against the live project that a password-only call is rejected (422)
+   for an anonymous user with no email, so the combined call is the only
+   way to have a password on the account before email confirmation.
+   Structurally eliminates the permanent-but-passwordless state the
+   original design could land in. (`691d9c2`, `fad46ef`, `f545112`)
+2. **Password-recovery deep-link acquisition.** The reset-password screen
+   opened correctly via `financeflow://reset-password` (Android
+   deep-link routing confirmed working), but `Linking.useURL()` returned
+   `null` on a warm-started app: it races Expo Router's own earlier-mounted
+   linking subscription for the one-shot `'url'` event, and its
+   `getInitialURL()` only reflects the app's original cold-launch intent.
+   Traced via source inspection of `expo-linking`'s Android native module
+   (`ExpoLinkingModule.kt`) and `expo-router`'s own linking subscription,
+   cross-referenced against the real `GET /auth/v1/verify` request captured
+   in Supabase's logs for an on-device tap. Fixed by switching to
+   `Linking.useLinkingURL()`, which reads persisted native state updated on
+   every `onNewIntent()` instead of racing a one-shot event. (`82c4a4a`)
+3. **`same_password` error mapping.** `updateUser({ password })` correctly
+   reached Supabase and was correctly rejected (HTTP 422, code
+   `same_password`) when a password-recovery attempt reused the account's
+   current password, but `translateAuthError()` had no case for that code,
+   so it fell through to the generic `AuthNetworkError` and the UI showed
+   "Couldn't connect" for what was actually a specific, expected
+   validation error. Root-caused via Supabase edge-log inspection (the
+   structured `x-sb-error-code: same_password` header), not assumed from
+   the generic message. Fixed by adding a typed `SamePasswordError`
+   following the existing `WeakPasswordError` pattern. (`e58c5cb`)
+
+Each fix was diagnosed from real evidence (Supabase Auth/edge logs, direct
+`auth.users` inspection via read-only queries, and live Android device
+testing) before any code changed, per this project's systematic-debugging
+practice — no fix was applied speculatively.
+
+**Validation:** 148/148 unit/component tests, TypeScript and ESLint clean,
+`./gradlew assembleRelease` clean. Live Android device E2E, both flows,
+against the real `finance-tracker-v2` Supabase project: anonymous →
+permanent upgrade (OTP received as a 6-digit code, verified, same
+`auth.users.id` preserved, password confirmed set via direct DB check) and
+password recovery (deep link → recovery session → password change with a
+genuinely different password → sign-out → sign-in with the new password →
+existing financial data still accessible). See [`testing.md`](testing.md)
+for full detail and [`traceability.md`](traceability.md) for the
+requirement mapping.
+
+**Known constraint, not a defect:** this Supabase project's built-in email
+rate limit is easily exhausted (a handful of sends per hour); custom SMTP
+(Gmail) is configured and required for reliable manual/live testing of
+this feature. See `src/data/repositories/authCredentials.integration.test.ts`'s
+header comment.
+
+Not yet merged to `main`. Built and reviewed entirely on the isolated
+`worktree-account-auth` branch/worktree.

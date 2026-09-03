@@ -1,5 +1,35 @@
 # Account Authentication & Anonymous Account Upgrade Implementation Plan
 
+> **SUPERSEDED IN PART — 2026-09-04.** This plan was implemented as
+> written, then real-device testing found three defects not caught by the
+> pre-flight scan or the design review that preceded this plan. Corrective
+> fixes were designed and implemented on top of this plan's own output,
+> not by rewriting it — this file remains the accurate historical record
+> of what was originally approved and built. For the actual, current
+> behavior, see [`docs/architecture/authentication.md`](../../architecture/authentication.md)
+> and [`docs/status.md`](../../status.md)'s "Account Authentication &
+> Anonymous Account Upgrade" section. In summary, three places below no
+> longer match the shipped implementation:
+>
+> - **Task 2** (`authCredentials.ts`): `verifyEmailOtp` below uses
+>   `type: 'email'`. The shipped version uses `type: 'email_change'`, and
+>   `linkEmail(email)` was renamed to `linkEmailWithPassword(email, password)`
+>   — see commits `691d9c2`, `fad46ef`.
+> - **Task 3** (`AuthContext.tsx`) and **Task 5** (create-account screen,
+>   referred to below): the password step described here as happening
+>   *after* OTP verification (`completeUpgrade(password)`) was moved into
+>   the *same* call as the email (`startEmailUpgrade(email, password)`),
+>   and `completeUpgrade` was removed — see commit `f545112`.
+> - **`app/reset-password.tsx`** (added in a later task than shown in this
+>   excerpt): uses `Linking.useLinkingURL()`, not `Linking.useURL()` as
+>   originally implemented — see commit `82c4a4a`. The `same_password`
+>   Supabase error code (commit `e58c5cb`) was not anticipated by this
+>   plan's original error taxonomy at all.
+>
+> Everything else in this plan — the architecture, the file structure, the
+> Global Constraints, and every task not listed above — was implemented as
+> written and remains accurate.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let a user turn their existing anonymous Supabase identity into a permanent email/password account — preserving the same `auth.users.id` and therefore all existing accounts/transactions/budgets/preferences/recurring_items/goals with zero data migration — while anonymous use remains fully supported for anyone who never opts in.

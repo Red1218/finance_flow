@@ -41,3 +41,33 @@ and
 [`architecture/presentation.md`](architecture/presentation.md#shared-form-modal-formmodal)
 for the mechanics, and [`status.md`](status.md) for the freeze record of
 each.
+
+## Account Authentication & Anonymous Account Upgrade
+
+Built on `worktree-account-auth`, not yet merged to `main`. No Domain or
+Application-layer files were added for this feature — Infrastructure,
+orchestration (`AuthContext.tsx`), and Presentation are the only layers
+involved.
+
+| Requirement | Infrastructure | Orchestration (`AuthContext.tsx`) | Presentation | Tests |
+|---|---|---|---|---|
+| Anonymous → permanent upgrade, same `auth.users.id` | `authCredentials.ts`: `linkEmailWithPassword(email, password)` → single `updateUser({email, password})` call | `startEmailUpgrade` | `app/account/create.tsx` (email+password step) | `authCredentials.test.ts`, `AuthContext.test.tsx`, `create.test.tsx`; live Android E2E (`status.md`) |
+| Email confirmation via OTP | `authCredentials.ts`: `verifyEmailOtp` → `verifyOtp({..., type: 'email_change'})` | `verifyUpgradeOtp` | `app/account/create.tsx` (OTP step, with resend) | `authCredentials.test.ts`, `AuthContext.test.tsx`, `create.test.tsx`; live Android E2E |
+| Email/password sign-in | `authCredentials.ts`: `signInWithPassword` | `signIn` | `app/account/sign-in.tsx` | `authCredentials.test.ts`, `AuthContext.test.tsx`, `sign-in.test.tsx`; live Android E2E |
+| Password recovery request | `authCredentials.ts`: `sendPasswordResetEmail` → `resetPasswordForEmail(email, {redirectTo: 'financeflow://reset-password'})` | `requestPasswordReset` | `app/account/forgot-password.tsx` | `authCredentials.test.ts`, `forgot-password.test.tsx` |
+| Password recovery deep-link callback | `authCredentials.ts`: `parseRecoveryTokens`, `establishRecoverySession` → `setSession({access_token, refresh_token})` | `completePasswordReset` | `app/reset-password.tsx` — `Linking.useLinkingURL()` (see [`architecture/authentication.md`](architecture/authentication.md) for why not `useURL()`) | `authCredentials.test.ts`, `reset-password.test.tsx`; live Android E2E |
+| Typed error taxonomy (incl. `same_password`) | `authErrors.ts`, `authCredentials.ts`'s `translateAuthError` | — | `src/ui/authErrorMessages.ts` | `authCredentials.test.ts`, `authErrorMessages.test.ts`; live Android E2E confirmed the specific message replaces the prior generic one |
+| Identity-aware Settings (create account / sign in / sign out) | — | `identityKind` (derived from `session.user.is_anonymous`) | `app/(tabs)/more/settings.tsx` | `settings.test.tsx` |
+| Anonymous use remains fully functional | `auth.ts` (bootstrap) — confirmed byte-identical to pre-feature baseline | dual-signal readiness gate — confirmed byte-identical to pre-feature baseline | — | `AuthContext.test.tsx` (pre-existing 4 readiness-gate tests, unchanged) |
+
+**Corrective fixes** (found via real-device testing after the above was
+first implemented; see `status.md` for full incident detail):
+
+| Defect | Fix | Commit |
+|---|---|---|
+| `verifyOtp` used `type: 'email'`; password set after OTP instead of with the email, leaving a permanent-but-passwordless state reachable | `type: 'email_change'`; combined `updateUser({email, password})` | `691d9c2`, `fad46ef`, `f545112` |
+| `Linking.useURL()` returned `null` on a warm-started app (races Expo Router's own linking subscription) | `Linking.useLinkingURL()` | `82c4a4a` |
+| `same_password` (HTTP 422) fell through to generic `AuthNetworkError` | Typed `SamePasswordError` | `e58c5cb` |
+
+See [`status.md`](status.md) for the freeze record and
+[`testing.md`](testing.md) for full validation detail.
