@@ -1,21 +1,43 @@
-# Testing — Core Transaction Loop
+# Testing — Core Transaction Loop and subsequent reliability fixes
 
-Verified results as of the implementation review pass (2026-09-02). All
-commands were run against the actual repository state on that date; see
-[`status.md`](status.md) for the freeze record.
+Verified results as of the latest documentation synchronization pass
+(2026-09-03), covering the original Core Transaction Loop freeze
+(2026-09-02) plus three subsequent checkpoints: the Release APK Startup
+Fix (`31b0582`), the Transaction Update Mapping Fix (`1604d8e`), and the
+Mobile UX Reliability Fixes (`1f3a4f6`). All commands were run against the
+actual repository state on the date noted; see [`status.md`](status.md)
+for the freeze record of each checkpoint.
 
-## Results
+## Results (current, 2026-09-03)
 
 | Check | Command | Result |
 |---|---|---|
 | TypeScript | `npx tsc --noEmit` | PASS — 0 errors |
 | ESLint | `npx expo lint` | PASS — exit 0, no warnings |
-| Unit / component tests | `npm test` | PASS — 92/92 tests, 12 suites |
-| Integration tests | `npm run test:integration` | PASS — 17/17 tests, 2 suites, against the real Supabase project |
-| Android export | `npx expo export --platform android` | PASS — 1175 modules bundled, no `testing-library` references in the output bundle |
-| Legacy Supabase reference check | grep for the previous project ref across `src/`, `app/`, and the exported `dist/` bundle | PASS — 0 occurrences. The only repo-wide occurrence is in the pre-existing, untracked `.env.v1-backup` file, unrelated to this feature and not part of the active `.env` or the exported bundle. |
+| Unit / component tests | `npm test` | PASS — 101/101 tests, 14 suites |
+| Integration tests | `npm run test:integration` | PASS — 20/20 tests, 3 suites, against the real Supabase project |
+| Android release build | `./gradlew assembleRelease` | PASS — release APK built and installed on the Pixel_8a emulator for native QA (see the Mobile UX Reliability Fixes and Release APK Startup Fix sections below) |
 | Manual transfer UI flow | End-to-end on the Android emulator (Pixel_8a), not via the integration tests | PASS — see below |
 | Accessibility | Source inspection of the required controls | `accessibilityLabel`/`accessibilityRole` present on the date input (`app/transaction/new.tsx`, `app/transaction/[id].tsx`) and the transfer "View other side" control (`app/transaction/[id].tsx`). These are not currently exercised by a dedicated automated accessibility test suite — none exists in this project; the component tests query by visible text, not by accessibility label. |
+
+The unit/component and integration totals grew from the original freeze
+(92/92 unit, 12 suites; 17/17 integration, 2 suites) by two later
+checkpoints:
+
+- **Transaction Update Mapping Fix** (`1604d8e`) added
+  `src/data/repositories/transactions.integration.test.ts` — 3 integration
+  tests, 1 new integration suite.
+- **Mobile UX Reliability Fixes** (`1f3a4f6`) added
+  `src/ui/FormModal.test.tsx` (5 tests) and `src/data/AuthContext.test.tsx`
+  (4 tests) — 9 unit/component tests, 2 new unit/component suites.
+
+The Android-export check and the legacy-Supabase-reference grep recorded
+in the original freeze were checkpoint-specific one-time verifications for
+the Core Transaction Loop feature itself, not a standing part of every
+later checkpoint's validation — later checkpoints instead validated
+against a real `./gradlew assembleRelease` release build installed on
+device, which is a stronger signal for the release-build-specific defects
+those checkpoints fixed.
 
 ## Integration scenario → test mapping
 
@@ -75,6 +97,67 @@ and security (RLS, RPC grants, cross-user isolation) — this manual pass
 verifies the same behavior is correctly wired through the UI, which the
 integration tests, by design, do not exercise.
 
+## Release APK Startup Fix (`31b0582`) — validation
+
+Not exercised by the automated suite (font loading is a native-module
+concern outside `jest-expo`'s mocked environment). Verified manually on a
+fresh `./gradlew assembleRelease` build installed on the Pixel_8a
+emulator: the app boots to Home instead of hanging on the spinner, an
+anonymous session is created, the session persists across relaunch, and
+Add Expense/Income were confirmed working. See
+[`architecture/startup-and-auth.md`](architecture/startup-and-auth.md).
+
+## Transaction Update Mapping Fix (`1604d8e`) — validation
+
+- `src/data/repositories/transactions.integration.test.ts` (3 tests, real
+  network): proves `amount`/`description`/`occurredAt`/`categoryId` all
+  persist correctly through `transactionRepository.update()`, verified by
+  an independent re-read (not just the mutation's own echoed response),
+  and that a field omitted from a patch is not overwritten. Confirmed to
+  fail with the original `PGRST204` error against the unmapped
+  pass-through before the fix, and to pass with `toUpdatePayload()`
+  restored — a true regression guard.
+- Manual QA on a rebuilt release APK: Expense/Income edits, category
+  changes, and Transfer edits/archive all persist correctly. Transfer and
+  Archive were already unaffected (separate RPC/literal-update code
+  paths) and remain so.
+
+See
+[`architecture/transaction-architecture.md`](architecture/transaction-architecture.md#update-path-field-mapping-fixed-2026-09-02-commit-1604d8e)
+for the corrected root-cause attribution.
+
+## Mobile UX Reliability Fixes (`1f3a4f6`) — validation
+
+**Form modal (`FormModal`):** `src/ui/FormModal.test.tsx` (5 tests) covers
+the component's structural wiring. On a release APK on the Pixel_8a
+emulator, all six migrated modals were confirmed working by tapping
+directly into each `TextInput`, observing genuine keyboard focus, typing,
+and completing a real save for three of them (Add Account, Budgets main
+budget, Budgets category budget). A second defect (whitespace/label taps
+falling through to the backdrop) was found during this same verification
+pass, fixed, and specifically re-tested afterward. `SelectModal` was
+exercised repeatedly and confirmed unaffected. See
+[`architecture/presentation.md`](architecture/presentation.md#shared-form-modal-formmodal).
+
+**Auth/data startup race:** `src/data/AuthContext.test.tsx` (4 tests)
+covers both signal-arrival orderings, a `SIGNED_OUT`-only event not
+falsely triggering readiness, and an error path. On the release APK, 3/3
+cold `force-stop` → relaunch cycles showed correct Home-screen data
+immediately, with no navigation, refresh, or screen reopen needed —
+confirmed against the same persisted anonymous identity across all three
+relaunches. See
+[`architecture/startup-and-auth.md`](architecture/startup-and-auth.md).
+
+**Post-fix transfer re-verification:** after both fixes landed, the full
+transfer lifecycle was re-run end-to-end on the release APK as a
+regression check — create (two accounts, one created via the
+newly-fixed Add Account modal) → verify both legs → edit the amount →
+verify both legs synced → archive → verify both legs archived and account
+balances reverted, confirmed via a fresh app relaunch rather than a
+possibly-stale cached screen (see the Known risks entry below). No
+regression found relative to the original Core Transaction Loop manual
+flow above.
+
 ## Known risks
 
 Only verified, observed risks are recorded here.
@@ -90,10 +173,23 @@ Only verified, observed risks are recorded here.
   Ledger, Accounts) and every freshly-pushed detail screen reloads
   correctly — confirmed during the manual UI flow above. This is a
   pre-existing navigation-stack pattern, not introduced by this feature,
-  and is out of scope for this feature to fix.
+  and is out of scope for this feature to fix. Re-observed and reconfirmed
+  during the Mobile UX Reliability Fixes checkpoint's post-fix transfer
+  re-verification (2026-09-03) — still present, still out of scope, not a
+  regression from either fix in that checkpoint.
 - **Integration-test anonymous users.** Every Jest/dev-session run mints a
   fresh anonymous Supabase auth user (there is no persisted session across
   separate processes), leaving residual `auth.users` rows as a known
   test-environment cost. All test-created transaction/account data itself
   (prefixed `__it_`) is verified archived/cleaned after each integration
   test run. This does not affect production usage.
+- **`FormModal` sheet does not layer above the tab bar (cosmetic).**
+  Introduced by the Mobile UX Reliability Fixes checkpoint (`1f3a4f6`).
+  `FormModal` renders inline in the screen's own component tree instead of
+  via React Native's `Modal` (a deliberate fix for the keyboard-dismissal
+  defect — see
+  [`architecture/presentation.md`](architecture/presentation.md#shared-form-modal-formmodal)),
+  so the sheet now layers above only its own screen's content, not above
+  the bottom tab bar the way the previous native-`Modal`-based
+  implementation did. Purely visual; the tab bar remains visible (and
+  tappable) behind an open sheet. No functional impact observed.
