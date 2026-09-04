@@ -124,34 +124,50 @@ export default function Budgets() {
             setOverallEditOpen(true);
           }}
         >
-          <View style={styles.ringBox}>
-            <Svg width={118} height={118} viewBox="0 0 118 118">
-              <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
-              <Circle
-                cx={59}
-                cy={59}
-                r={ringRadius}
-                fill="none"
-                stroke={data.overallProgress.isOver ? colors.accent2 : colors.accent}
-                strokeWidth={10}
-                strokeDasharray={`${circumference} ${circumference}`}
-                strokeDashoffset={offset}
-                strokeLinecap="round"
-                transform="rotate(-90 59 59)"
-              />
-            </Svg>
-            <View style={styles.ringLabel}>
-              <Num style={styles.ringPct}>{data.overallProgress.pct}%</Num>
-              <K>Used</K>
+          {data.hasOverall ? (
+            <>
+              <View style={styles.ringBox}>
+                <Svg width={118} height={118} viewBox="0 0 118 118">
+                  <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
+                  <Circle
+                    cx={59}
+                    cy={59}
+                    r={ringRadius}
+                    fill="none"
+                    stroke={data.overallProgress.isOver ? colors.accent2 : colors.accent}
+                    strokeWidth={10}
+                    strokeDasharray={`${circumference} ${circumference}`}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    transform="rotate(-90 59 59)"
+                  />
+                </Svg>
+                <View style={styles.ringLabel}>
+                  <Num style={styles.ringPct}>{data.overallProgress.pct}%</Num>
+                  <K>Used</K>
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Muted>Left across {data.rows.length + 1} budgets</Muted>
+                <Num style={styles.leftAmount}>{formatINR(data.overallProgress.remaining)}</Num>
+                <Muted>
+                  {formatINR(data.overallProgress.spent)} spent of {formatINR(data.overallProgress.limit)}
+                </Muted>
+              </View>
+            </>
+          ) : (
+            <View style={styles.ringBox}>
+              <Svg width={118} height={118} viewBox="0 0 118 118">
+                <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
+              </Svg>
             </View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Muted>Left across {data.rows.length + 1} budgets</Muted>
-            <Num style={styles.leftAmount}>{formatINR(data.overallProgress.remaining)}</Num>
-            <Muted>
-              {formatINR(data.overallProgress.spent)} spent of {formatINR(data.overallProgress.limit)}
-            </Muted>
-          </View>
+          )}
+          {!data.hasOverall && (
+            <View style={{ flex: 1 }}>
+              <Muted>No overall budget set</Muted>
+              <Text style={styles.emptyOverallCta}>Set a monthly limit →</Text>
+            </View>
+          )}
         </Pressable>
 
         <View style={styles.overTag}>
@@ -232,6 +248,7 @@ const styles = StyleSheet.create({
   ringLabel: { position: 'absolute', alignItems: 'center' },
   ringPct: { fontFamily: fonts.heading, fontSize: 23 },
   leftAmount: { fontFamily: fonts.heading, fontSize: 27, marginVertical: 2 },
+  emptyOverallCta: { fontFamily: fonts.heading, fontSize: 17, color: colors.accent700, marginTop: 4 },
   overTag: { marginTop: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   manageLink: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent700 },
   rows: { marginTop: spacing.s2, gap: spacing.s3 },
