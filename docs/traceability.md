@@ -71,3 +71,24 @@ first implemented; see `status.md` for full incident detail):
 
 See [`status.md`](status.md) for the freeze record and
 [`testing.md`](testing.md) for full validation detail.
+
+## Budgets
+
+No Application-layer file exists for this feature — the screen's own
+`useMemo` performs the (pre-existing) spend aggregation directly against
+the repository/hook read, matching the pattern already in place before
+this checkpoint.
+
+| Requirement | Domain | Infrastructure | Presentation | Tests |
+|---|---|---|---|---|
+| Category budget (create/edit, pre-existing) | `budget.ts`: `budgetProgress` | `repositories/budgets.ts`: `setBudget({category_id: <id>, ...})`, `listActiveBudgets` | `app/(tabs)/budgets.tsx` (category rows, category `FormModal`) | `budget.test.ts`; live Android E2E |
+| Overall monthly budget (create/edit) | `budget.ts`: `budgetProgress` | `repositories/budgets.ts`: `setBudget({category_id: null, ...})` | `app/(tabs)/budgets.tsx` (`data.hasOverall`, overall `FormModal`) | `budget.test.ts`; live Android E2E (create, edit, persistence) |
+| No-overall-budget empty state, routed to the shared editor | — | — | `app/(tabs)/budgets.tsx` (`!data.hasOverall` branch; both branches share one `Pressable`/`onPress`) | Live Android E2E (empty state text and tap-to-editor confirmed on a fresh anonymous user) |
+| Category budgets independent of overall-budget existence | — | — | `app/(tabs)/budgets.tsx` (category "Add"/rows carry no `hasOverall` guard) | Live Android E2E (confirmed both with and without an overall budget present) |
+| Archive-then-insert persistence | — | `repositories/budgets.ts`: `setBudget` (archives any existing active row for the same `category_id`, then inserts) | — | Live Android E2E + direct read-only query confirming the prior row's `archived_at` was set and the new row is the sole active one |
+
+An earlier draft (`stash@{0}`, dropped, never merged) bypassed the shared
+overall-budget editor and incorrectly gated category budgets on the
+overall budget's existence — rejected during investigation; neither
+behavior is present above. See [`status.md`](status.md) and
+[`testing.md`](testing.md) for the full record.

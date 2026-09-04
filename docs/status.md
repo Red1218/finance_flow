@@ -104,7 +104,10 @@ permanent email/password account, preserving the same `auth.users.id` (and
 therefore all existing accounts/transactions/budgets/preferences tied to
 it) with zero data migration, while anonymous use remains fully supported.
 Adds email/password sign-in and a native-deep-link password-recovery flow.
-Built on `worktree-account-auth`, isolated from `main`; not yet merged.
+Built on `worktree-account-auth`, isolated from `main`. Merged into `main`
+via a clean fast-forward (`a660189..ae0a687`, 2026-09-04) and pushed to
+`origin/main`. Both HEADs confirmed identical post-push.
+`worktree-account-auth` is fully merged and now redundant.
 
 All new logic is additive around the frozen `AuthContext` dual-signal
 readiness gate (`1f3a4f6`) — confirmed byte-identical across the whole
@@ -177,5 +180,47 @@ rate limit is easily exhausted (a handful of sends per hour); custom SMTP
 this feature. See `src/data/repositories/authCredentials.integration.test.ts`'s
 header comment.
 
-Not yet merged to `main`. Built and reviewed entirely on the isolated
-`worktree-account-auth` branch/worktree.
+Merged into `main` via a clean fast-forward (`a660189..ae0a687`,
+2026-09-04) and pushed to `origin/main`. Both HEADs confirmed identical
+post-push. `worktree-account-auth` is fully merged and now redundant.
+
+## Budgets
+
+- **Implementation:** Approved & Frozen — 2026-09-05
+
+Category budgets (pre-existing) and a new overall monthly budget, both in
+`app/(tabs)/budgets.tsx`. `category_id IS NULL` on the `budgets` table
+represents the overall budget, distinguished in the UI via `hasOverall:
+!!overall`; category budgets remain fully independent of whether an
+overall budget exists in either direction. Creating and editing the
+overall budget both go through the same existing `FormModal` editor —
+there is no separate inline entry flow. When no overall budget exists,
+the screen shows "No overall budget set / Set a monthly limit →" instead
+of computing progress against a zero limit; tapping it opens that same
+shared editor. Persistence reuses the pre-existing archive-then-insert
+`setBudget()` pattern in `src/data/repositories/budgets.ts` — replacing a
+budget archives the prior row rather than updating it in place. No
+Domain, Application, Infrastructure, or Supabase schema/RLS changes were
+required; the only file changed is `app/(tabs)/budgets.tsx`.
+
+An earlier draft of this work existed as `stash@{0}` and was rejected
+during investigation: it bypassed the shared overall-budget editor for a
+separate inline entry flow, and incorrectly made category budgets
+unusable until an overall budget was set. That stash has since been
+dropped and was not used.
+
+**Validation:** TypeScript and ESLint clean, 148/148 unit/component
+tests, `./gradlew assembleDebug` and `./gradlew assembleRelease` both
+clean, `npx expo export --platform android` clean. Live-device QA on a
+real Android device (SM_E066B) against the real `finance-tracker-v2`
+Supabase project: empty state → shared editor → create → persists across
+force-stop/relaunch → edit → persists, confirmed at the database level
+(prior row archived, new row active); category budget created and
+confirmed usable both with and without an overall budget present. See
+[`testing.md`](testing.md) for full detail and
+[`traceability.md`](traceability.md) for the requirement mapping.
+
+Not yet committed — verified on the working tree pending a focused commit
+(see this feature's own approval record for scope: excludes the unrelated
+icon-rebrand and `app/transaction/new.tsx` changes also present in the
+working tree).

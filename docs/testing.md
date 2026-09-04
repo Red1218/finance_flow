@@ -5,8 +5,9 @@ Verified results as of the latest documentation synchronization pass
 (2026-09-02), three subsequent checkpoints — the Release APK Startup Fix
 (`31b0582`), the Transaction Update Mapping Fix (`1604d8e`), and the
 Mobile UX Reliability Fixes (`1f3a4f6`) — and the Account Authentication &
-Anonymous Account Upgrade feature (built on `worktree-account-auth`, not
-yet merged). All commands were run against the actual repository state on
+Anonymous Account Upgrade feature (built on `worktree-account-auth`, since merged into
+`main` via fast-forward and pushed to `origin/main` — see
+[`status.md`](status.md)). All commands were run against the actual repository state on
 the date noted; see [`status.md`](status.md) for the freeze record of each
 checkpoint.
 
@@ -170,7 +171,8 @@ flow above.
 
 ## Account Authentication & Anonymous Account Upgrade — validation
 
-Built and validated entirely on `worktree-account-auth`, not yet merged.
+Built and validated entirely on `worktree-account-auth`, since merged
+into `main` via fast-forward and pushed to `origin/main`.
 See [`status.md`](status.md) for the full corrective-evolution narrative
 (three defects found and fixed via real-device testing after the original
 implementation) and [`architecture/authentication.md`](architecture/authentication.md)
@@ -217,6 +219,46 @@ Auth/edge logs before being implemented (structured error codes and
 timestamps, not guesswork) and re-verified live on-device afterward — see
 `status.md` for the specific evidence each fix was based on.
 
+## Budgets — validation
+
+| Check | Command | Result |
+|---|---|---|
+| TypeScript | `npx tsc --noEmit` | PASS — 0 errors |
+| ESLint | `npx expo lint` | PASS — exit 0 |
+| Unit / component tests | `npm test -- --roots app src` | PASS — 148/148 tests, 21 suites (unchanged; no new tests added for this feature) |
+| Android debug build | `./gradlew assembleDebug` | PASS |
+| Android release build | `./gradlew assembleRelease` | PASS |
+| Android export | `npx expo export --platform android` | PASS |
+
+**Live-device QA**, on a real Android device (SM_E066B) via USB, against
+the real `finance-tracker-v2` Supabase project:
+
+1. Fresh anonymous user, no overall budget: empty state showed exactly
+   "No overall budget set / Set a monthly limit →"; tapping it opened the
+   same `FormModal` editor used for editing (no separate inline flow).
+2. Created an overall budget (₹18,000): saved, ring/spent/remaining
+   rendered correctly, persisted across a force-stop + relaunch.
+3. Edited the overall budget (₹18,000 → ₹22,000): UI updated immediately;
+   confirmed via a direct read-only query against `public.budgets` that
+   the ₹18,000 row was archived (`archived_at` set) and the ₹22,000 row
+   is the sole active one — the archive-then-insert pattern working as
+   designed, not just as coded.
+4. Created a category budget (Groceries, ₹5,000) on the same user:
+   succeeded and appeared independently of the overall budget.
+5. Confirmed, on both a fresh user (no overall budget) and a separate
+   pre-existing user (overall budget already set), that "Add a category
+   budget" remains enabled and functional regardless of overall-budget
+   state in either direction.
+6. Navigated away and back, and relaunched the app; budget data remained
+   available and correct throughout. No transaction or authentication
+   behavior was affected (unrelated screens untouched by this feature).
+
+An earlier draft (`stash@{0}`, since dropped) was rejected during
+investigation for bypassing the shared editor and for incorrectly gating
+category budgets on the overall budget's existence — neither behavior is
+present in the verified implementation. See [`status.md`](status.md) for
+the full investigation record.
+
 ## Known risks
 
 Only verified, observed risks are recorded here.
@@ -260,3 +302,26 @@ Only verified, observed risks are recorded here.
   the bottom tab bar the way the previous native-`Modal`-based
   implementation did. Purely visual; the tab bar remains visible (and
   tappable) behind an open sheet. No functional impact observed.
+- **Debug/dev-client build cannot reach Supabase from a physical device
+  (development-environment issue, not a Budgets defect).** Observed
+  during Budgets device QA: a `./gradlew assembleDebug` build installed
+  via `expo run:android`/dev-client failed every anonymous-auth request
+  with `AuthRetryableFetchError` (status 0), confirmed via Supabase logs
+  that no request ever arrived server-side, while the same device's own
+  browser reached the same Supabase URL correctly (DNS, TLS, and network
+  all fine). A `./gradlew assembleRelease` build of the identical code
+  against the same backend worked correctly. Root cause narrowed to the
+  debug/dev-client build's own networking layer, not application code,
+  Supabase, or the device network — out of scope to fix further here;
+  QA proceeded on the release build instead.
+- **`.claude/worktrees/` local harness artifacts inflate Jest results.**
+  A pre-existing, non-repository directory (`.git/info/exclude`d, not
+  `.gitignore`d) can contain a full nested mirror of this project,
+  including its own `node_modules`. Running `npm test` without scoping
+  picks up its test files too, producing misleading duplicate suite
+  counts and failures unrelated to the actual project (observed: 42
+  suites/261 tests instead of the real 21/148, with 11 spurious
+  failures). Not a code defect. If this happens, re-run with
+  `npx jest --roots app src` to confirm the true result, or remove the
+  stray directory if it's no longer needed for an active worktree
+  session.
