@@ -39,6 +39,9 @@ jest.mock('../../hooks/useCategories', () => ({
   useCategories: () => ({
     data: [
       { id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' },
+      { id: 'cat-3', name: 'Transport', kind: 'EXPENSE' },
+      { id: 'cat-4', name: 'Dining', kind: 'EXPENSE' },
+      { id: 'cat-5', name: 'Utilities', kind: 'EXPENSE' },
       { id: 'cat-2', name: 'Salary', kind: 'INCOME' },
     ],
     loading: false,
@@ -107,5 +110,56 @@ describe('Add Transaction screen', () => {
     expect(mockCreateTransfer).toHaveBeenCalledTimes(1);
     expect(mockCreateTransfer.mock.calls[0][0]).toMatchObject({ fromAccountId: 'acc-1', toAccountId: 'acc-2', amount: 5 });
     expect(mockCreateTransaction).not.toHaveBeenCalled();
+  });
+
+  it('collapses categories by default to the first 3, with a Show all control', () => {
+    render(<NewTransaction />);
+    expect(screen.getByText('Groceries')).toBeTruthy();
+    expect(screen.getByText('Transport')).toBeTruthy();
+    expect(screen.getByText('Dining')).toBeTruthy();
+    expect(screen.queryByText('Utilities')).toBeNull();
+    expect(screen.getByText('Show all ↓')).toBeTruthy();
+  });
+
+  it('expands to show all categories and collapses back', async () => {
+    render(<NewTransaction />);
+    await userEvent.press(screen.getByText('Show all ↓'));
+    expect(screen.getByText('Utilities')).toBeTruthy();
+    expect(screen.getByText('Show less ↑')).toBeTruthy();
+
+    await userEvent.press(screen.getByText('Show less ↑'));
+    expect(screen.queryByText('Utilities')).toBeNull();
+    expect(screen.getByText('Show all ↓')).toBeTruthy();
+  });
+
+  it('selecting a category leaves the expand/collapse state untouched', async () => {
+    render(<NewTransaction />);
+    await userEvent.press(screen.getByText('Groceries'));
+    expect(screen.queryByText('Utilities')).toBeNull();
+    expect(screen.getByText('Show all ↓')).toBeTruthy();
+
+    await userEvent.press(screen.getByText('Show all ↓'));
+    await userEvent.press(screen.getByText('Utilities'));
+    expect(screen.getByText('Utilities')).toBeTruthy();
+    expect(screen.getByText('Show less ↑')).toBeTruthy();
+  });
+
+  it('hides the expand control and shows all categories when there are 3 or fewer', async () => {
+    render(<NewTransaction />);
+    await userEvent.press(screen.getByText('Income'));
+    expect(screen.getByText('Salary')).toBeTruthy();
+    expect(screen.queryByText('Show all ↓')).toBeNull();
+    expect(screen.queryByText('Show less ↑')).toBeNull();
+  });
+
+  it('re-collapses categories when switching kind and back', async () => {
+    render(<NewTransaction />);
+    await userEvent.press(screen.getByText('Show all ↓'));
+    expect(screen.getByText('Utilities')).toBeTruthy();
+
+    await userEvent.press(screen.getByText('Income'));
+    await userEvent.press(screen.getByText('Expense'));
+    expect(screen.queryByText('Utilities')).toBeNull();
+    expect(screen.getByText('Show all ↓')).toBeTruthy();
   });
 });

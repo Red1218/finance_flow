@@ -43,6 +43,7 @@ export default function NewTransaction() {
   const [kind, setKind] = useState<Kind>('Expense');
   const [amount, setAmount] = useState('0');
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [dateText, setDateText] = useState(() => todayInputValue());
@@ -66,7 +67,12 @@ export default function NewTransaction() {
 
   useEffect(() => {
     setCategoryId(null);
+    setCategoriesExpanded(false);
   }, [kind]);
+
+  const INITIAL_CATEGORY_COUNT = 3;
+  const visibleCategories = categoriesExpanded ? relevantCategories : relevantCategories.slice(0, INITIAL_CATEGORY_COUNT);
+  const canExpandCategories = relevantCategories.length > INITIAL_CATEGORY_COUNT;
 
   const numeric = parseFloat(amount) || 0;
   const account = accounts.data?.find((a) => a.id === accountId);
@@ -78,6 +84,8 @@ export default function NewTransaction() {
     !saving &&
     pickedDate !== null &&
     (kind === 'Transfer' ? !!accountId && !!toAccountId && accountId !== toAccountId : !!accountId);
+
+  const selectCategory = (id: string) => setCategoryId(id);
 
   const tapKey = (key: string) => {
     setAmount((prev) => {
@@ -132,7 +140,7 @@ export default function NewTransaction() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top']}>
+    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()}>
           <Text style={styles.link}>Cancel</Text>
@@ -143,7 +151,7 @@ export default function NewTransaction() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Seg
           options={[
             { label: 'Expense', value: 'Expense' as Kind },
@@ -161,10 +169,23 @@ export default function NewTransaction() {
 
         {kind !== 'Transfer' ? (
           <View style={styles.field}>
-            <K style={styles.fieldLabel}>Category</K>
+            <View style={styles.categoryHeader}>
+              <K style={styles.fieldLabel}>Category</K>
+              {canExpandCategories && (
+                <Pressable
+                  onPress={() => setCategoriesExpanded((e) => !e)}
+                  accessibilityRole="button"
+                  accessibilityLabel={categoriesExpanded ? 'Show fewer categories' : 'Show all categories'}
+                  accessibilityState={{ expanded: categoriesExpanded }}
+                  hitSlop={8}
+                >
+                  <Text style={styles.categoryToggle}>{categoriesExpanded ? 'Show less ↑' : 'Show all ↓'}</Text>
+                </Pressable>
+              )}
+            </View>
             <View style={styles.chips}>
-              {relevantCategories.map((c) => (
-                <Chip key={c.id} label={c.name} active={c.id === categoryId} onPress={() => setCategoryId(c.id)} />
+              {visibleCategories.map((c) => (
+                <Chip key={c.id} label={c.name} active={c.id === categoryId} onPress={() => selectCategory(c.id)} />
               ))}
             </View>
           </View>
@@ -201,16 +222,16 @@ export default function NewTransaction() {
 
         {error ? <Body style={styles.error}>{error}</Body> : null}
 
-        <View style={styles.keypad}>
-          {KEYS.map((k) => (
-            <Pressable key={k} style={styles.key} onPress={() => tapKey(k)}>
-              <Text style={styles.keyText}>{k}</Text>
-            </Pressable>
-          ))}
-        </View>
-
         <Button title={`Save ${kind.toLowerCase()}`} onPress={save} disabled={!canSave} loading={saving} block />
       </ScrollView>
+
+      <View style={styles.keypad}>
+        {KEYS.map((k) => (
+          <Pressable key={k} style={styles.key} onPress={() => tapKey(k)}>
+            <Text style={styles.keyText}>{k}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       <SelectModal
         visible={accountPickerOpen}
@@ -241,16 +262,26 @@ const styles = StyleSheet.create({
   },
   link: { fontFamily: fonts.body, fontSize: 13, color: colors.accent700 },
   linkDisabled: { color: colors.neutral500 },
+  scroll: { flex: 1 },
   content: { padding: spacing.s4, gap: spacing.s4 },
   amountBlock: { alignItems: 'center', paddingVertical: spacing.s2 },
   amount: { fontFamily: fonts.heading, fontSize: 46, color: colors.text, marginTop: 6 },
   field: { gap: 9 },
   fieldLabel: {},
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  categoryToggle: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent700 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   accountRow: { flexDirection: 'row', justifyContent: 'space-between' },
   accountLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.accent700 },
   error: { color: colors.accent2_700 },
-  keypad: { flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.s2 },
+  keypad: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    paddingTop: spacing.s2,
+    paddingHorizontal: spacing.s4,
+  },
   key: { width: '33.33%', minHeight: 52, alignItems: 'center', justifyContent: 'center' },
   keyText: { fontFamily: fonts.body, fontSize: 22, color: colors.text },
 });
