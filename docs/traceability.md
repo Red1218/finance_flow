@@ -25,16 +25,19 @@ that share a test with another scenario above), see
 
 ## Beyond the Core Transaction Loop
 
-Two further checkpoints fixed defects outside the transaction-requirement
-table above — a startup/build concern and a cross-screen Presentation
-primitive, not new transaction requirements. Recorded here for the same
-implementation → test → validation → commit traceability.
+Three further checkpoints fixed defects or refined UX outside the
+transaction-requirement table above — a startup/build concern, a
+cross-screen Presentation primitive, and a New Transaction screen UX
+refinement — not new transaction requirements. Recorded here for the
+same implementation → test → validation → commit traceability.
 
 | Checkpoint | Implementation | Tests | Native validation | Commit |
 |---|---|---|---|---|
 | Release APK Startup Fix | `package.json` (`expo-file-system` direct dependency), `app/_layout.tsx` (`FontGate` error/retry) | None automated (native-module concern outside `jest-expo`) | Fresh release build boots to Home; session persists; Add Expense/Income confirmed | `31b0582` |
 | Form modal keyboard dismissal | `src/ui/FormModal.tsx`, migrated into `app/(tabs)/budgets.tsx`, `app/(tabs)/more/accounts.tsx`, `app/(tabs)/more/recurring.tsx`, `app/(tabs)/more/goals.tsx` | `src/ui/FormModal.test.tsx` (5 tests) | All 6 migrated modals confirmed on release APK: real keyboard focus, typed input, real saves; `SelectModal` confirmed unaffected | `1f3a4f6` |
 | Auth/data startup race | `src/data/AuthContext.tsx` (dual-signal readiness gate) | `src/data/AuthContext.test.tsx` (4 tests, both signal orderings) | 3/3 cold relaunches on release APK show correct data immediately | `1f3a4f6` |
+| Transaction Entry — collapsible category selector | `app/transaction/new.tsx` (`categoriesExpanded` state; `visibleCategories = categoriesExpanded ? relevantCategories : relevantCategories.slice(0, 3)`; toggle independent of `selectCategory`) | `src/__tests__/transaction/new.test.tsx` (5 new tests: default-collapse, expand/collapse, selection-independence both states, no-toggle-when-≤3) | Real device (SM_E066B): collapsed/expand/collapse, selection while collapsed and while expanded, Income confirmed, Transfer confirmed unaffected; ≤3-category branch verified via Jest since both real datasets exceed 3 | Not yet committed |
+| Transaction Entry — bottom-docked numeric keypad | `app/transaction/new.tsx` (keypad `View` moved from inside the `ScrollView` to a fixed sibling below it; plain flexbox, no absolute positioning) | No new tests (layout-only change; existing suite unaffected) | Real device: keypad docked at bottom across Expense/Income/Transfer, expanded category list does not cover it, Note field's system keyboard opens/dismisses correctly, end-to-end save confirmed | Not yet committed |
 
 See [`architecture/startup-and-auth.md`](architecture/startup-and-auth.md)
 and

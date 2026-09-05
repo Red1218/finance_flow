@@ -21,7 +21,7 @@ checkpoint.
 | Integration tests | `npm run test:integration` | PASS (Core Transaction Loop suites, 20/20 tests, 3 suites, real Supabase project) — see the Account Authentication section below for `authCredentials.integration.test.ts`'s separate, email-quota-sensitive status |
 | Android release build | `./gradlew assembleRelease` | PASS — release APK built and installed on a real Android device for native QA (see the Account Authentication, Mobile UX Reliability Fixes, and Release APK Startup Fix sections below) |
 | Manual transfer UI flow | End-to-end on the Android emulator (Pixel_8a), not via the integration tests | PASS — see below |
-| Accessibility | Source inspection of the required controls | `accessibilityLabel`/`accessibilityRole` present on the date input (`app/transaction/new.tsx`, `app/transaction/[id].tsx`) and the transfer "View other side" control (`app/transaction/[id].tsx`). These are not currently exercised by a dedicated automated accessibility test suite — none exists in this project; the component tests query by visible text, not by accessibility label. |
+| Accessibility | Source inspection of the required controls | `accessibilityLabel`/`accessibilityRole` present on the date input (`app/transaction/new.tsx`, `app/transaction/[id].tsx`), the transfer "View other side" control (`app/transaction/[id].tsx`), and the category expand/collapse toggle (`app/transaction/new.tsx`: `accessibilityRole="button"`, `accessibilityLabel` of "Show all categories"/"Show fewer categories", `accessibilityState={{ expanded }}`). These are not currently exercised by a dedicated automated accessibility test suite — none exists in this project; the component tests query by visible text, not by accessibility label. |
 
 The unit/component and integration totals grew from the original freeze
 (92/92 unit, 12 suites; 17/17 integration, 2 suites) by three later
@@ -258,6 +258,56 @@ investigation for bypassing the shared editor and for incorrectly gating
 category budgets on the overall budget's existence — neither behavior is
 present in the verified implementation. See [`status.md`](status.md) for
 the full investigation record.
+
+## Transaction Entry UX — validation
+
+Covers both combined UX changes to `app/transaction/new.tsx`: the
+collapsible category selector and the bottom-docked numeric keypad.
+
+| Check | Command | Result |
+|---|---|---|
+| TypeScript | `npx tsc --noEmit` | PASS — 0 errors |
+| ESLint | `npx expo lint` | PASS — exit 0 |
+| Unit / component tests | `npm test -- --roots app src` | PASS — 153/153 tests, 21 suites (148 baseline + 5 new in `src/__tests__/transaction/new.test.tsx`) |
+| Android release build | `./gradlew assembleRelease` | PASS |
+
+**Live-device QA**, on the same real Android device (SM_E066B) used for
+Budgets:
+
+1. Collapsed default: exactly the first 3 categories shown, ordering
+   unchanged, "Show all ↓" control present.
+2. Expand: all categories shown (19 for Expense, 10 for Income on this
+   project's real data), control becomes "Show less ↑".
+3. Collapse: back to the first 3, control back to "Show all ↓".
+4. Selecting a category while collapsed, and while expanded, both leave
+   the expand/collapse state untouched in either direction — the
+   regression the toggle was built to avoid.
+5. Income mode: same collapse/expand behavior, independent category set.
+6. Transfer mode: no category selector at all, confirmed unaffected.
+7. Keypad stays visually docked at the bottom of the screen across all
+   of the above, including with the category list fully expanded — the
+   expanded list scrolls independently above it and never covers it.
+8. Amount entry through the docked keypad works correctly.
+9. The Note field's system keyboard opens and dismisses correctly; the
+   custom keypad yields the space to it while typing (the same visual
+   outcome as before this change, when the keypad simply scrolled out of
+   view above the focused field instead).
+10. End-to-end save verified: a real Entertainment expense (₹34) was
+    saved and confirmed reflected in the Ledger and the Home budget
+    totals afterward — the layout change did not affect the save path.
+
+The ≤3-category branch (toggle omitted, all categories shown) has no
+real dataset to exercise on this device, since both Expense and Income
+currently have more than 3 categories — it was verified deterministically
+by the Jest suite instead, on the same code path
+(`relevantCategories.length > 3`).
+
+A small-screen-plus-system-keyboard interaction was observed during this
+QA: on very little remaining vertical space, the fixed-height keypad can
+be pushed below the visible area while the Note field's keyboard is up.
+This reproduces the same outcome the screen already had before this
+change (the keypad not being visible while typing a note) and is not a
+Transaction Entry regression.
 
 ## Known risks
 

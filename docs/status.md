@@ -224,3 +224,58 @@ Not yet committed — verified on the working tree pending a focused commit
 (see this feature's own approval record for scope: excludes the unrelated
 icon-rebrand and `app/transaction/new.tsx` changes also present in the
 working tree).
+
+## Transaction Entry UX Refinement
+
+- **Implementation:** Approved & Frozen — 2026-09-05
+
+Two combined Presentation-layer UX changes to `app/transaction/new.tsx`,
+the New Transaction screen. This is a UX refinement to that one screen,
+not a re-freeze of the transaction feature as a whole — the Core
+Transaction Loop's create/edit/archive/transfer behavior, RPCs, and RLS
+are unchanged.
+
+1. **Collapsible category selector.** The category chip list now shows
+   only the first 3 categories by default (all of them if fewer than 3
+   exist, in which case the toggle is omitted entirely), with an
+   independent "Show all ↓" / "Show less ↑" control. Selecting a category
+   no longer collapses the list — expansion state and selection state are
+   fully decoupled, replacing the previous behavior where the whole chip
+   list was hidden until tapped open and auto-collapsed on selection.
+   Expense and Income use the same logic; Transfer still has no category
+   selector at all. Expansion state is plain component state, reset to
+   collapsed whenever the screen mounts or the Expense/Income/Transfer
+   kind changes — not persisted, since no preference mechanism for this
+   exists in the app.
+2. **Bottom-docked numeric keypad.** The keypad `View` moved from being
+   an item inside the screen's `ScrollView` to a fixed sibling below it,
+   docked at the bottom of the layout via plain flexbox (`ScrollView`
+   `flex: 1` alongside the keypad's own content-sized height) — no
+   `position: absolute` and no hardcoded screen-height math. Category,
+   Date, Note, and Account now scroll independently above the keypad,
+   which remains visible regardless of scroll position or category
+   expansion. The existing Android `windowSoftInputMode="adjustResize"`
+   handling and `SafeAreaView` bottom-edge inset are unchanged and
+   continue to apply.
+
+No Domain, Application, Infrastructure, Supabase, or authentication
+changes were made. No new dependency was introduced.
+
+**Validation:** TypeScript and ESLint clean, 153/153 unit/component
+tests (148 baseline + 5 new, covering default-collapse, expand/collapse,
+selection-independence in both states, and the ≤3-category no-toggle
+case), `./gradlew assembleRelease` clean. Live-device QA on the same real
+Android device (SM_E066B) used for the Budgets checkpoint: collapsed
+default, expand, collapse, selection while collapsed and while expanded,
+Income, Transfer (no category section, keypad still docked), scrolling,
+the Note field's system keyboard opening and dismissing correctly, and an
+end-to-end save (a real Entertainment expense) confirmed reflected in the
+Ledger and budget totals afterward. The ≤3-category branch has no real
+dataset to exercise on this device (both Expense and Income exceed 3
+categories) and was verified via the Jest suite instead, on the same code
+path. See [`testing.md`](testing.md) for full detail and
+[`traceability.md`](traceability.md) for the requirement mapping.
+
+Not yet committed — verified on the working tree pending a focused commit,
+kept separate from the unrelated icon-rebrand changes also present in the
+working tree.
