@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useGoals } from '../../../src/hooks/useGoals';
+import { usePreferences } from '../../../src/hooks/usePreferences';
 import { createGoal, contributeToGoal, setGoalPaused } from '../../../src/data/repositories/goals';
-import { toNumber, formatINR } from '../../../src/domain/money';
+import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { budgetProgress } from '../../../src/domain/budget';
 import { Bar, Button, Input, K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
@@ -11,6 +12,8 @@ import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
 export default function Goals() {
   const goals = useGoals();
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const [newOpen, setNewOpen] = useState(false);
   const [name, setName] = useState('');
@@ -78,7 +81,7 @@ export default function Goals() {
 
         <View style={styles.summary}>
           <K>Put away this month</K>
-          <Text style={styles.summaryAmount}>{formatINR(totalMonthlyTarget)}</Text>
+          <Text style={styles.summaryAmount}>{formatCurrency(totalMonthlyTarget, currencyCode)}</Text>
         </View>
 
         <View style={styles.list}>
@@ -94,13 +97,13 @@ export default function Goals() {
                     <K>{p.pct}%</K>
                   </View>
                   <View style={styles.goalAmountRow}>
-                    <Text style={styles.goalAmount}>{formatINR(toNumber(g.saved_amount))}</Text>
-                    <Muted> of {formatINR(toNumber(g.target_amount))}</Muted>
+                    <Text style={styles.goalAmount}>{formatCurrency(toNumber(g.saved_amount), currencyCode)}</Text>
+                    <Muted> of {formatCurrency(toNumber(g.target_amount), currencyCode)}</Muted>
                   </View>
                   <Bar pct={p.pct} height={8} color={p.isOver ? colors.accent2 : colors.accent} />
                   <View style={styles.goalFooter}>
                     <Muted style={{ fontSize: 12 }}>
-                      {g.is_paused ? 'Paused.' : g.monthly_target ? `${formatINR(toNumber(g.monthly_target))} a month keeps this on pace.` : ''}
+                      {g.is_paused ? 'Paused.' : g.monthly_target ? `${formatCurrency(toNumber(g.monthly_target), currencyCode)} a month keeps this on pace.` : ''}
                     </Muted>
                     <Pressable onPress={() => setGoalPaused(g.id, !g.is_paused).then(goals.refetch)}>
                       <Text style={styles.link}>{g.is_paused ? 'Resume' : 'Pause'}</Text>

@@ -3,8 +3,9 @@ import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAccounts } from '../../../src/hooks/useAccounts';
 import { useTransactions } from '../../../src/hooks/useTransactions';
+import { usePreferences } from '../../../src/hooks/usePreferences';
 import { createAccount } from '../../../src/data/repositories/accounts';
-import { toNumber, formatINR } from '../../../src/domain/money';
+import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { transactionSign } from '../../../src/data/repositories/transactions';
 import { monthRange } from '../../../src/domain/dateRange';
 import type { AccountType } from '../../../src/data/types';
@@ -27,6 +28,8 @@ export default function Accounts() {
   const accounts = useAccounts();
   const allTx = useTransactions({});
   const monthTx = useTransactions({ from, to });
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const [addOpen, setAddOpen] = useState(false);
   const [name, setName] = useState('');
@@ -97,9 +100,9 @@ export default function Accounts() {
 
         <View style={styles.netWorth}>
           <K>Everything together</K>
-          <Text style={styles.netAmount}>{formatINR(data.netWorth)}</Text>
+          <Text style={styles.netAmount}>{formatCurrency(data.netWorth, currencyCode)}</Text>
           <Muted>
-            {data.monthChange >= 0 ? 'Up' : 'Down'} {formatINR(Math.abs(data.monthChange))} this month · {(accounts.data ?? []).length} accounts
+            {data.monthChange >= 0 ? 'Up' : 'Down'} {formatCurrency(Math.abs(data.monthChange), currencyCode)} this month · {(accounts.data ?? []).length} accounts
           </Muted>
         </View>
 
@@ -117,7 +120,7 @@ export default function Accounts() {
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.balance, balance < 0 && { color: colors.accent2_700 }]}>{formatINR(balance)}</Text>
+                    <Text style={[styles.balance, balance < 0 && { color: colors.accent2_700 }]}>{formatCurrency(balance, currencyCode)}</Text>
                     {a.mask ? <Muted style={{ fontSize: 11.5, marginTop: 2 }}>••{a.mask}</Muted> : null}
                   </View>
                 </View>

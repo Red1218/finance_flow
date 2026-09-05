@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDashboard } from '../../src/hooks/useDashboard';
-import { formatINR } from '../../src/domain/money';
+import { formatCurrency } from '../../src/domain/money';
 import { Body, K, Muted, Num } from '../../src/ui/primitives';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { colors, fonts, shadow, spacing } from '../../src/theme/tokens';
@@ -32,12 +32,12 @@ export default function Home() {
         <View style={styles.section}>
           <K>Left to spend</K>
           <View style={styles.leftRow}>
-            <Num style={styles.leftAmount}>{formatINR(d.leftToSpend)}</Num>
-            <Muted>of {formatINR(d.limit)}</Muted>
+            <Num style={styles.leftAmount}>{formatCurrency(d.leftToSpend, d.currencyCode)}</Num>
+            <Muted>of {formatCurrency(d.limit, d.currencyCode)}</Muted>
           </View>
           <Body style={styles.coach}>
             {d.hasBudget
-              ? `${d.daysLeft} days left. Spend about ${formatINR(d.dailyAllowance)} a day and you land on budget.`
+              ? `${d.daysLeft} days left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
               : 'No budget set for this month yet — set one from the Budgets tab.'}
           </Body>
         </View>
@@ -52,7 +52,7 @@ export default function Home() {
           </View>
           <View style={styles.rowBetween}>
             <K>Last 7 days</K>
-            <K style={styles.num}>{formatINR(d.last7Total)}</K>
+            <K style={styles.num}>{formatCurrency(d.last7Total, d.currencyCode)}</K>
           </View>
         </View>
 

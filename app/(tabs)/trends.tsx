@@ -5,7 +5,8 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useBudgets } from '../../src/hooks/useBudgets';
 import { useCategories } from '../../src/hooks/useCategories';
-import { toNumber, formatINR } from '../../src/domain/money';
+import { usePreferences } from '../../src/hooks/usePreferences';
+import { toNumber, formatCurrency } from '../../src/domain/money';
 import { monthlyExpenseTotals, findCategoryWatch } from '../../src/domain/trends';
 import { monthProgress } from '../../src/domain/dashboard';
 import { Body, K, Muted, ScreenHeader, Tag } from '../../src/ui/primitives';
@@ -22,6 +23,8 @@ export default function Trends() {
   const tx = useTransactions({ from: rangeStart.toISOString() });
   const budgets = useBudgets();
   const categories = useCategories();
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const loading = tx.loading || budgets.loading || categories.loading;
   const refetch = () => {
@@ -99,7 +102,7 @@ export default function Trends() {
               <Text style={styles.bold}>
                 {data.watch.categoryName} is running {data.watch.pctAboveAverage}% above your recent average
               </Text>{' '}
-              — {formatINR(data.watch.currentTotal)} this month vs an average of {formatINR(data.watch.priorAverage)}.
+              — {formatCurrency(data.watch.currentTotal, currencyCode)} this month vs an average of {formatCurrency(data.watch.priorAverage, currencyCode)}.
             </Body>
           </View>
         ) : null}
@@ -113,7 +116,7 @@ export default function Trends() {
             <Body style={styles.insightBody}>
               You&rsquo;re{' '}
               <Text style={styles.bold}>
-                {formatINR(Math.abs(data.thisMonth - (data.months[data.months.length - 2]?.total ?? 0)))} {data.monthOverMonth <= 0 ? 'under' : 'over'}
+                {formatCurrency(Math.abs(data.thisMonth - (data.months[data.months.length - 2]?.total ?? 0)), currencyCode)} {data.monthOverMonth <= 0 ? 'under' : 'over'}
               </Text>{' '}
               where you were last month ({data.monthOverMonth > 0 ? '+' : ''}
               {data.monthOverMonth}%).
@@ -129,11 +132,11 @@ export default function Trends() {
             <K>End of month</K>
           </View>
           <Body style={styles.insightBody}>
-            At today&rsquo;s pace, this month closes around <Text style={styles.bold}>{formatINR(data.pace)}</Text>
+            At today&rsquo;s pace, this month closes around <Text style={styles.bold}>{formatCurrency(data.pace, currencyCode)}</Text>
             {data.budgetLimit
               ? data.pace <= data.budgetLimit
-                ? ` — ${formatINR(data.budgetLimit - data.pace)} under budget.`
-                : ` — ${formatINR(data.pace - data.budgetLimit)} over budget.`
+                ? ` — ${formatCurrency(data.budgetLimit - data.pace, currencyCode)} under budget.`
+                : ` — ${formatCurrency(data.pace - data.budgetLimit, currencyCode)} over budget.`
               : '.'}
           </Body>
         </View>

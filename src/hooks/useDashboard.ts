@@ -3,6 +3,7 @@ import { useTransactions } from './useTransactions';
 import { useBudgets } from './useBudgets';
 import { useCategories } from './useCategories';
 import { useAccounts } from './useAccounts';
+import { usePreferences } from './usePreferences';
 import { toNumber } from '../domain/money';
 import { budgetProgress } from '../domain/budget';
 import { monthProgress, dailyAllowance, last7DaysTotals } from '../domain/dashboard';
@@ -17,6 +18,8 @@ export function useDashboard(recentLimit = 6) {
   const budgets = useBudgets();
   const categories = useCategories();
   const accounts = useAccounts();
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const loading = tx.loading || budgets.loading || categories.loading || accounts.loading;
   const error = tx.error || budgets.error || categories.error || accounts.error;
@@ -47,9 +50,10 @@ export function useDashboard(recentLimit = 6) {
     const last7Total = bars.reduce((a, b) => a + b, 0);
     const maxBar = Math.max(1, ...bars);
 
-    const recent = rows.slice(0, recentLimit).map((t) => buildTransactionRowVM(t, categoriesById, accountsById));
+    const recent = rows.slice(0, recentLimit).map((t) => buildTransactionRowVM(t, categoriesById, accountsById, currencyCode));
 
     return {
+      currencyCode,
       hasBudget: !!overallBudget,
       leftToSpend: progress.remaining,
       limit,
@@ -66,7 +70,7 @@ export function useDashboard(recentLimit = 6) {
       recent,
       totalCount: rows.length,
     };
-  }, [tx.data, budgets.data, categories.data, accounts.data, today, recentLimit]);
+  }, [tx.data, budgets.data, categories.data, accounts.data, today, recentLimit, currencyCode]);
 
   const refetch = () => {
     tx.refetch();

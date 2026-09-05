@@ -18,11 +18,13 @@ or empty date disables Save.
 
 ## Precision-aware amount formatting and input
 
-- `formatMoney(amount, precision, opts)` (`src/domain/money.ts`) formats
-  an amount to the user's `preferences.decimal_precision`, with an
-  optional leading `+`/`-` sign. The pre-existing `formatINR` (whole-rupee,
-  used by Dashboard/Budgets/Goals aggregate displays) is untouched —
-  those displays keep their existing whole-rupee presentation.
+- `formatMoney(amount, currencyCode, precision, opts)` (`src/domain/money.ts`)
+  formats an amount to the user's `preferences.decimal_precision`, with an
+  optional leading `+`/`-` sign. `formatCurrency(amount, currencyCode, opts)`
+  (renamed from the INR-only `formatINR`, used by Dashboard/Budgets/Goals
+  aggregate displays) keeps its existing whole-unit presentation but now
+  formats in whichever currency `preferences.currency_code` holds, via the
+  `CURRENCIES`/`getCurrencyMeta` table in the same file.
 - The Add Transaction keypad (`app/transaction/new.tsx`, `tapKey`) guards
   input against exceeding the user's configured precision: once
   `precision` digits after the decimal point are entered, further digits

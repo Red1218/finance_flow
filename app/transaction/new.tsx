@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAccounts } from '../../src/hooks/useAccounts';
 import { useCategories } from '../../src/hooks/useCategories';
 import { usePreferences } from '../../src/hooks/usePreferences';
+import { getCurrencyMeta } from '../../src/domain/money';
 import { createTransaction, createTransfer } from '../../src/application/transactions';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
@@ -39,6 +40,7 @@ export default function NewTransaction() {
   const categories = useCategories(undefined);
   const prefs = usePreferences();
   const precision = prefs.data?.decimal_precision ?? 2;
+  const currency = getCurrencyMeta(prefs.data?.currency_code);
 
   const [kind, setKind] = useState<Kind>('Expense');
   const [amount, setAmount] = useState('0');
@@ -164,7 +166,7 @@ export default function NewTransaction() {
 
         <View style={styles.amountBlock}>
           <K>Amount</K>
-          <Text style={styles.amount}>₹{numeric ? numeric.toLocaleString('en-IN') : amount}</Text>
+          <Text style={styles.amount}>{currency.symbol}{numeric ? numeric.toLocaleString(currency.locale) : amount}</Text>
         </View>
 
         {kind !== 'Transfer' ? (

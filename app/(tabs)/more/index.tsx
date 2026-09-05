@@ -9,7 +9,7 @@ import { useCategories } from '../../../src/hooks/useCategories';
 import { useBudgets } from '../../../src/hooks/useBudgets';
 import { usePreferences } from '../../../src/hooks/usePreferences';
 import { transactionSign } from '../../../src/data/repositories/transactions';
-import { toNumber, formatINR } from '../../../src/domain/money';
+import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
 type Href = '/(tabs)/more/accounts' | '/(tabs)/more/recurring' | '/(tabs)/more/goals' | '/(tabs)/more/categories' | '/(tabs)/more/settings';
@@ -34,6 +34,7 @@ export default function MoreHub() {
   const categories = useCategories('EXPENSE');
   const budgets = useBudgets();
   const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const subtitles = useMemo(() => {
     const accountList = accounts.data ?? [];
@@ -57,15 +58,15 @@ export default function MoreHub() {
     const budgetedCategoryIds = new Set((budgets.data ?? []).filter((b) => b.category_id).map((b) => b.category_id));
 
     return {
-      accounts: `${accountList.length} linked · ${formatINR(netWorth)} together`,
+      accounts: `${accountList.length} linked · ${formatCurrency(netWorth, currencyCode)} together`,
       recurring: nextDue
-        ? `${formatINR(monthlyTotal)} a month · ${nextDue.name} ${dueInDays(nextDue.next_due_date, today)}`
-        : `${formatINR(monthlyTotal)} a month`,
-      goals: `${activeGoals.length} running · ${formatINR(monthlyTarget)} put away this month`,
+        ? `${formatCurrency(monthlyTotal, currencyCode)} a month · ${nextDue.name} ${dueInDays(nextDue.next_due_date, today)}`
+        : `${formatCurrency(monthlyTotal, currencyCode)} a month`,
+      goals: `${activeGoals.length} running · ${formatCurrency(monthlyTarget, currencyCode)} put away this month`,
       categories: `${categoryList.length} categories · ${budgetedCategoryIds.size} with a budget`,
-      settings: `${prefs.data?.currency_code ?? 'INR'} · Week starts ${prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}`,
+      settings: `${currencyCode} · Week starts ${prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}`,
     };
-  }, [accounts.data, allTx.data, recurring.data, goals.data, categories.data, budgets.data, prefs.data, today]);
+  }, [accounts.data, allTx.data, recurring.data, goals.data, categories.data, budgets.data, prefs.data, today, currencyCode]);
 
   const items: { label: string; href: Href; subtitle: string }[] = [
     { label: 'Accounts', href: '/(tabs)/more/accounts', subtitle: subtitles.accounts },

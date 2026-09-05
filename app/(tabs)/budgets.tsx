@@ -6,8 +6,9 @@ import Svg, { Circle } from 'react-native-svg';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useBudgets } from '../../src/hooks/useBudgets';
 import { useCategories } from '../../src/hooks/useCategories';
+import { usePreferences } from '../../src/hooks/usePreferences';
 import { setBudget } from '../../src/data/repositories/budgets';
-import { toNumber, formatINR } from '../../src/domain/money';
+import { toNumber, formatCurrency } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthRange } from '../../src/domain/dateRange';
 import { Bar, Button, Input, K, Muted, Num, ScreenHeader, Tag } from '../../src/ui/primitives';
@@ -23,6 +24,8 @@ export default function Budgets() {
   const tx = useTransactions({ from, to });
   const budgets = useBudgets();
   const categories = useCategories('EXPENSE');
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const [addOpen, setAddOpen] = useState(false);
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
@@ -149,9 +152,9 @@ export default function Budgets() {
               </View>
               <View style={{ flex: 1 }}>
                 <Muted>Left across {data.rows.length + 1} budgets</Muted>
-                <Num style={styles.leftAmount}>{formatINR(data.overallProgress.remaining)}</Num>
+                <Num style={styles.leftAmount}>{formatCurrency(data.overallProgress.remaining, currencyCode)}</Num>
                 <Muted>
-                  {formatINR(data.overallProgress.spent)} spent of {formatINR(data.overallProgress.limit)}
+                  {formatCurrency(data.overallProgress.spent, currencyCode)} spent of {formatCurrency(data.overallProgress.limit, currencyCode)}
                 </Muted>
               </View>
             </>
@@ -187,11 +190,11 @@ export default function Budgets() {
               <View style={styles.rowTop}>
                 <Text style={styles.rowName}>{r.name}</Text>
                 <Text style={[styles.rowStatus, r.isOver && { color: colors.accent2_700 }]}>
-                  {r.isOver ? `${formatINR(r.spent - r.limit)} over` : `${formatINR(r.remaining)} left`}
+                  {r.isOver ? `${formatCurrency(r.spent - r.limit, currencyCode)} over` : `${formatCurrency(r.remaining, currencyCode)} left`}
                 </Text>
               </View>
               <Muted style={{ fontSize: 12, marginBottom: 7 }}>
-                {formatINR(r.spent)} of {formatINR(r.limit)} spent
+                {formatCurrency(r.spent, currencyCode)} of {formatCurrency(r.limit, currencyCode)} spent
               </Muted>
               <Bar pct={r.pct} color={r.isOver ? colors.accent2 : colors.accent} />
             </Pressable>

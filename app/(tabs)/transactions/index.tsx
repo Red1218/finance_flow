@@ -5,10 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTransactions } from '../../../src/hooks/useTransactions';
 import { useCategories } from '../../../src/hooks/useCategories';
 import { useAccounts } from '../../../src/hooks/useAccounts';
+import { usePreferences } from '../../../src/hooks/usePreferences';
 import { groupByDay } from '../../../src/domain/dashboard';
 import { monthRange } from '../../../src/domain/dateRange';
 import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
-import { formatINR, toNumber } from '../../../src/domain/money';
+import { formatCurrency, toNumber } from '../../../src/domain/money';
 import { Chip, Input, K, Muted, ScreenHeader } from '../../../src/ui/primitives';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
 import { colors, shadow, spacing } from '../../../src/theme/tokens';
@@ -26,6 +27,8 @@ export default function TransactionsList() {
   const tx = useTransactions({ from, to, search: search || undefined });
   const categories = useCategories();
   const accounts = useAccounts();
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'short' });
 
@@ -45,16 +48,16 @@ export default function TransactionsList() {
 
     const grouped = groupByDay(filtered, today).map((g) => ({
       day: g.day,
-      rows: g.rows.map((r) => buildTransactionRowVM(r, categoriesById, accountsById)),
+      rows: g.rows.map((r) => buildTransactionRowVM(r, categoriesById, accountsById, currencyCode)),
     }));
 
     return { groups: grouped, monthOut: out };
-  }, [tx.data, categories.data, accounts.data, filter, today]);
+  }, [tx.data, categories.data, accounts.data, filter, today, currencyCode]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <ScreenHeader title="Transactions" right={<K>{monthLabel} · {formatINR(monthOut)} out</K>} />
+        <ScreenHeader title="Transactions" right={<K>{monthLabel} · {formatCurrency(monthOut, currencyCode)} out</K>} />
         <Input
           placeholder="Search description"
           value={search}

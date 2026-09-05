@@ -4,11 +4,10 @@ import { useRouter } from 'expo-router';
 import { usePreferences } from '../../../src/hooks/usePreferences';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
+import { CURRENCIES } from '../../../src/domain/money';
 import { K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
-
-const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'];
 
 export default function Settings() {
   const router = useRouter();
@@ -124,7 +123,7 @@ export default function Settings() {
       <SelectModal
         visible={currencyOpen}
         title="Currency"
-        options={CURRENCIES.map((c) => ({ id: c, label: c }))}
+        options={CURRENCIES.map((c) => ({ id: c.code, label: c.label }))}
         onSelect={(opt) => setPref({ currency_code: opt.id })}
         onClose={() => setCurrencyOpen(false)}
       />

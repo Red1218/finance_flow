@@ -42,6 +42,7 @@ export default function TransactionDetail() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgetLimit, setBudgetLimit] = useState<number | null>(null);
   const [precision, setPrecision] = useState(2);
+  const [currencyCode, setCurrencyCode] = useState('INR');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +73,7 @@ export default function TransactionDetail() {
       setCategories(cats);
       setAccounts(accs);
       setPrecision(prefs?.decimal_precision ?? 2);
+      setCurrencyCode(prefs?.currency_code ?? 'INR');
       const catBudget = t?.category_id ? budgets.find((b) => b.category_id === t.category_id) : undefined;
       setBudgetLimit(catBudget ? toNumber(catBudget.amount) : null);
 
@@ -127,7 +129,7 @@ export default function TransactionDetail() {
 
   const isTransfer = tx.type === 'TRANSFER_OUT' || tx.type === 'TRANSFER_IN';
   const canRecategorise = tx.type === 'EXPENSE' || tx.type === 'INCOME';
-  const vm = buildTransactionDetailVM(tx, categoriesById, accountsById, budgetLimit, precision, otherLeg ?? undefined);
+  const vm = buildTransactionDetailVM(tx, categoriesById, accountsById, budgetLimit, precision, currencyCode, otherLeg ?? undefined);
 
   const saveRegularEdit = async () => {
     setSaving(true);

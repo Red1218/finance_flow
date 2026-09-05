@@ -3,9 +3,10 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { useCategories } from '../../../src/hooks/useCategories';
 import { useBudgets } from '../../../src/hooks/useBudgets';
 import { useTransactions } from '../../../src/hooks/useTransactions';
+import { usePreferences } from '../../../src/hooks/usePreferences';
 import { createCategory, deleteCategory } from '../../../src/data/repositories/categories';
 import { setBudget } from '../../../src/data/repositories/budgets';
-import { toNumber, formatINR } from '../../../src/domain/money';
+import { toNumber, formatCurrency, getCurrencyMeta } from '../../../src/domain/money';
 import { Button, IconButton, Input, K, Muted } from '../../../src/ui/primitives';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
@@ -23,6 +24,9 @@ export default function Categories() {
   const categories = useCategories('EXPENSE');
   const budgets = useBudgets();
   const tx = useTransactions({});
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
+  const currencySymbol = getCurrencyMeta(currencyCode).symbol;
 
   const loading = categories.loading || budgets.loading || tx.loading;
   const refetch = () => {
@@ -52,14 +56,14 @@ export default function Categories() {
         id: c.id,
         name: c.name,
         hasBudget: limitAmount > 0,
-        meta: `${limitAmount > 0 ? `${formatINR(limitAmount)} budget` : 'No budget set'} · ${txCount} transaction${txCount === 1 ? '' : 's'}`,
+        meta: `${limitAmount > 0 ? `${formatCurrency(limitAmount, currencyCode)} budget` : 'No budget set'} · ${txCount} transaction${txCount === 1 ? '' : 's'}`,
         warn:
           txCount > 0
             ? `${txCount} transaction${txCount === 1 ? '' : 's'} will move to Uncategorised${limitAmount > 0 ? ', and its budget is removed.' : '.'}`
             : 'Nothing is filed here yet — safe to remove.',
       };
     });
-  }, [categories.data, budgets.data, tx.data]);
+  }, [categories.data, budgets.data, tx.data, currencyCode]);
 
   const addCategory = async () => {
     const trimmed = name.trim();
@@ -103,7 +107,7 @@ export default function Categories() {
           <View style={styles.addRow}>
             <Input placeholder="Name, e.g. Pets" value={name} onChangeText={setName} style={{ flex: 1 }} />
             <Input
-              placeholder="₹ budget"
+              placeholder={`${currencySymbol} budget`}
               value={limit}
               onChangeText={(v) => setLimit(v.replace(/[^0-9]/g, ''))}
               keyboardType="numeric"

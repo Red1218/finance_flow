@@ -3,8 +3,9 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View }
 import { useRecurring } from '../../../src/hooks/useRecurring';
 import { useCategories } from '../../../src/hooks/useCategories';
 import { useAccounts } from '../../../src/hooks/useAccounts';
+import { usePreferences } from '../../../src/hooks/usePreferences';
 import { createRecurring, setRecurringPaused } from '../../../src/data/repositories/recurring';
-import { toNumber, formatINR } from '../../../src/domain/money';
+import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { Button, Input, K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
 import { FormModal } from '../../../src/ui/FormModal';
@@ -26,6 +27,8 @@ export default function Recurring() {
   const recurring = useRecurring();
   const categories = useCategories();
   const accounts = useAccounts();
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const [addOpen, setAddOpen] = useState(false);
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
@@ -94,8 +97,8 @@ export default function Recurring() {
         <View style={styles.summary}>
           <K>Committed every month</K>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryAmount}>{formatINR(data.monthlyTotal)}</Text>
-            <Muted>{formatINR(data.monthlyTotal * 12)} a year</Muted>
+            <Text style={styles.summaryAmount}>{formatCurrency(data.monthlyTotal, currencyCode)}</Text>
+            <Muted>{formatCurrency(data.monthlyTotal * 12, currencyCode)} a year</Muted>
           </View>
         </View>
 
@@ -114,7 +117,7 @@ export default function Recurring() {
                     {r.account ? ` · ${r.account.name}` : ''}
                   </Muted>
                 </View>
-                <Text style={styles.amount}>{formatINR(toNumber(r.amount))}</Text>
+                <Text style={styles.amount}>{formatCurrency(toNumber(r.amount), currencyCode)}</Text>
                 <Switch
                   value={!r.is_paused}
                   onValueChange={(v) => setRecurringPaused(r.id, !v).then(refetch)}

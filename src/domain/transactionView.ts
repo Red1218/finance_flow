@@ -1,7 +1,7 @@
 // Presentation-layer mapping code: turns Domain Transaction/TransferPair data
 // (as returned by the Application layer) into display-ready ViewModels.
 // Application never imports anything from this file.
-import { toNumber, formatINR, formatMoney } from './money';
+import { toNumber, formatCurrency, formatMoney } from './money';
 import type { Transaction, Category, Account } from '../data/types';
 import { transactionSign } from '../data/repositories/transactions';
 
@@ -17,7 +17,8 @@ export interface TransactionRowVM {
 export function buildTransactionRowVM(
   tx: Transaction,
   categoriesById: Map<string, Category>,
-  accountsById: Map<string, Account>
+  accountsById: Map<string, Account>,
+  currencyCode: string
 ): TransactionRowVM {
   const category = tx.category_id ? categoriesById.get(tx.category_id) : undefined;
   const account = accountsById.get(tx.account_id);
@@ -36,7 +37,7 @@ export function buildTransactionRowVM(
     id: tx.id,
     title,
     subtitle,
-    amountLabel: formatINR(amount * sign, { sign: true }),
+    amountLabel: formatCurrency(amount * sign, currencyCode, { sign: true }),
     isIncome: sign > 0,
     occurred_at: tx.occurred_at,
   };
@@ -73,6 +74,7 @@ export function buildTransactionDetailVM(
   accountsById: Map<string, Account>,
   budgetLimit: number | null,
   precision: number,
+  currencyCode: string,
   pairOtherLeg?: Transaction
 ): TransactionDetailVM {
   const sign = transactionSign(tx.type);
@@ -105,7 +107,7 @@ export function buildTransactionDetailVM(
   return {
     id: tx.id,
     typeLabel,
-    amountLabel: formatMoney(amount * sign, precision, { sign: true }),
+    amountLabel: formatMoney(amount * sign, currencyCode, precision, { sign: true }),
     isIncome: sign > 0,
     dateLabel,
     title,
