@@ -1,17 +1,12 @@
 import { Tabs } from 'expo-router';
-import { colors, fonts } from '../../src/theme/tokens';
+import { TabBar } from '../../src/ui/TabBar';
 
 export default function TabsLayout() {
   return (
     <Tabs
+      tabBar={(props) => <TabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarIcon: () => null,
-        tabBarIconStyle: { width: 0, height: 0, margin: 0 },
-        tabBarActiveTintColor: colors.accent700,
-        tabBarInactiveTintColor: colors.neutral600,
-        tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.divider },
-        tabBarLabelStyle: { fontFamily: fonts.body, fontSize: 11 },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Home' }} />
