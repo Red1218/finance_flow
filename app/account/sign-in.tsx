@@ -39,13 +39,16 @@ export default function SignIn() {
       </View>
       <View style={styles.content}>
         <Heading style={styles.title}>Welcome back</Heading>
-        <Body style={styles.sub}>Signing in switches this device to your existing account.</Body>
+        <Body style={styles.sub}>Sign in to see your data on this device.</Body>
         <Input placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={styles.input} />
         <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={styles.input} />
         {error && <Text style={styles.error}>{error}</Text>}
         <Button title="Sign in" onPress={submit} loading={loading} block />
         <Pressable onPress={() => router.push('/account/forgot-password')} style={{ marginTop: spacing.s2 }}>
           <Text style={styles.link}>Forgot password?</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push('/account/create')} style={{ marginTop: spacing.s2 }}>
+          <Text style={styles.link}>Don&rsquo;t have an account? Create one</Text>
         </Pressable>
       </View>
     </SafeAreaView>
