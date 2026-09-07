@@ -13,12 +13,15 @@ import { formatCurrency, toNumber } from '../../../src/domain/money';
 import { Chip, Input, K, Muted, ScreenHeader } from '../../../src/ui/primitives';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
 import { colors, shadow, spacing } from '../../../src/theme/tokens';
+import { useAuth } from '../../../src/data/AuthContext';
+import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
 type Filter = 'All' | 'Expenses' | 'Income' | 'Transfers';
 const FILTERS: Filter[] = ['All', 'Expenses', 'Income', 'Transfers'];
 
 export default function TransactionsList() {
   const router = useRouter();
+  const { session } = useAuth();
   const [filter, setFilter] = useState<Filter>('All');
   const [search, setSearch] = useState('');
   const today = useMemo(() => new Date(), []);
@@ -53,6 +56,14 @@ export default function TransactionsList() {
 
     return { groups: grouped, monthOut: out };
   }, [tx.data, categories.data, accounts.data, filter, today, currencyCode]);
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <SignInPrompt message="Sign in to see your transactions." />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
