@@ -3,13 +3,11 @@
 // drkalfmlrfhohwznsenl — same one .env already points the app at). Not run
 // by `npm test` — run explicitly via `npm run test:integration`.
 //
-// Goes through the app's real auth path (ensureAnonymousSession) for the
-// "own transfer" tests, and a second, independently-authenticated client for
-// the cross-user tests. As documented in the Testing Foundation checkpoint,
-// each run signs in at least one (here, two) brand-new anonymous users —
-// unavoidable with only the public anon key available, no service_role key
-// used or introduced. All data rows this file creates are archived again
-// before the suite ends; only the auth user rows themselves persist.
+// Signs in as the shared test account (TEST_ACCOUNT_EMAIL/PASSWORD) for the
+// "own transfer" tests, and a second, independently-signed-in client
+// (TEST_ACCOUNT_2_EMAIL/PASSWORD) for the cross-user tests — see
+// testAuth.ts. All data rows this file creates are archived again before
+// the suite ends.
 //
 // Required-scenario -> test mapping (18 scenarios, 15 `it` blocks in this
 // file — 3 blocks each cover more than one scenario, documented below):
@@ -35,7 +33,7 @@
 //   18. existing RLS behavior remains intact            -> "leaves ordinary RLS-scoped reads on transactions intact"
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
-import { ensureAnonymousSession } from './auth';
+import { signInTestAccount, signInTestAccount2 } from './testAuth';
 import { createTransferPair, updateTransferPair, archiveTransferPair, getTransferPair } from './transactions';
 import { TransferPairCorruptError } from '../../domain/transactionRules';
 import { ArchivedAccountError } from '../../application/transactions/errors';
@@ -64,15 +62,15 @@ describe('transfer RPCs (integration)', () => {
   const createdGroupIds: string[] = [];
 
   beforeAll(async () => {
-    await ensureAnonymousSession();
+    await signInTestAccount();
     const { data: userRes } = await supabase.auth.getUser();
     const myUserId = userRes.user!.id;
     myAccountA = await insertAccount(supabase, myUserId, '__it_transfer_acc_a');
     myAccountB = await insertAccount(supabase, myUserId, '__it_transfer_acc_b');
 
     otherClient = makeClient();
-    const { data: otherAuth, error: otherAuthError } = await otherClient.auth.signInAnonymously();
-    if (otherAuthError) throw otherAuthError;
+    await signInTestAccount2(otherClient);
+    const { data: otherAuth } = await otherClient.auth.getUser();
     otherAccountId = await insertAccount(otherClient, otherAuth.user!.id, '__it_transfer_acc_other');
   }, 30000);
 

@@ -3,20 +3,12 @@
 // SUPABASE_URL/ANON_KEY in .env already point the app at). Not run by
 // `npm test` — run explicitly via `npm run test:integration`.
 //
-// This goes through the app's real auth path (ensureAnonymousSession, same
-// as app/_layout.tsx uses) rather than bypassing RLS, per the checkpoint's
-// "test authentication-dependent repository behavior using the
-// application's existing architecture" requirement. Consequence: since a
-// Jest/Node process has no persisted AsyncStorage session to reuse, EVERY
-// run of this file signs in as a brand-new anonymous user. That user
-// cannot be deleted with only the public anon key (no service_role key is
-// used or introduced here — deleting Supabase auth users requires the
-// admin API). All *data* this test creates (the category, and its budget
-// if any) is archived again before the suite ends, so the only residue of
-// running this file is one more row in auth.users — the same
-// architectural cost that made anonymous "sign out" unsafe to expose in
-// the app itself (see AUTH FINALIZATION checkpoint).
-import { ensureAnonymousSession } from './auth';
+// Signs in as the shared, pre-created integration-test account
+// (TEST_ACCOUNT_EMAIL/PASSWORD — see testAuth.ts) rather than creating a
+// fresh anonymous identity per run (anonymous auth no longer exists in
+// this app). All data this test creates (the category, and its budget if
+// any) is archived again before the suite ends.
+import { signInTestAccount } from './testAuth';
 import { createCategory, deleteCategory, listCategories } from './categories';
 import { setBudget } from './budgets';
 
@@ -25,7 +17,7 @@ describe('categories repository (integration)', () => {
   let createdId: string;
 
   beforeAll(async () => {
-    await ensureAnonymousSession();
+    await signInTestAccount();
   });
 
   afterAll(async () => {

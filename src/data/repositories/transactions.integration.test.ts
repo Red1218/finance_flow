@@ -10,16 +10,13 @@
 // resolving, and this test would fail. Not run by `npm test` — run
 // explicitly via `npm run test:integration`.
 //
-// Goes through the app's real auth path (ensureAnonymousSession), same as
-// the other integration tests in this directory. Creates one disposable
-// account, one disposable category, and one disposable transaction under a
-// fresh anonymous user; all are archived again before the suite ends, per
-// the same convention as categories.integration.test.ts and
-// transferRpcs.integration.test.ts — the only residue is the anonymous
-// auth.users row itself, which cannot be deleted with only the public
-// anon key.
+// Signs in as the shared test account (TEST_ACCOUNT_EMAIL/PASSWORD — see
+// testAuth.ts) rather than creating a fresh anonymous identity per run
+// (anonymous auth no longer exists in this app). Creates one disposable
+// account, one disposable category, and one disposable transaction; all are
+// archived again before the suite ends.
 import { supabase } from '../supabaseClient';
-import { ensureAnonymousSession } from './auth';
+import { signInTestAccount } from './testAuth';
 import { transactionRepository } from './transactions';
 
 describe('transactionRepository.update (integration)', () => {
@@ -28,7 +25,7 @@ describe('transactionRepository.update (integration)', () => {
   let txId: string;
 
   beforeAll(async () => {
-    await ensureAnonymousSession();
+    await signInTestAccount();
     const { data: userRes } = await supabase.auth.getUser();
     const userId = userRes.user!.id;
 

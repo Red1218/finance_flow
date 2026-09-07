@@ -1,9 +1,11 @@
-// Integration tests need the real EXPO_PUBLIC_SUPABASE_URL/ANON_KEY that
-// `expo start` normally injects via its own env loading — plain `jest` does
-// not do this. Parsed by hand (no dotenv dependency) since this project's
-// .env is a plain KEY=value file with no quoting/multiline values.
-// Intentionally only wired into jest.integration.config.js — unit tests
-// must never require real credentials to run.
+// Integration tests need the real EXPO_PUBLIC_SUPABASE_URL/ANON_KEY (that
+// `expo start` normally injects) plus TEST_ACCOUNT_EMAIL/PASSWORD and
+// TEST_ACCOUNT_2_EMAIL/PASSWORD (two real, pre-created, OTP-verified
+// accounts — see src/data/repositories/testAuth.ts) — plain `jest` does
+// none of this env injection. Parsed by hand (no dotenv dependency) since
+// this project's .env is a plain KEY=value file with no quoting/multiline
+// values. Intentionally only wired into jest.integration.config.js — unit
+// tests must never require real credentials to run.
 const fs = require('fs');
 const path = require('path');
 
