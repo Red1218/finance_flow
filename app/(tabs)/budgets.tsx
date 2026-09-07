@@ -15,9 +15,12 @@ import { Bar, Button, Input, K, Muted, Num, ScreenHeader, Tag } from '../../src/
 import { SelectModal } from '../../src/ui/SelectModal';
 import { FormModal } from '../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
+import { useAuth } from '../../src/data/AuthContext';
+import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
 export default function Budgets() {
   const router = useRouter();
+  const { session } = useAuth();
   const today = useMemo(() => new Date(), []);
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
@@ -111,6 +114,14 @@ export default function Budgets() {
 
   const [overallEditOpen, setOverallEditOpen] = useState(false);
   const [overallAmount, setOverallAmount] = useState('');
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <SignInPrompt message="Sign in to see your budgets." />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
