@@ -11,6 +11,8 @@ import { monthlyExpenseTotals, findCategoryWatch } from '../../src/domain/trends
 import { monthProgress } from '../../src/domain/dashboard';
 import { Body, K, Muted, ScreenHeader, Tag } from '../../src/ui/primitives';
 import { colors, spacing } from '../../src/theme/tokens';
+import { useAuth } from '../../src/data/AuthContext';
+import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
 const MONTHS_BACK = 6;
 const CHART_W = 320;
@@ -18,6 +20,7 @@ const CHART_H = 120;
 
 export default function Trends() {
   const today = useMemo(() => new Date(), []);
+  const { session } = useAuth();
   const rangeStart = useMemo(() => new Date(today.getFullYear(), today.getMonth() - (MONTHS_BACK - 1), 1), [today]);
 
   const tx = useTransactions({ from: rangeStart.toISOString() });
@@ -62,6 +65,14 @@ export default function Trends() {
 
     return { months, watch, thisMonth, monthOverMonth, pace, budgetLimit, linePath, areaPath, lastPoint };
   }, [tx.data, budgets.data, categories.data, today]);
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <SignInPrompt message="Sign in to see your trends." />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
