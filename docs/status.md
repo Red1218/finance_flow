@@ -279,3 +279,36 @@ path. See [`testing.md`](testing.md) for full detail and
 Not yet committed — verified on the working tree pending a focused commit,
 kept separate from the unrelated icon-rebrand changes also present in the
 working tree.
+
+## Email-Bound Data (Anonymous Auth Removal)
+
+- **Design:** Approved & Frozen — 2026-09-07
+- **Implementation:** Approved & Frozen — 2026-09-07
+
+Removes anonymous authentication entirely. No data is ever stored or read
+without a real, OTP-verified email account. The app shell (tab navigation)
+stays browsable when signed out — each screen shows a `SignInPrompt`
+instead of its real content, rather than a hard login wall — but nothing
+is read or written without a session.
+
+`AuthStatus` gains `'signedOut'` as a normal resting state. Fixed a real
+bug found during planning: the auth-state listener only marked itself
+"seen" for a truthy session, which would have left a signed-out user stuck
+on `'initializing'` forever now that "no session" is permanent rather than
+a transient pre-anonymous-bootstrap gap.
+
+Signup goes through a real `supabase.auth.signUp()` + OTP (`type:
+'signup'`) instead of the old anonymous-upgrade `updateUser()` +
+`type: 'email_change'` path — see
+[`authentication.md`](architecture/authentication.md)'s superseded notice.
+
+Existing anonymous `auth.users` rows (live-device QA sessions,
+integration-test artifacts) are left orphaned — no cleanup step.
+Integration tests sign in as a shared, pre-created real account instead of
+a fresh anonymous identity per run — no `service_role` key introduced.
+
+See [`docs/superpowers/specs/2026-09-07-email-bound-auth-design.md`](superpowers/specs/2026-09-07-email-bound-auth-design.md)
+for the full design and [`docs/superpowers/plans/2026-09-07-email-bound-auth.md`](superpowers/plans/2026-09-07-email-bound-auth.md)
+for the implementation plan.
+
+**Validation:** TypeScript compiler clean (no errors or warnings). ESLint found 1 error (unexpected dynamic env access in testAuth.ts, pre-existing and unrelated to this feature). Jest suite: 167 tests passed; 6 test suites failed due to missing Supabase environment variables (EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY), which is expected for integration tests and does not indicate a failure of this feature's implementation. Live on-device verification (sign up a fresh test account, confirm every screen shows real content, sign out, sign back in, and verify data persistence) is outstanding, pending manual test-account creation with a real OTP-verified email address — this step requires human access to an email inbox and is the same external blocker as Task 17.

@@ -95,3 +95,19 @@ overall-budget editor and incorrectly gated category budgets on the
 overall budget's existence — rejected during investigation; neither
 behavior is present above. See [`status.md`](status.md) and
 [`testing.md`](testing.md) for the full record.
+
+## Email-Bound Data (Anonymous Auth Removal)
+
+No Domain or Application-layer files were touched — Infrastructure,
+orchestration (`AuthContext.tsx`), and Presentation are the only layers
+involved, same as the feature this one supersedes.
+
+| Requirement | Infrastructure | Orchestration (`AuthContext.tsx`) | Presentation | Tests |
+|---|---|---|---|---|
+| No anonymous session bootstrap | `auth.ts`: `signInAnonymously`/`ensureAnonymousSession` deleted; `getExistingSession` is now the whole bootstrap | init effect calls `getExistingSession()` directly | — | `AuthContext.test.tsx` |
+| `signedOut` is a normal resting state, not stuck `initializing` | — | `authListenerSeen` set on any listener event (fixed the null-session stuck-forever bug); `status` derives `authenticated`/`signedOut` from `session` | `RootNavigator` (`app/_layout.tsx`) already fell through for anything but `initializing`/`error` — unchanged | `AuthContext.test.tsx` |
+| Signup requires OTP verification | `authCredentials.ts`: `signUp` (`auth.signUp`), `verifySignupOtp` (`type: 'signup'`) | `signUp`/`verifySignupOtp` orchestration methods | `app/account/create.tsx` | `authCredentials.test.ts`, `create.test.tsx` |
+| Every screen locked (not walled off) when signed out | — | `session` exposed via `useAuth()` | 11 screens each gate on `session`, rendering `SignInPrompt` (`src/ui/SignInPrompt.tsx`) in place of real content — Home, Ledger, Budgets, Trends, Accounts, Goals, Categories, Recurring, More hub, transaction/new, transaction/[id] | `SignInPrompt.test.tsx`; no per-screen tests added (mechanical, uniform change — see this plan's Global Constraints) |
+| Settings collapses to session-based branching | — | — | `app/(tabs)/more/settings.tsx`: one `session` check replaces three `identityKind` cases | `settings.test.tsx` |
+| Sign-out has no destructive-data-loss warning | — | `signOut()` goes straight to `signedOut`, no re-bootstrap | `settings.tsx`: plain `Sign out` row, no `Alert` | `AuthContext.test.tsx`, `settings.test.tsx` |
+| Integration tests authenticate without anonymous auth | `testAuth.ts`: `signInTestAccount`/`signInTestAccount2` against a shared, pre-created real account | — | — | all 4 `*.integration.test.ts` files under `src/data/repositories/` |

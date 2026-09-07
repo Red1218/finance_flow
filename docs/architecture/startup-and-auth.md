@@ -1,3 +1,15 @@
+> **Superseded 2026-09-07.** The "Anonymous session bootstrap" section
+> below describes a mechanism that no longer exists —
+> `ensureAnonymousSession()`/`signInAnonymously()` were removed. Bootstrap
+> is now a single `getExistingSession()` read with no fallback sign-in;
+> `AuthStatus` gained a `'signedOut'` resting state for "no session found."
+> The font-loading section and the dual-signal readiness-gate mechanism
+> itself (kept, not removed — see
+> [`docs/superpowers/specs/2026-09-07-email-bound-auth-design.md`](../superpowers/specs/2026-09-07-email-bound-auth-design.md))
+> are both still accurate.
+
+---
+
 # Startup and Authentication
 
 The sequence from process start to a usable screen: font loading, then

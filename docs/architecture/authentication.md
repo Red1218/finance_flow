@@ -1,3 +1,14 @@
+> **Superseded 2026-09-07.** Anonymous authentication has been removed —
+> see [`docs/superpowers/specs/2026-09-07-email-bound-auth-design.md`](../superpowers/specs/2026-09-07-email-bound-auth-design.md)
+> for why, and this file's own content below for what anonymous-first used
+> to mean (kept for history, not current behavior). The "Anonymous →
+> permanent upgrade" flow described below no longer exists — signup now
+> goes straight through `supabase.auth.signUp()` (`src/data/repositories/authCredentials.ts`'s
+> `signUp`/`verifySignupOtp`, `type: 'signup'`), not the anonymous-upgrade
+> `updateUser()`/`type: 'email_change'` path documented here.
+
+---
+
 # Account Authentication & Anonymous Account Upgrade
 
 Built on `worktree-account-auth`, not yet merged to `main`. Covers
