@@ -52,11 +52,27 @@ jest.mock('../../hooks/usePreferences', () => ({
   usePreferences: () => ({ data: { decimal_precision: 2 }, loading: false }),
 }));
 
+// mockSession is read inside the jest.mock factory below — Jest allows
+// referencing variables prefixed with "mock" from within a mock factory
+// despite the usual hoisting restriction, so this stays a plain `let`.
+let mockSession: { user: { id: string } } | null = { user: { id: 'u1' } };
+jest.mock('../../data/AuthContext', () => ({
+  useAuth: () => ({ session: mockSession }),
+}));
+
 describe('Add Transaction screen', () => {
   beforeEach(() => {
     mockCreateTransaction.mockClear();
     mockCreateTransfer.mockClear();
     mockBack.mockClear();
+    mockSession = { user: { id: 'u1' } };
+  });
+
+  it('shows a sign-in prompt instead of the form when signed out', () => {
+    mockSession = null;
+    render(<NewTransaction />);
+    expect(screen.getByText('Sign in to add a transaction.')).toBeTruthy();
+    expect(screen.queryByText('Expense')).toBeNull();
   });
 
   it('renders the Expense/Income/Transfer selector and expense categories by default', () => {

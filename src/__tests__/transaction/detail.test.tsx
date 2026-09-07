@@ -3,7 +3,7 @@
 // exclusion). Filename doesn't use "[id]" here since it's no longer inside
 // a routed directory and doesn't need to match the dynamic-segment pattern.
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { act, render, screen, waitFor } from '@testing-library/react-native';
 import TransactionDetail from '../../../app/transaction/[id]';
 
 jest.mock('expo-router', () => ({
@@ -60,10 +60,32 @@ jest.mock('../../data/repositories/transactions', () => ({
   transactionSign: (type: string) => (type === 'INCOME' || type === 'TRANSFER_IN' ? 1 : type === 'EXPENSE' || type === 'TRANSFER_OUT' ? -1 : 0),
 }));
 
+// mockSession is read inside the jest.mock factory below — Jest allows
+// referencing variables prefixed with "mock" from within a mock factory
+// despite the usual hoisting restriction, so this stays a plain `let`.
+let mockSession: { user: { id: string } } | null = { user: { id: 'u1' } };
+jest.mock('../../data/AuthContext', () => ({
+  useAuth: () => ({ session: mockSession }),
+}));
+
 describe('Transaction Detail screen', () => {
   beforeEach(() => {
     mockGetTransactionById.mockReset();
     mockGetTransferPair.mockClear();
+    mockSession = { user: { id: 'u1' } };
+  });
+
+  it('shows a sign-in prompt instead of the transaction when signed out', async () => {
+    mockSession = null;
+    mockGetTransactionById.mockResolvedValue(null);
+    render(<TransactionDetail />);
+    expect(screen.getByText('Sign in to see this transaction.')).toBeTruthy();
+    // The data-loading effect still fires (hooks run before the signed-out
+    // early return) — flush it here so its state updates don't leak into
+    // the next test's render as an unwrapped act() warning.
+    await act(async () => {
+      await Promise.resolve();
+    });
   });
 
   it('never renders a "Cleared" tag for a regular expense', async () => {

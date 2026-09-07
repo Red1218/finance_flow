@@ -70,8 +70,12 @@ function translateAuthError(error: RawAuthError): never {
 // so unlike the anonymous-upgrade case this used to handle, there is no
 // permanent-but-passwordless state to guard against.
 export async function signUp(email: string, password: string): Promise<void> {
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) translateAuthError(error);
+  // GoTrue's user-enumeration protection: signing up with an email that's
+  // already registered returns HTTP 200 with no `error`, but an obfuscated
+  // user carrying an empty `identities` array instead of a real one.
+  if (data.user && data.user.identities?.length === 0) throw new EmailAlreadyRegisteredError();
 }
 
 export async function verifySignupOtp(email: string, token: string): Promise<Session> {

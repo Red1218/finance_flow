@@ -20,7 +20,11 @@ export default function Settings() {
   };
 
   if (!session) {
-    return <SignInPrompt message="Sign in to see your account and settings." />;
+    return (
+      <View style={styles.screen}>
+        <SignInPrompt message="Sign in to see your account and settings." />
+      </View>
+    );
   }
 
   const email = session.user.email;

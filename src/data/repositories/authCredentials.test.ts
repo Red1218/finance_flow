@@ -42,9 +42,14 @@ describe('signUp', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('calls signUp with the email and password together', async () => {
-    (supabase.auth.signUp as jest.Mock).mockResolvedValue({ error: null });
+    (supabase.auth.signUp as jest.Mock).mockResolvedValue({ data: { user: { identities: [{ id: 'i1' }] } }, error: null });
     await signUp('a@b.com', 'S3cur3-Passw0rd');
     expect(supabase.auth.signUp).toHaveBeenCalledWith({ email: 'a@b.com', password: 'S3cur3-Passw0rd' });
+  });
+
+  it('throws EmailAlreadyRegisteredError when GoTrue returns an obfuscated user with no identities (already-registered email)', async () => {
+    (supabase.auth.signUp as jest.Mock).mockResolvedValue({ data: { user: { identities: [] } }, error: null });
+    await expect(signUp('taken@b.com', 'pw')).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
   });
 
   it('throws InvalidEmailError for email_address_invalid', async () => {
