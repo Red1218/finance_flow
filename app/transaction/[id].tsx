@@ -15,6 +15,8 @@ import type { Account, Category, Transaction } from '../../src/data/types';
 import { Body, Button, IconButton, Input, K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
+import { useAuth } from '../../src/data/AuthContext';
+import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
 function dateInputValue(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -34,6 +36,7 @@ function parseDateInput(value: string): Date | null {
 export default function TransactionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { session } = useAuth();
 
   const [tx, setTx] = useState<Transaction | null>(null);
   const [otherLeg, setOtherLeg] = useState<Transaction | null>(null);
@@ -118,6 +121,14 @@ export default function TransactionDetail() {
   const accountsById = useMemo(() => indexById(accounts), [accounts]);
   const expenseCategories = useMemo(() => categories.filter((c) => c.kind === 'EXPENSE'), [categories]);
   const incomeCategories = useMemo(() => categories.filter((c) => c.kind === 'INCOME'), [categories]);
+
+  if (!session) {
+    return (
+      <View style={styles.loading}>
+        <SignInPrompt message="Sign in to see this transaction." />
+      </View>
+    );
+  }
 
   if (loading || !tx) {
     return (
