@@ -12,6 +12,8 @@ import type { AccountType } from '../../../src/data/types';
 import { Button, Card, Input, K, Muted, Seg, Tag } from '../../../src/ui/primitives';
 import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { useAuth } from '../../../src/data/AuthContext';
+import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
 const TYPE_LABEL: Record<AccountType, string> = {
   CASH: 'Cash',
@@ -22,6 +24,7 @@ const TYPE_LABEL: Record<AccountType, string> = {
 
 export default function Accounts() {
   const router = useRouter();
+  const { session } = useAuth();
   const today = useMemo(() => new Date(), []);
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
@@ -82,6 +85,14 @@ export default function Accounts() {
       setSaving(false);
     }
   };
+
+  if (!session) {
+    return (
+      <View style={styles.screen}>
+        <SignInPrompt message="Sign in to see your accounts." />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
