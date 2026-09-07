@@ -9,9 +9,12 @@ import { Bar, Button, Input, K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
 import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { useAuth } from '../../../src/data/AuthContext';
+import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
 export default function Goals() {
   const goals = useGoals();
+  const { session } = useAuth();
   const prefs = usePreferences();
   const currencyCode = prefs.data?.currency_code ?? 'INR';
 
@@ -66,6 +69,14 @@ export default function Goals() {
       setSaving(false);
     }
   };
+
+  if (!session) {
+    return (
+      <View style={styles.screen}>
+        <SignInPrompt message="Sign in to see your goals." />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
