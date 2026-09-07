@@ -1,18 +1,17 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
-import { ensureAnonymousSession, signOutUser } from './repositories/auth';
+import { getExistingSession, signOutUser } from './repositories/auth';
 import {
-  linkEmailWithPassword,
-  verifyEmailOtp,
+  signUp as signUpCredential,
+  verifySignupOtp as verifySignupOtpCredential,
   setPassword,
   signInWithPassword,
   sendPasswordResetEmail,
   establishRecoverySession,
 } from './repositories/authCredentials';
 
-export type AuthStatus = 'initializing' | 'authenticated' | 'error';
-export type IdentityKind = 'anonymous' | 'permanent';
+export type AuthStatus = 'initializing' | 'authenticated' | 'signedOut' | 'error';
 
 interface AuthState {
   session: Session | null;
@@ -20,9 +19,8 @@ interface AuthState {
   error: string | null;
   retry: () => void;
   signOut: () => Promise<void>;
-  identityKind: IdentityKind | null;
-  startEmailUpgrade: (email: string, password: string) => Promise<void>;
-  verifyUpgradeOtp: (email: string, token: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  verifySignupOtp: (email: string, token: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   completePasswordReset: (url: string, password: string) => Promise<void>;
@@ -36,14 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
-  // ensureAnonymousSession() resolving only means a session object was found
-  // or created — it says nothing about whether supabase-js's own auth
-  // listener (which is what the PostgREST client's request headers sync off
-  // of) has caught up. On a warm relaunch the local session lookup resolves
-  // fast enough to outrun that sync, so the first screen's queries can go out
-  // before the client is actually ready to authenticate them and RLS quietly
-  // returns nothing. Gating on both signals — regardless of which arrives
-  // first — closes that window without guessing at SDK internals or timers.
+  // getExistingSession() resolving only means the persisted-session lookup
+  // finished (to a real session, or to null — both are valid outcomes now)
+  // — it says nothing about whether supabase-js's own auth listener (which
+  // is what the PostgREST client's request headers sync off of) has caught
+  // up. On a warm relaunch the local session lookup resolves fast enough to
+  // outrun that sync, so the first screen's queries can go out before the
+  // client is actually ready to authenticate them and RLS quietly returns
+  // nothing. Gating on both signals — regardless of which arrives first —
+  // closes that window without guessing at SDK internals or timers.
   const [sessionResolved, setSessionResolved] = useState(false);
   const [authListenerSeen, setAuthListenerSeen] = useState(false);
 
@@ -53,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setSessionResolved(false);
     setAuthListenerSeen(false);
-    ensureAnonymousSession()
+    getExistingSession()
       .then((s) => {
         if (cancelled) return;
         setSession(s);
@@ -73,53 +72,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Every event type is accepted here, not just SIGNED_IN — a restored
     // session fires INITIAL_SESSION rather than SIGNED_IN, and filtering to
-    // SIGNED_IN only would mean this listener never fires on a warm relaunch,
-    // permanently stalling readiness instead of fixing the race.
+    // SIGNED_IN only would mean this listener never fires on a warm relaunch
+    // at all. authListenerSeen is set on ANY event, including one carrying a
+    // null session (no anonymous fallback exists anymore, so "signed out" is
+    // a real, permanent resting state, not just a pre-bootstrap gap) —
+    // gating this on a truthy session, as an earlier version of this file
+    // did, would leave a signed-out user stuck on 'initializing' forever.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
-      if (next) setAuthListenerSeen(true);
+      setAuthListenerSeen(true);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (sessionResolved && authListenerSeen) setStatus('authenticated');
-  }, [sessionResolved, authListenerSeen]);
-
-  // Derived, not stored — recomputed from `session` every render, so there
-  // is no separate state to fall out of sync with it. null only while
-  // status isn't 'authenticated' yet (screens that read this are only
-  // reachable once it is).
-  const identityKind: IdentityKind | null = session ? (session.user.is_anonymous === false ? 'permanent' : 'anonymous') : null;
+    if (sessionResolved && authListenerSeen) setStatus(session ? 'authenticated' : 'signedOut');
+  }, [sessionResolved, authListenerSeen, session]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   const signOut = async () => {
     await signOutUser();
-    // Anonymous identities have no credential to sign back in with, so this
-    // device has no session afterward. The retry below runs the same
-    // initialization as a fresh launch would: no session found -> a BRAND
-    // NEW anonymous user is created. Whatever was tied to the old anonymous
-    // identity (accounts, transactions, budgets, ...) stays in the database
-    // but becomes unreachable from this device — there is no way back to it.
-    // This consequence is flagged, not silently designed around, per the
-    // sign-out checkpoint note.
+    // Every account is now real and recoverable by signing back in — unlike
+    // the old anonymous case, there is nothing to re-bootstrap after
+    // signing out. Going straight to signedOut (instead of re-running the
+    // init effect via retry()) is correct, not a shortcut.
     setSession(null);
-    setStatus('initializing');
-    retry();
+    setStatus('signedOut');
   };
 
-  // --- new: credential orchestration. Each method sequences 1-2
-  // authCredentials.ts calls and updates `session` when one returns a new
-  // one; none inspects a Supabase error — every rejection here is already
-  // one of the typed classes from ./repositories/authErrors. ---
-
-  const startEmailUpgrade = useCallback(async (email: string, password: string) => {
-    await linkEmailWithPassword(email, password);
+  const signUp = useCallback(async (email: string, password: string) => {
+    await signUpCredential(email, password);
   }, []);
 
-  const verifyUpgradeOtp = useCallback(async (email: string, token: string) => {
-    const next = await verifyEmailOtp(email, token);
+  const verifySignupOtp = useCallback(async (email: string, token: string) => {
+    const next = await verifySignupOtpCredential(email, token);
     setSession(next);
   }, []);
 
@@ -146,9 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error,
         retry,
         signOut,
-        identityKind,
-        startEmailUpgrade,
-        verifyUpgradeOtp,
+        signUp,
+        verifySignupOtp,
         signIn,
         requestPasswordReset,
         completePasswordReset,
