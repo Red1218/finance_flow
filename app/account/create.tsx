@@ -15,7 +15,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CreateAccount() {
   const router = useRouter();
-  const { startEmailUpgrade, verifyUpgradeOtp } = useAuth();
+  const { signUp, verifySignupOtp } = useAuth();
 
   const [step, setStep] = useState<Step>('emailPassword');
   const [email, setEmail] = useState('');
@@ -40,7 +40,7 @@ export default function CreateAccount() {
     }
     setLoading(true);
     try {
-      await startEmailUpgrade(email, password);
+      await signUp(email, password);
       setStep('otp');
     } catch (e) {
       if (e instanceof EmailAlreadyRegisteredError) setEmailTaken(true);
@@ -54,7 +54,7 @@ export default function CreateAccount() {
     setError(null);
     setLoading(true);
     try {
-      await verifyUpgradeOtp(email, otp);
+      await verifySignupOtp(email, otp);
       setStep('done');
     } catch (e) {
       setError(authErrorMessage(e));
@@ -68,7 +68,7 @@ export default function CreateAccount() {
     setResendMessage(null);
     setResending(true);
     try {
-      await startEmailUpgrade(email, password);
+      await signUp(email, password);
       setResendMessage('A new code is on its way.');
     } catch (e) {
       setError(authErrorMessage(e));
@@ -90,10 +90,9 @@ export default function CreateAccount() {
       <View style={styles.content}>
         {step === 'emailPassword' && (
           <>
-            <Heading style={styles.title}>Protect this device&rsquo;s data</Heading>
+            <Heading style={styles.title}>Create an account</Heading>
             <Body style={styles.sub}>
-              Add an email and password so you can get back to everything you&rsquo;ve entered — even if you sign out,
-              lose this device, or reinstall the app.
+              Your data is tied to this account, not this device — sign in from anywhere to get back to it.
             </Body>
             <Input placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={styles.input} />
             <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={styles.input} />
@@ -124,7 +123,7 @@ export default function CreateAccount() {
         {step === 'done' && (
           <>
             <Heading style={styles.title}>Account created</Heading>
-            <Body style={styles.sub}>Everything on this device is now safely tied to {email}.</Body>
+            <Body style={styles.sub}>You&rsquo;re signed in as {email}.</Body>
             <Button title="Done" onPress={() => router.back()} block />
           </>
         )}
