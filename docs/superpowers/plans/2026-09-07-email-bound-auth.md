@@ -936,8 +936,7 @@ Replace the entire file:
 
 ```tsx
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { Pressable } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { usePreferences } from '../../../src/hooks/usePreferences';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
@@ -1072,8 +1071,6 @@ const styles = StyleSheet.create({
   rowValue: { fontFamily: fonts.body, fontSize: 14.5, color: colors.neutral700 },
 });
 ```
-
-Note: `Alert` needs importing — add `Alert` to the `react-native` import line: `import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';` (and drop the separate `Pressable` import line above, which was only split out for this listing's clarity).
 
 Note the removed pieces versus the original: `useRouter` (no longer used — the two "Create an account"/"Sign in" rows are gone, replaced by the whole-screen `SignInPrompt` when signed out), `identityKind`, and the `Alert.alert`-based sign-out confirmation (no longer needed — every account is real and recoverable by signing back in).
 
