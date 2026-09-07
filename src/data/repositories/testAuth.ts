@@ -8,24 +8,23 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
+function requireEnv(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing ${name} in .env — see jest.integration.setup.js and this file's header comment`);
   return value;
 }
 
 export async function signInTestAccount(): Promise<void> {
   const { error } = await supabase.auth.signInWithPassword({
-    email: requireEnv('TEST_ACCOUNT_EMAIL'),
-    password: requireEnv('TEST_ACCOUNT_PASSWORD'),
+    email: requireEnv('TEST_ACCOUNT_EMAIL', process.env.TEST_ACCOUNT_EMAIL),
+    password: requireEnv('TEST_ACCOUNT_PASSWORD', process.env.TEST_ACCOUNT_PASSWORD),
   });
   if (error) throw error;
 }
 
 export async function signInTestAccount2(client: SupabaseClient): Promise<void> {
   const { error } = await client.auth.signInWithPassword({
-    email: requireEnv('TEST_ACCOUNT_2_EMAIL'),
-    password: requireEnv('TEST_ACCOUNT_2_PASSWORD'),
+    email: requireEnv('TEST_ACCOUNT_2_EMAIL', process.env.TEST_ACCOUNT_2_EMAIL),
+    password: requireEnv('TEST_ACCOUNT_2_PASSWORD', process.env.TEST_ACCOUNT_2_PASSWORD),
   });
   if (error) throw error;
 }
