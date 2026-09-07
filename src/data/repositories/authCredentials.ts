@@ -1,9 +1,9 @@
 //
 // Credential/identity management — distinct responsibility from
-// src/data/repositories/auth.ts (anonymous session bootstrap), which this
-// file does not modify or duplicate. Every export below is a single
-// Supabase Auth call plus error translation; multi-step orchestration
-// (e.g. link email -> verify OTP -> set password) lives in AuthContext.
+// src/data/repositories/auth.ts (session bootstrap), which this file does
+// not modify or duplicate. Every export below is a single Supabase Auth
+// call plus error translation; multi-step orchestration (e.g. signUp ->
+// verify OTP) lives in AuthContext.
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
 import {
@@ -65,20 +65,17 @@ function translateAuthError(error: RawAuthError): never {
   }
 }
 
-// Sets the password in the SAME request that starts the email change,
-// rather than as a later step after OTP verification. GoTrue rejects a
-// password-only updateUser() for an anonymous user with no email/phone
-// (422 validation_failed) -- confirmed empirically against the live
-// project -- so this combined call is the only way to have a password on
-// the account before the email is confirmed. This closes the
-// permanent-but-passwordless state the original design could land in.
-export async function linkEmailWithPassword(email: string, password: string): Promise<void> {
-  const { error } = await supabase.auth.updateUser({ email, password });
+// A fresh signup (no anonymous identity to upgrade from anymore) —
+// supabase.auth.signUp() already takes email+password together natively,
+// so unlike the anonymous-upgrade case this used to handle, there is no
+// permanent-but-passwordless state to guard against.
+export async function signUp(email: string, password: string): Promise<void> {
+  const { error } = await supabase.auth.signUp({ email, password });
   if (error) translateAuthError(error);
 }
 
-export async function verifyEmailOtp(email: string, token: string): Promise<Session> {
-  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email_change' });
+export async function verifySignupOtp(email: string, token: string): Promise<Session> {
+  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
   if (error) translateAuthError(error);
   if (!data.session) throw new AuthNetworkError();
   return data.session;
