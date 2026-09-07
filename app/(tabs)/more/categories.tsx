@@ -40,6 +40,7 @@ export default function Categories() {
   const [saving, setSaving] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     const budgetByCategory = new Map((budgets.data ?? []).filter((b) => b.category_id).map((b) => [b.category_id as string, b]));
@@ -55,6 +56,7 @@ export default function Categories() {
       return {
         id: c.id,
         name: c.name,
+        isSystem: c.is_system,
         hasBudget: limitAmount > 0,
         meta: `${limitAmount > 0 ? `${formatCurrency(limitAmount, currencyCode)} budget` : 'No budget set'} · ${txCount} transaction${txCount === 1 ? '' : 's'}`,
         warn:
@@ -83,12 +85,15 @@ export default function Categories() {
     }
   };
 
-  const confirmDelete = async (id: string) => {
+  const confirmDelete = async (id: string, isSystem: boolean) => {
     setDeletingId(id);
+    setDeleteError(null);
     try {
-      await deleteCategory(id);
+      await deleteCategory(id, isSystem);
       setPendingId(null);
       refetch();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Could not remove this category.');
     } finally {
       setDeletingId(null);
     }
@@ -131,20 +136,29 @@ export default function Categories() {
                     <Text style={styles.rowName}>{r.name}</Text>
                     <Muted style={styles.rowMeta}>{r.meta}</Muted>
                   </View>
-                  <IconButton label="Delete category" onPress={() => setPendingId(r.id)}>
+                  <IconButton
+                    label="Delete category"
+                    onPress={() => {
+                      setDeleteError(null);
+                      setPendingId(r.id);
+                    }}
+                  >
                     <Text style={{ color: colors.accent2_700, fontSize: 16 }}>✕</Text>
                   </IconButton>
                 </View>
                 {pendingId === r.id && (
                   <View style={styles.confirm}>
-                    <Text style={styles.confirmText}>{r.warn}</Text>
+                    <Text style={styles.confirmText}>{r.isSystem ? "This is a default category and can't be removed." : r.warn}</Text>
+                    {deleteError && <Text style={[styles.confirmText, styles.confirmError]}>{deleteError}</Text>}
                     <View style={styles.confirmActions}>
-                      <Button
-                        title="Delete anyway"
-                        variant="secondary"
-                        onPress={() => confirmDelete(r.id)}
-                        loading={deletingId === r.id}
-                      />
+                      {!r.isSystem && (
+                        <Button
+                          title="Delete anyway"
+                          variant="secondary"
+                          onPress={() => confirmDelete(r.id, r.isSystem)}
+                          loading={deletingId === r.id}
+                        />
+                      )}
                       <Button title="Keep it" variant="ghost" onPress={() => setPendingId(null)} />
                     </View>
                   </View>
@@ -173,5 +187,6 @@ const styles = StyleSheet.create({
   rowMeta: { fontSize: 11.5, marginTop: 3 },
   confirm: { marginTop: 8, padding: 12, borderRadius: 2, backgroundColor: colors.accent2_100 },
   confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.accent2_900 },
+  confirmError: { fontFamily: fonts.heading, marginTop: 6 },
   confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
 });

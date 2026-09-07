@@ -31,7 +31,16 @@ export async function createCategory(name: string, kind: CategoryKind = 'EXPENSE
 // Reassigns the category's transactions to Uncategorised and archives its
 // budget before archiving the category itself, so nothing is left pointing
 // at a row that's gone.
-export async function deleteCategory(id: string): Promise<void> {
+//
+// System categories are shared rows (user_id IS NULL) that RLS forbids
+// anyone from updating — categories_update_policy requires is_system =
+// false. Without this guard, the transactions/budget updates below still
+// succeed (they carry no is_system check) while the final categories
+// update silently matches 0 rows, so the category never actually goes
+// away but its transactions and budget do. Refuse up front instead.
+export async function deleteCategory(id: string, isSystem: boolean): Promise<void> {
+  if (isSystem) throw new Error("Default categories can't be removed — only ones you created.");
+
   const { error: txError } = await supabase.from('transactions').update({ category_id: null }).eq('category_id', id);
   if (txError) throw txError;
 

@@ -31,7 +31,7 @@ describe('deleteCategory', () => {
     const categories = chainable({ error: null });
     mockFrom.mockImplementation((table: string) => ({ transactions, budgets, categories })[table]);
 
-    await deleteCategory('cat-1');
+    await deleteCategory('cat-1', false);
 
     expect(mockFrom).toHaveBeenNthCalledWith(1, 'transactions');
     expect(transactions.update).toHaveBeenCalledWith({ category_id: null });
@@ -52,7 +52,7 @@ describe('deleteCategory', () => {
     const transactions = chainable({ error: boom });
     mockFrom.mockImplementation((table: string) => (table === 'transactions' ? transactions : chainable({ error: null })));
 
-    await expect(deleteCategory('cat-1')).rejects.toThrow(boom);
+    await expect(deleteCategory('cat-1', false)).rejects.toThrow(boom);
     expect(mockFrom).toHaveBeenCalledTimes(1);
   });
 
@@ -62,7 +62,12 @@ describe('deleteCategory', () => {
     const budgets = chainable({ error: boom });
     mockFrom.mockImplementation((table: string) => ({ transactions, budgets })[table]);
 
-    await expect(deleteCategory('cat-1')).rejects.toThrow(boom);
+    await expect(deleteCategory('cat-1', false)).rejects.toThrow(boom);
     expect(mockFrom).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses a system category without touching transactions, budgets, or the category row', async () => {
+    await expect(deleteCategory('cat-1', true)).rejects.toThrow(/default categories/i);
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });

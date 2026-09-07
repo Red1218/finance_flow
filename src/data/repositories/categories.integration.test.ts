@@ -29,7 +29,7 @@ describe('categories repository (integration)', () => {
   });
 
   afterAll(async () => {
-    if (createdId) await deleteCategory(createdId);
+    if (createdId) await deleteCategory(createdId, false);
   });
 
   it('creates a real row under RLS and reads it back via listCategories', async () => {
@@ -50,7 +50,7 @@ describe('categories repository (integration)', () => {
     const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
     await setBudget({ category_id: createdId, amount: 500, currency_code: 'INR', start_date: from, end_date: to });
 
-    await deleteCategory(createdId);
+    await deleteCategory(createdId, false);
 
     const list = await listCategories('EXPENSE');
     expect(list.some((c) => c.id === createdId)).toBe(false);
