@@ -13,6 +13,8 @@ import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
 import { DatePickerField } from '../../src/ui/DatePickerField';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
+import { useAuth } from '../../src/data/AuthContext';
+import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
 type Kind = 'Expense' | 'Income' | 'Transfer';
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'];
@@ -37,6 +39,7 @@ function parseDateInput(value: string): Date | null {
 
 export default function NewTransaction() {
   const router = useRouter();
+  const { session } = useAuth();
   const accounts = useAccounts();
   const categories = useCategories(undefined);
   const prefs = usePreferences();
@@ -141,6 +144,14 @@ export default function NewTransaction() {
       setSaving(false);
     }
   };
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+        <SignInPrompt message="Sign in to add a transaction." />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
