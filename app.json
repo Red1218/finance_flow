@@ -14,7 +14,8 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundImage": "./assets/images/adaptive-icon-background.png",
+        "backgroundColor": "#161826"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.finance_flow"
