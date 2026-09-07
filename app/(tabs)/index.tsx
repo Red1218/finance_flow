@@ -6,12 +6,23 @@ import { formatCurrency } from '../../src/domain/money';
 import { Body, K, Muted, Num } from '../../src/ui/primitives';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { colors, fonts, shadow, spacing } from '../../src/theme/tokens';
+import { useAuth } from '../../src/data/AuthContext';
+import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
 export default function Home() {
   const router = useRouter();
   const d = useDashboard();
+  const { session } = useAuth();
   const today = new Date();
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <SignInPrompt message="Sign in to see your spending." />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
