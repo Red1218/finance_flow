@@ -9,6 +9,8 @@ import { setBudget } from '../../../src/data/repositories/budgets';
 import { toNumber, formatCurrency, getCurrencyMeta } from '../../../src/domain/money';
 import { Button, IconButton, Input, K, Muted } from '../../../src/ui/primitives';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { useAuth } from '../../../src/data/AuthContext';
+import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
 function monthRange(today: Date) {
   return {
@@ -27,6 +29,7 @@ export default function Categories() {
   const prefs = usePreferences();
   const currencyCode = prefs.data?.currency_code ?? 'INR';
   const currencySymbol = getCurrencyMeta(currencyCode).symbol;
+  const { session } = useAuth();
 
   const loading = categories.loading || budgets.loading || tx.loading;
   const refetch = () => {
@@ -98,6 +101,14 @@ export default function Categories() {
       setDeletingId(null);
     }
   };
+
+  if (!session) {
+    return (
+      <View style={styles.screen}>
+        <SignInPrompt message="Sign in to see your categories." />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
