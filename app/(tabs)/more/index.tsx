@@ -11,6 +11,8 @@ import { usePreferences } from '../../../src/hooks/usePreferences';
 import { transactionSign } from '../../../src/data/repositories/transactions';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { useAuth } from '../../../src/data/AuthContext';
+import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
 type Href = '/(tabs)/more/accounts' | '/(tabs)/more/recurring' | '/(tabs)/more/goals' | '/(tabs)/more/categories' | '/(tabs)/more/settings';
 
@@ -25,6 +27,7 @@ function dueInDays(iso: string, today: Date): string {
 
 export default function MoreHub() {
   const router = useRouter();
+  const { session } = useAuth();
   const today = useMemo(() => new Date(), []);
 
   const accounts = useAccounts();
@@ -75,6 +78,14 @@ export default function MoreHub() {
     { label: 'Categories', href: '/(tabs)/more/categories', subtitle: subtitles.categories },
     { label: 'Settings', href: '/(tabs)/more/settings', subtitle: subtitles.settings },
   ];
+
+  if (!session) {
+    return (
+      <View style={styles.screen}>
+        <SignInPrompt message="Sign in to see more." />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
