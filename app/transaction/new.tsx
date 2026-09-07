@@ -10,6 +10,7 @@ import { createTransaction, createTransfer } from '../../src/application/transac
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
+import { DatePickerField } from '../../src/ui/DatePickerField';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
 
@@ -193,16 +194,7 @@ export default function NewTransaction() {
           </View>
         ) : null}
 
-        <View style={styles.field}>
-          <K style={styles.fieldLabel}>Date</K>
-          <Input
-            value={dateText}
-            onChangeText={setDateText}
-            placeholder="YYYY-MM-DD"
-            accessibilityLabel="Transaction date, year-month-day"
-            style={{ marginTop: 6, maxWidth: 160 }}
-          />
-        </View>
+        <DatePickerField value={pickedDate ?? new Date()} onChange={(d) => setDateText(todayInputValue(d))} />
 
         <View style={styles.field}>
           <Input placeholder="Add a note (optional)" value={note} onChangeText={setNote} />
