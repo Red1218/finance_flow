@@ -10,6 +10,8 @@ import { Button, Input, K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
 import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { useAuth } from '../../../src/data/AuthContext';
+import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
 function dueLabel(iso: string, today: Date): string {
   const due = new Date(iso);
@@ -24,6 +26,7 @@ function dueLabel(iso: string, today: Date): string {
 
 export default function Recurring() {
   const today = useMemo(() => new Date(), []);
+  const { session } = useAuth();
   const recurring = useRecurring();
   const categories = useCategories();
   const accounts = useAccounts();
@@ -81,6 +84,14 @@ export default function Recurring() {
       setSaving(false);
     }
   };
+
+  if (!session) {
+    return (
+      <View style={styles.screen}>
+        <SignInPrompt message="Sign in to see your recurring items." />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
