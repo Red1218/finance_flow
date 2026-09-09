@@ -1318,8 +1318,8 @@ Add to `src/__tests__/more/settings.test.tsx` (following its existing `jest.mock
 ```tsx
 it('requests SMS permission and enables the preference when the toggle is turned on', async () => {
   (requestSmsPermission as jest.Mock).mockResolvedValue(true);
-  const { getByText } = render(<SettingsScreen />);
-  fireEvent(getByText('Detect transactions from SMS').parent!, 'valueChange', true);
+  const { getByTestId } = render(<SettingsScreen />);
+  fireEvent(getByTestId('sms-detection-switch'), 'valueChange', true);
   await waitFor(() => {
     expect(requestSmsPermission).toHaveBeenCalled();
     expect(updatePreferences).toHaveBeenCalledWith({ sms_detection_enabled: true });
@@ -1328,8 +1328,8 @@ it('requests SMS permission and enables the preference when the toggle is turned
 
 it('does not enable the preference if the user denies the permission prompt', async () => {
   (requestSmsPermission as jest.Mock).mockResolvedValue(false);
-  const { getByText } = render(<SettingsScreen />);
-  fireEvent(getByText('Detect transactions from SMS').parent!, 'valueChange', true);
+  const { getByTestId } = render(<SettingsScreen />);
+  fireEvent(getByTestId('sms-detection-switch'), 'valueChange', true);
   await waitFor(() => {
     expect(requestSmsPermission).toHaveBeenCalled();
   });
@@ -1337,14 +1337,16 @@ it('does not enable the preference if the user denies the permission prompt', as
 });
 
 it('turning the toggle off does not re-request permission', async () => {
-  const { getByText } = render(<SettingsScreen />);
-  fireEvent(getByText('Detect transactions from SMS').parent!, 'valueChange', false);
+  const { getByTestId } = render(<SettingsScreen />);
+  fireEvent(getByTestId('sms-detection-switch'), 'valueChange', false);
   await waitFor(() => {
     expect(updatePreferences).toHaveBeenCalledWith({ sms_detection_enabled: false });
   });
   expect(requestSmsPermission).not.toHaveBeenCalled();
 });
 ```
+
+There is no existing precedent in this test file for triggering a `Switch` (the current "Nudges" switches have no tests) — `testID` is used here rather than guessing at a DOM-shape-dependent query like `getByText(...).parent`, which would target the row's container `View`, not the `Switch` itself, and silently do nothing.
 
 Add `jest.mock('../../data/native/smsListener', () => ({ requestSmsPermission: jest.fn() }));` and `import { requestSmsPermission } from '../../data/native/smsListener';` at the top of the test file, matching the existing mock style in that file.
 
@@ -1364,6 +1366,7 @@ In `app/(tabs)/more/settings.tsx`, import `requestSmsPermission` from `'../../..
     <View style={[styles.row, { borderBottomWidth: 0 }]}>
       <Text style={styles.rowLabel}>Detect transactions from SMS</Text>
       <Switch
+        testID="sms-detection-switch"
         value={!!prefs.data?.sms_detection_enabled}
         onValueChange={async (v) => {
           if (v) {
@@ -1414,7 +1417,7 @@ Read `app/(tabs)/more/accounts.tsx` (list rendering, empty state, `SignInPrompt`
 ```tsx
 // src/__tests__/transaction/detected.test.tsx
 import React from 'react';
-import { render, waitFor, fireEvent } from '@testing-library/react-native';
+import { render, waitFor, userEvent } from '@testing-library/react-native';
 import DetectedScreen from '../../../app/transaction/detected';
 import { listDetections, removeDetection } from '../../data/repositories/pendingDetections';
 
@@ -1457,7 +1460,7 @@ describe('DetectedScreen', () => {
 
   it('navigates to the new-transaction form pre-filled, with the matched account, when a row is tapped', async () => {
     const { findByText } = render(<DetectedScreen />);
-    fireEvent.press(await findByText('GUNREDDY RAMANUJA RE'));
+    await userEvent.press(await findByText('GUNREDDY RAMANUJA RE'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/transaction/new',
       params: {
@@ -1473,7 +1476,7 @@ describe('DetectedScreen', () => {
 
   it('dismisses a detection without navigating when "Not a transaction" is pressed', async () => {
     const { findByText } = render(<DetectedScreen />);
-    fireEvent.press(await findByText('Not a transaction'));
+    await userEvent.press(await findByText('Not a transaction'));
     await waitFor(() => expect(removeDetection).toHaveBeenCalledWith('KOTAKB:804121858190'));
     expect(mockPush).not.toHaveBeenCalled();
   });
@@ -1696,10 +1699,12 @@ it('removes the originating detection after a successful save', async () => {
     amount: '150', kind: 'Expense', accountId: 'acc-1', note: 'x', dateText: '2026-09-07', detectionId: 'KOTAKB:1',
   });
   const { getByText } = render(<NewTransactionScreen />);
-  fireEvent.press(getByText('Save'));
+  await userEvent.press(getByText('Save'));
   await waitFor(() => expect(removeDetection).toHaveBeenCalledWith('KOTAKB:1'));
 });
 ```
+
+This file already uses `userEvent.press(screen.getByText(...))` throughout (confirmed: every existing interaction test in `new.test.tsx` uses `userEvent`, never `fireEvent.press`) — `userEvent` is already imported, matching that established pattern is what makes this reliable here, not a `fireEvent.press` call with no precedent in this file.
 
 Add `jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn() }), useLocalSearchParams: jest.fn(() => ({})) }));` (extending the existing `expo-router` mock in this file with `useLocalSearchParams` if it isn't already there) and `jest.mock('../../data/repositories/pendingDetections', () => ({ removeDetection: jest.fn() }));` plus the corresponding imports.
 
