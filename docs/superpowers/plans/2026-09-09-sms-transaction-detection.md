@@ -205,9 +205,11 @@ Create `android/app/src/main/java/com/anonymous/finance_flow/SmsListenerPackage.
 ```kotlin
 package com.anonymous.finance_flow
 
+import android.view.View
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
 
 class SmsListenerPackage : ReactPackage {
@@ -215,12 +217,15 @@ class SmsListenerPackage : ReactPackage {
     return listOf(SmsListenerModule(reactContext))
   }
 
-  // Signature must match this project's actual installed ReactPackage
-  // interface exactly (checked against node_modules/react-native's
-  // ReactPackage.kt after Task 1's review caught a similar mismatch):
-  // List<ViewManager<in Nothing, in Nothing>>, not List<ViewManager<View,
-  // ReactShadowNode<*>>> (an older/different RN version's shape).
-  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<in Nothing, in Nothing>> {
+  // The interface declares this as List<ViewManager<in Nothing, in Nothing>>
+  // (checked against node_modules/react-native's ReactPackage.kt). Kotlin
+  // override return types only need to be a subtype, not an exact match --
+  // List<ViewManager<View, ReactShadowNode<*>>> is a valid, compiling
+  // override of that declaration (verified independently twice, by working
+  // through the same use-site variance reasoning against the actual
+  // ReactPackage.kt/ViewManager.java/ReactShadowNode.java source: `in
+  // Nothing` makes every concrete ViewManager<A,B> a valid substitution).
+  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<View, ReactShadowNode<*>>> {
     return emptyList()
   }
 }
