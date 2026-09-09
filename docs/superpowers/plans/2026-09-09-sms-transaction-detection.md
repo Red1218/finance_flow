@@ -320,7 +320,14 @@ describe('smsListener', () => {
   });
 
   it('checks current permission grant', async () => {
-    (PermissionsAndroid.check as jest.Mock).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    // checkSmsPermission() calls PermissionsAndroid.check twice internally
+    // (once per permission) -- each of the two assertions below needs two
+    // queued values, not one.
+    (PermissionsAndroid.check as jest.Mock)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false);
     await expect(checkSmsPermission()).resolves.toBe(true);
     await expect(checkSmsPermission()).resolves.toBe(false);
   });
