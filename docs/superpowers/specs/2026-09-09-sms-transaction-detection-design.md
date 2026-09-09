@@ -25,8 +25,12 @@ day to day.
 3. **Starting bank scope: Kotak Bank and Axis Bank** (the user's two
    most-used), with real sample messages captured below. Additional banks
    are new parser modules added later, not a redesign.
-4. **Auto-match account by bank name**, editable on the review screen —
-   if an account named "Kotak" already exists in the app, pre-select it.
+4. **Auto-match account by bank name (and product)**, editable on the
+   review screen — if an account named "Kotak" already exists, pre-select
+   it for a savings-account detection; a Kotak *credit card* detection
+   matches a separate "Kotak Credit Card" account if one exists, since the
+   real samples showed these are genuinely different sender IDs/products,
+   not just one "Kotak" bucket (see Parser modules below).
 5. **Distribution: sideload only, not Play Store.** The spike
    ([2026-09-08 conversation], not a separate doc) found that Google Play's
    SMS/Call-Log permission policy only binds apps submitted through Play
@@ -40,22 +44,46 @@ day to day.
    build submitted to the Play Store**, where it would need the full
    declaration/review treatment this spec doesn't attempt to satisfy.
 
-## Real sample messages (captured directly from the user, redacted)
+## Real sample messages (captured directly from the user's SMS app)
 
-These are the authoritative source for the parser patterns below — not
-guessed formats. Both were shared as WhatsApp-forwarded copies of the SMS
-text, which preserves the message body verbatim but **does not show the
-real SMS sender ID header** (e.g. a short code like `AX-KOTAKB`) — see
-Prerequisite 1 below.
+These replace the earlier WhatsApp-forwarded samples and are the
+authoritative source for the parser patterns below. Pulling from the real
+SMS app (screenshots, not forwards) surfaced the actual sender IDs, and
+revealed that **"one bank" is not "one message format"** — Kotak alone
+sends from two different sender IDs depending on product, each with its
+own set of message shapes. This reshapes the parser module structure (see
+below): dispatch is keyed by **sender ID + subtype**, not just "bank name."
 
-**Kotak Bank:**
+**`VK-KOTAKB-S`** — Kotak Bank savings account (UPI/IMPS):
 ```
+# debit (UPI sent)
 Sent Rs.150.00 from Kotak Bank A/c X8721 to GUNREDDY RAMANUJA RE on 07-09-26.
 UPI Ref 804121858190. Not done by you? Tap https://kotak.bank.in/KBANKT/Fraud
+
+# credit (UPI received) — note: "AC 8721" not "A/c X8721", and "UPI Ref:" with
+# a colon and no space, both different from the debit message above
+Received Rs.1500.00 in your Kotak Bank AC 8721 from GUNREDDY RAMANUJA RE
+on 05-09-26.UPI Ref:765736473067
+
+# credit (IMPS received) — a third distinct shape: "Rs. 16486.30" (space
+# after Rs.), "A/C x8721" (lowercase x), no UPI Ref at all, "IMPS Ref no" instead
+Received Rs. 16486.30 on 07-09-26 in your Kotak Bank A/C x8721 by an A/C
+linked to mobile x163. IMPS Ref no 625010029187.
 ```
 
-**Axis Bank:**
+**`AX-KOTAKB-S`** — Kotak Bank **credit card** (different sender ID from the
+savings account above — same bank, different product, must be matched and
+routed separately):
 ```
+INR 351 spent on Kotak Credit Card x4030 on 06-09-26 at BLINK COMMERCE PVT LTD.
+Avl limit INR 3625.51 Not you? SMS CCLOST 4030 to 5676788
+```
+Note the amount has **no decimal places** here ("INR 351", not "INR 351.00")
+— unlike every UPI/IMPS message above.
+
+**`VM-AXISBK-S`** — Axis Bank:
+```
+# debit
 INR 6800.00 debited
 A/c no. XX1994
 07-09-26, 11:01:15
@@ -63,22 +91,49 @@ UPI/P2M/313051540148/Thanvir Bros Pvt Lt
 Not you? SMS BLOCKUPI Cust ID to 919951860002
 Axis Bank
 ```
+No credit-side example seen yet for Axis.
+
+**Non-transactional messages that must be filtered out, not parsed as
+transactions** — both sender IDs above also send messages that aren't
+transactions and must not produce a false-positive draft:
+```
+# VM-AXISBK-S — card PIN set, not a transaction
+PIN for Axis Bank Debit Card no. XX1968 is set. Ensure card is enabled for
+online, contactless, intl usage for a seamless experience. Visit https://...
+```
+
+**Multi-part SMS gotcha**: one Kotak message was observed arriving as two
+physically separate SMS, the second being just a continuation fragment:
+```
+...Refer UM no. 1bb7cf4f5fbd47a4b975d4474a4791eb@ybl. Regards, Kotak Bank
+```
+Android delivers a long SMS as multiple PDU parts in one `SMS_RECEIVED`
+intent. A naive receiver that reads only the first part will see a
+truncated message and either fail to parse or parse garbage. The native
+receiver **must** concatenate all parts via
+`Telephony.Sms.Intents.getMessagesFromIntent(intent)` (join each
+`SmsMessage.getMessageBody()` in array order) before handing the body to
+the parser — this is called out explicitly because it's a well-known
+Android pitfall, not a hypothetical.
 
 ## Architecture
 
 ```
 Native SMS_RECEIVED broadcast
   → SmsReceiver.kt (Android, new)
+      concatenates multi-part PDUs (Telephony.Sms.Intents.getMessagesFromIntent)
       emits {sender, body, timestamp} via DeviceEventEmitter
   → src/data/native/smsEvents.ts (new)
       thin JS subscription wrapper around the native event
   → src/domain/smsTransactionParser.ts (new)
       pure function: (sender, body) -> ParsedTransaction | null
-      dispatches to one of N per-bank parser modules by sender/body match
+      dispatches to one of N parser modules by exact sender-ID match
   → src/data/repositories/pendingDetections.ts (new)
-      AsyncStorage-backed queue of ParsedTransaction drafts, keyed by a
-      dedup id (bank + UPI ref number) so a re-delivered/duplicate SMS
-      doesn't create a second draft
+      AsyncStorage-backed queue of ParsedTransaction drafts, keyed by each
+      subtype's dedupKey (usually the bank's own reference number; the
+      credit-card subtype has none, so it dedups on sender+amount+date+
+      merchant instead) so a re-delivered/duplicate SMS doesn't create a
+      second draft
   → UI: a "Detected transactions" list (new screen or a section on an
       existing hub screen — exact placement decided at plan time) showing
       pending drafts as a badge/count; tapping one navigates into the
@@ -113,65 +168,83 @@ This slots into the signed-out model the last branch just built:
   draft hits the same `SignInPrompt` gate every other entry point already
   uses. No new auth-gating logic needed; this is inherited for free.
 
-### Per-bank parser pattern
+### Parser modules (per sender ID + subtype)
 
-Each bank gets its own module (`src/domain/smsParsers/kotak.ts`,
-`.../axis.ts`, ...) implementing a shared shape:
+Given one bank can have multiple sender IDs and multiple message shapes per
+sender ID, each **sender ID** gets its own module, and internally tries its
+known subtypes in order:
+
+- `src/domain/smsParsers/kotakUpi.ts` — sender `VK-KOTAKB-S`: UPI-sent
+  (debit), UPI-received (credit), IMPS-received (credit)
+- `src/domain/smsParsers/kotakCreditCard.ts` — sender `AX-KOTAKB-S`:
+  card spend
+- `src/domain/smsParsers/axis.ts` — sender `VM-AXISBK-S`: debit; filters
+  out non-transactional messages (PIN-set, etc.)
+
+Shared shape:
 
 ```ts
 interface BankParser {
-  matches(sender: string, body: string): boolean;
-  parse(body: string): ParsedTransaction; // only called if matches() is true
+  senderId: string; // exact match against the SMS sender header, e.g. 'VK-KOTAKB-S'
+  parse(body: string): ParsedTransaction | null; // null = matched sender but not a transaction (e.g. PIN-set notice)
 }
 
 interface ParsedTransaction {
   amount: number;
   direction: 'debit' | 'credit';
+  accountType: 'bank_account' | 'credit_card';
   accountLast4: string;
   merchant: string;
   date: string; // ISO, parsed from the bank's DD-MM-YY format
-  dedupKey: string; // bank id + reference number
+  dedupKey: string; // sender id + reference number
 }
 ```
 
-Concrete fields identified from the real samples (final regex written at
-implementation time, this documents the fields each pattern must capture):
+Dispatch matches `sender` against each parser's `senderId` first (exact,
+not fuzzy) — this project's earlier fallback-to-body-text-matching idea is
+dropped now that real sender IDs are known; exact sender match is simpler
+and this app's own account list already distinguishes bank vs. credit card,
+so `accountType` matters for account auto-matching (a Kotak savings account
+and a Kotak credit card are two different rows in this app, matched
+separately even though both are "Kotak").
 
-| Field | Kotak | Axis |
-|---|---|---|
-| Amount | `Rs.150.00` → `Rs\.?\s?([\d,]+\.\d{2})` | `INR 6800.00` → `INR\s?([\d,]+\.\d{2})` |
-| Direction | keyword `Sent` → debit | keyword `debited` → debit |
-| Account last4 | `A/c X8721` → `X(\d{4})` | `A/c no. XX1994` → `XX(\d{4})` |
-| Merchant | between `to ` and ` on ` → `GUNREDDY RAMANUJA RE` | text after last `/` in the `UPI/P2M/<ref>/<name>` line → `Thanvir Bros Pvt Lt` (bank-truncated, expected to sometimes be cut off — this is exactly why review-before-save matters) |
-| Date | `on 07-09-26` (DD-MM-YY) | `07-09-26, 11:01:15` on its own line (DD-MM-YY, HH:MM:SS) |
-| Dedup ref | `UPI Ref 804121858190` | ref embedded in `UPI/P2M/313051540148/...` |
+Concrete fields per subtype (final regex written at implementation time —
+this documents what each must capture, using the real samples above):
 
-Both banks only demonstrate a **debit** ("Sent"/"debited") in the sample.
-Credit-side keywords (e.g. "Received"/"credited") aren't in either sample —
-the implementer should ask the user for one credit-side example per bank
-before writing that branch, rather than guessing the wording.
+| Subtype | Amount | Direction | Account | Merchant/Counterparty | Date | Dedup ref |
+|---|---|---|---|---|---|---|
+| Kotak UPI sent | `Rs.150.00` → `Rs\.?\s?([\d,]+\.\d{2})` | literal `Sent` → debit | `A/c X8721` → `X(\d{4})` | between `to ` and ` on ` | `on 07-09-26` | `UPI Ref (\d+)` |
+| Kotak UPI received | `Rs.1500.00` (same amount regex) | literal `Received...UPI Ref` → credit | `AC 8721` → `AC (\d{4})` (no `X` prefix here) | between `from ` and ` on ` | `on 05-09-26` | `UPI Ref:(\d+)` (colon, no space) |
+| Kotak IMPS received | `Rs. 16486.30` (note the space after `Rs.`) | literal `Received...IMPS Ref` → credit | `A/C x8721` → `x(\d{4})` (lowercase) | not present in this message shape — leave blank, user fills in on review | `on 07-09-26` | `IMPS Ref no (\d+)` |
+| Kotak credit card spend | `INR 351` → `INR\s?(\d+)` (**no decimal group** — differs from every other subtype) | always debit (a card "spend") | `x4030` → `x(\d{4})` | after `at ` up to `. Avl limit` | `on 06-09-26` | no ref number in the message — dedup on `(sender, amount, date, merchant)` tuple instead |
+| Axis debit | `INR 6800.00` → `INR\s?([\d,]+\.\d{2})` | literal `debited` → debit | `A/c no. XX1994` → `XX(\d{4})` | text after the last `/` in the `UPI/P2M/<ref>/<name>` line (bank-truncates long names — exactly why review-before-save matters) | own line `07-09-26, 11:01:15` | ref embedded in the same `UPI/P2M/<ref>/...` line |
 
-### Bank identification (sender matching)
+Every subtype above is a **debit or credit that already happened** — Axis's
+PIN-set message (and anything shaped like it) must return `null` from
+`parse()`, not a best-effort guess.
 
-Reliable practice is to match on the SMS **sender ID** (a short alphanumeric
-header like `AX-KOTAKB`), not on the message body. The two samples above
-were shared as WhatsApp forwards, which don't preserve that header.
-
-**Prerequisite before implementation**: pull 1-2 real messages directly
-from the phone's SMS app (not a forward) for each bank, to confirm the
-actual sender ID string. Each `BankParser.matches()` should check the
-sender ID as the primary signal, falling back to the literal bank-name
-string already visible in both bodies (`"Kotak Bank"`, `"Axis Bank"`) if
-the sender ID doesn't match any known pattern — this keeps the feature
-working even if a sender ID format is missed, at the cost of being
-slightly less precise than sender-only matching.
+No credit-side example exists yet for Axis — the implementer should ask
+the user for one rather than guessing the wording, same as before.
 
 ## Testing
 
-- `smsTransactionParser.test.ts` / per-bank parser tests use the **exact
-  real message bodies above** as fixtures — no synthetic/guessed SMS text.
+- Per-parser tests (`kotakUpi.test.ts`, `kotakCreditCard.test.ts`,
+  `axis.test.ts`) use the **exact real message bodies above** as fixtures —
+  no synthetic/guessed SMS text — covering every subtype in the table
+  (including the credit-card no-decimal amount format and the IMPS
+  no-merchant case), plus one non-transactional message (Axis PIN-set)
+  asserting `parse()` returns `null`.
+- A concatenation test for `SmsReceiver`'s JS-visible contract: given the
+  two-part Kotak message (`"Sent Rs...."` + `"...Refer UM no....Kotak
+  Bank"`), the parser only ever sees the correctly joined single body —
+  this is really testing `smsTransactionParser`'s consumption of an
+  already-joined string, since the native join itself isn't unit-testable
+  in this repo's JS suite (see below), but it documents the joined-body
+  shape the native side must produce.
 - `pendingDetections.test.ts`: queue add/dedup/remove, AsyncStorage-backed,
   same mocking pattern as this repo's other `AsyncStorage`-touching tests.
+  Include a dedup case for the credit-card subtype, which has no reference
+  number and dedups on `(sender, amount, date, merchant)` instead.
 - Native `SmsReceiver.kt` itself isn't unit-testable in this repo's JS test
   suite — verified manually on-device (send/receive a real SMS, confirm a
   draft appears), consistent with how this repo already treats native-only
