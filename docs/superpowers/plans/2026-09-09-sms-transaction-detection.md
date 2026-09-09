@@ -205,11 +205,9 @@ Create `android/app/src/main/java/com/anonymous/finance_flow/SmsListenerPackage.
 ```kotlin
 package com.anonymous.finance_flow
 
-import android.view.View
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
 
 class SmsListenerPackage : ReactPackage {
@@ -217,7 +215,12 @@ class SmsListenerPackage : ReactPackage {
     return listOf(SmsListenerModule(reactContext))
   }
 
-  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<View, ReactShadowNode<*>>> {
+  // Signature must match this project's actual installed ReactPackage
+  // interface exactly (checked against node_modules/react-native's
+  // ReactPackage.kt after Task 1's review caught a similar mismatch):
+  // List<ViewManager<in Nothing, in Nothing>>, not List<ViewManager<View,
+  // ReactShadowNode<*>>> (an older/different RN version's shape).
+  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<in Nothing, in Nothing>> {
     return emptyList()
   }
 }
