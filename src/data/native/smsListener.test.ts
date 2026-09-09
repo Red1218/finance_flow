@@ -30,7 +30,6 @@ describe('smsListener', () => {
 
   it('returns an empty array when the native module is unavailable', async () => {
     const original = NativeModules.SmsListenerModule;
-    // @ts-expect-error simulating an unlinked module
     NativeModules.SmsListenerModule = undefined;
     await expect(drainQueuedSms()).resolves.toEqual([]);
     NativeModules.SmsListenerModule = original;

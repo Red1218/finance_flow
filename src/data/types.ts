@@ -71,6 +71,7 @@ export interface Preferences {
   budget_alerts_enabled: boolean;
   daily_reminder_enabled: boolean;
   reminder_time: string | null;
+  sms_detection_enabled: boolean;
 }
 
 export interface RecurringItem {
