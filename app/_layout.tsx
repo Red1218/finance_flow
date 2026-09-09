@@ -3,6 +3,7 @@ import { useFonts, SourceSerif4_400Regular, SourceSerif4_600SemiBold, SourceSeri
 import { Stack } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from '../src/data/AuthContext';
+import { useSmsDetectionBootstrap } from '../src/data/useSmsDetectionBootstrap';
 import { Body, Button } from '../src/ui/primitives';
 import { colors, spacing } from '../src/theme/tokens';
 
@@ -76,6 +77,9 @@ function FontGate({ onRetry }: { onRetry: () => void }) {
 
 export default function RootLayout() {
   const [attempt, setAttempt] = useState(0);
+  // Runs regardless of session state (and independent of font-loading/retry
+  // below) — it only reads device SMS and writes to a local queue.
+  useSmsDetectionBootstrap();
   return <FontGate key={attempt} onRetry={() => setAttempt((a) => a + 1)} />;
 }
 
