@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAccounts } from '../../src/hooks/useAccounts';
@@ -7,6 +7,7 @@ import { useCategories } from '../../src/hooks/useCategories';
 import { usePreferences } from '../../src/hooks/usePreferences';
 import { getCurrencyMeta } from '../../src/domain/money';
 import { createTransaction, createTransfer } from '../../src/application/transactions';
+import { removeDetection } from '../../src/data/repositories/pendingDetections';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
@@ -39,6 +40,14 @@ function parseDateInput(value: string): Date | null {
 
 export default function NewTransaction() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    amount?: string;
+    kind?: string;
+    accountId?: string;
+    note?: string;
+    dateText?: string;
+    detectionId?: string;
+  }>();
   const { session } = useAuth();
   const accounts = useAccounts();
   const categories = useCategories(undefined);
@@ -46,14 +55,14 @@ export default function NewTransaction() {
   const precision = prefs.data?.decimal_precision ?? 2;
   const currency = getCurrencyMeta(prefs.data?.currency_code);
 
-  const [kind, setKind] = useState<Kind>('Expense');
-  const [amount, setAmount] = useState('0');
+  const [kind, setKind] = useState<Kind>((params.kind as Kind) || 'Expense');
+  const [amount, setAmount] = useState(params.amount || '0');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
-  const [accountId, setAccountId] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(params.accountId || null);
   const [toAccountId, setToAccountId] = useState<string | null>(null);
-  const [dateText, setDateText] = useState(() => todayInputValue());
-  const [note, setNote] = useState('');
+  const [dateText, setDateText] = useState(() => params.dateText || todayInputValue());
+  const [note, setNote] = useState(params.note || '');
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
   const [toAccountPickerOpen, setToAccountPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -137,6 +146,7 @@ export default function NewTransaction() {
           occurredAt,
         });
       }
+      if (params.detectionId) await removeDetection(params.detectionId);
       router.back();
     } catch (e) {
       setError(transactionErrorMessage(e));

@@ -5,13 +5,18 @@
 // @testing-library/react-native into the shipped app and breaking the
 // Metro/Android build. Tests for app/ screens live here instead.
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { useLocalSearchParams } from 'expo-router';
 import NewTransaction from '../../../app/transaction/new';
+import { removeDetection } from '../../data/repositories/pendingDetections';
 
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack, push: jest.fn() }),
+  useLocalSearchParams: jest.fn(() => ({})),
 }));
+
+jest.mock('../../data/repositories/pendingDetections', () => ({ removeDetection: jest.fn() }));
 
 jest.mock('react-native-safe-area-context', () => {
   const { View } = jest.requireActual('react-native');
@@ -66,6 +71,8 @@ describe('Add Transaction screen', () => {
     mockCreateTransfer.mockClear();
     mockBack.mockClear();
     mockSession = { user: { id: 'u1' } };
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    (removeDetection as jest.Mock).mockClear();
   });
 
   it('shows a sign-in prompt instead of the form when signed out', () => {
@@ -177,5 +184,22 @@ describe('Add Transaction screen', () => {
     await userEvent.press(screen.getByText('Expense'));
     expect(screen.queryByText('Utilities')).toBeNull();
     expect(screen.getByText('Show all ↓')).toBeTruthy();
+  });
+
+  it('pre-fills fields from route params when present', () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({
+      amount: '150', kind: 'Expense', accountId: 'acc-1', note: 'GUNREDDY RAMANUJA RE', dateText: '2026-09-07',
+    });
+    const { getByDisplayValue } = render(<NewTransaction />);
+    expect(getByDisplayValue('GUNREDDY RAMANUJA RE')).toBeTruthy();
+  });
+
+  it('removes the originating detection after a successful save', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({
+      amount: '150', kind: 'Expense', accountId: 'acc-1', note: 'x', dateText: '2026-09-07', detectionId: 'KOTAKB:1',
+    });
+    const { getByText } = render(<NewTransaction />);
+    await userEvent.press(getByText('Save'));
+    await waitFor(() => expect(removeDetection).toHaveBeenCalledWith('KOTAKB:1'));
   });
 });
