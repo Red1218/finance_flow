@@ -81,26 +81,43 @@ Avl limit INR 3625.51 Not you? SMS CCLOST 4030 to 5676788
 Note the amount has **no decimal places** here ("INR 351", not "INR 351.00")
 — unlike every UPI/IMPS message above.
 
-**`VM-AXISBK-S`** — Axis Bank:
+**Axis Bank** — sent from **two different sender IDs** for the same
+message types (`VM-AXISBK-S` and `AX-AXISBK-S` both observed sending
+identically-shaped debit messages) — see "Sender ID matching" below, this
+is why matching is by bank-code substring, not exact sender string:
 ```
-# debit
+# debit (UPI/P2M) — seen from both VM-AXISBK-S and AX-AXISBK-S
 INR 6800.00 debited
 A/c no. XX1994
 07-09-26, 11:01:15
 UPI/P2M/313051540148/Thanvir Bros Pvt Lt
 Not you? SMS BLOCKUPI Cust ID to 919951860002
 Axis Bank
+
+# credit (UPI/P2A — person-to-account) — a third distinct shape: trailing
+# "IST", counterparty formatted as "<name> /<bank-code>/Paym"
+INR 15000.00 credited
+A/c no. XX1994
+03-09-26, 19:20:56 IST
+UPI/P2A/881446193797/GUNREDDY /KKBK/Paym - Axis Bank
+
+# credit (cash/cheque deposit — "BNA-DEPOSIT") — structurally different
+# from every other message: single-line "credited to Axis Bank A/c no."
+# phrasing, 4-digit YEAR (09-02-2026, not 09-02-26 like everywhere else),
+# and a 6-digit account tail (XX771994) instead of the usual 4 — account
+# digit length is NOT a safe constant across subtypes
+INR 500.00 credited to Axis Bank A/c no. XX771994 on 09-02-2026 00:31:24.
+Info-BNA-DEPOSIT/AXIS BANK LIMITED/AXPR/2605. Avl Bal INR 832.61.
 ```
-No credit-side example seen yet for Axis.
 
 **Non-transactional messages that must be filtered out, not parsed as
-transactions** — both sender IDs above also send messages that aren't
-transactions and must not produce a false-positive draft:
-```
-# VM-AXISBK-S — card PIN set, not a transaction
-PIN for Axis Bank Debit Card no. XX1968 is set. Ensure card is enabled for
-online, contactless, intl usage for a seamless experience. Visit https://...
-```
+transactions** — real Axis SMS traffic turned out to be **mostly this
+category**, not transactions: card PIN set, app-welcome/limit-upgrade
+notices, new-device login alerts, transfer-limit-change alerts, security-
+question-reset alerts. Enumerating and excluding each one is a losing
+game — see "Positive-match only" below, this is why the parser now
+requires a positive structural match (amount + debited/credited + account)
+rather than trying to blacklist every non-transactional shape.
 
 **Multi-part SMS gotcha**: one Kotak message was observed arriving as two
 physically separate SMS, the second being just a continuation fragment:
@@ -174,39 +191,65 @@ Given one bank can have multiple sender IDs and multiple message shapes per
 sender ID, each **sender ID** gets its own module, and internally tries its
 known subtypes in order:
 
-- `src/domain/smsParsers/kotakUpi.ts` — sender `VK-KOTAKB-S`: UPI-sent
-  (debit), UPI-received (credit), IMPS-received (credit)
-- `src/domain/smsParsers/kotakCreditCard.ts` — sender `AX-KOTAKB-S`:
-  card spend
-- `src/domain/smsParsers/axis.ts` — sender `VM-AXISBK-S`: debit; filters
-  out non-transactional messages (PIN-set, etc.)
+- `src/domain/smsParsers/kotakUpi.ts` — bank code `KOTAKB`, savings
+  account shapes only (see below): UPI-sent (debit), UPI-received
+  (credit), IMPS-received (credit). Only sender `VK-KOTAKB-S` observed so
+  far, but matched by bank-code substring like Axis, not exact string —
+  Axis's two-sender-ID discovery means assuming Kotak's sender is stable
+  would just be the same mistake not yet caught.
+- `src/domain/smsParsers/kotakCreditCard.ts` — bank code `KOTAKB`, credit
+  card spend shape only (only sender `AX-KOTAKB-S` observed so far, same
+  substring-matching caveat as above). Since both Kotak parsers share a
+  bank code, dispatch tries `kotakCreditCard` first (its shape — "spent on
+  Kotak Credit Card" — is more specific/unambiguous) and falls through to
+  `kotakUpi` if it doesn't match.
+- `src/domain/smsParsers/axis.ts` — bank code `AXISBK`: debit (P2M),
+  credit (P2A), credit (BNA-DEPOSIT)
 
 Shared shape:
 
 ```ts
 interface BankParser {
-  senderId: string; // exact match against the SMS sender header, e.g. 'VK-KOTAKB-S'
-  parse(body: string): ParsedTransaction | null; // null = matched sender but not a transaction (e.g. PIN-set notice)
+  bankCode: string; // substring match against the sender header, e.g. 'KOTAKB', 'AXISBK'
+  parse(body: string): ParsedTransaction | null; // null = no known transactional shape matched
 }
 
 interface ParsedTransaction {
   amount: number;
   direction: 'debit' | 'credit';
   accountType: 'bank_account' | 'credit_card';
-  accountLast4: string;
+  accountLast4: string; // whatever digit run follows the X/XX prefix — length varies (4 in most messages, 6 in the BNA-DEPOSIT one), never assume a fixed width
   merchant: string;
-  date: string; // ISO, parsed from the bank's DD-MM-YY format
+  date: string; // ISO — source formats vary: DD-MM-YY in most messages, DD-MM-YYYY in the BNA-DEPOSIT one
   dedupKey: string; // sender id + reference number
 }
 ```
 
-Dispatch matches `sender` against each parser's `senderId` first (exact,
-not fuzzy) — this project's earlier fallback-to-body-text-matching idea is
-dropped now that real sender IDs are known; exact sender match is simpler
-and this app's own account list already distinguishes bank vs. credit card,
-so `accountType` matters for account auto-matching (a Kotak savings account
-and a Kotak credit card are two different rows in this app, matched
-separately even though both are "Kotak").
+**Sender ID matching**: real traffic showed Axis sending the *identical*
+debit shape from two different sender strings (`VM-AXISBK-S` and
+`AX-AXISBK-S`) — the leading two letters are a telecom-route prefix, not
+part of the bank's identity, and apparently not stable. Matching must be a
+substring/suffix check against the bank code (`sender.includes('AXISBK')`,
+`sender.includes('KOTAKB')`), never exact string equality against a full
+sender ID. This app's account list already distinguishes bank vs. credit
+card, so `accountType` still matters for auto-matching (a Kotak savings
+account and a Kotak credit card are two different rows even though both
+are "Kotak") — that distinction is carried by which parser module matched
+(`kotakUpi` vs `kotakCreditCard`), not by the sender prefix.
+
+**Positive-match only, not a blacklist**: the real Axis inbox turned out
+to be mostly non-transactional traffic (PIN-set, app-welcome, login
+alerts, limit-change alerts, security-question resets — five distinct
+non-transactional shapes seen already, more will exist). Enumerating and
+excluding every non-transactional template is an open-ended, losing game.
+Instead, each parser's `parse()` only returns non-null when the body
+positively matches a known transactional shape (an amount, a
+debited/credited keyword, and an account number are all present and
+extractable) — anything else, known or not, returns `null` by default.
+This also means the subtype table below is a **living list**, not a
+claimed-exhaustive enumeration: a message shape nobody has seen yet simply
+produces no draft (safe no-op) until a sample is captured and a case is
+added — same low-risk, additive extension path as adding a new bank.
 
 Concrete fields per subtype (final regex written at implementation time —
 this documents what each must capture, using the real samples above):
@@ -217,23 +260,30 @@ this documents what each must capture, using the real samples above):
 | Kotak UPI received | `Rs.1500.00` (same amount regex) | literal `Received...UPI Ref` → credit | `AC 8721` → `AC (\d{4})` (no `X` prefix here) | between `from ` and ` on ` | `on 05-09-26` | `UPI Ref:(\d+)` (colon, no space) |
 | Kotak IMPS received | `Rs. 16486.30` (note the space after `Rs.`) | literal `Received...IMPS Ref` → credit | `A/C x8721` → `x(\d{4})` (lowercase) | not present in this message shape — leave blank, user fills in on review | `on 07-09-26` | `IMPS Ref no (\d+)` |
 | Kotak credit card spend | `INR 351` → `INR\s?(\d+)` (**no decimal group** — differs from every other subtype) | always debit (a card "spend") | `x4030` → `x(\d{4})` | after `at ` up to `. Avl limit` | `on 06-09-26` | no ref number in the message — dedup on `(sender, amount, date, merchant)` tuple instead |
-| Axis debit | `INR 6800.00` → `INR\s?([\d,]+\.\d{2})` | literal `debited` → debit | `A/c no. XX1994` → `XX(\d{4})` | text after the last `/` in the `UPI/P2M/<ref>/<name>` line (bank-truncates long names — exactly why review-before-save matters) | own line `07-09-26, 11:01:15` | ref embedded in the same `UPI/P2M/<ref>/...` line |
+| Axis debit (P2M) | `INR 6800.00` → `INR\s?([\d,]+\.\d{2})` | literal `debited` → debit | `A/c no. XX1994` → `XX(\d{4})` | text after the last `/` in the `UPI/P2M/<ref>/<name>` line (bank-truncates long names — exactly why review-before-save matters) | own line `07-09-26, 11:01:15` | ref embedded in the same `UPI/P2M/<ref>/...` line |
+| Axis credit (P2A) | `INR 15000.00` (same regex) | literal `credited` → credit | `A/c no. XX1994` → `XX(\d{4})` | text between the 3rd and 4th `/` in `UPI/P2A/<ref>/<name> /<bank-code>/Paym` — trailing space before the `/` is real, trim it | own line `03-09-26, 19:20:56 IST` (trailing `IST` must be stripped before date parsing) | ref embedded in the `UPI/P2A/<ref>/...` line |
+| Axis credit (deposit) | `INR 500.00` (same regex, but inline in prose, not its own line) | literal `credited to Axis Bank` → credit | `XX771994` → `XX(\d+)` (**not** a fixed 4 digits — capture the full run) | not a person — leave blank or set to a fixed label like `"Deposit"`, since the message only names `AXIS BANK LIMITED`/an internal code, not a payer | `on 09-02-2026 00:31:24` — **4-digit year**, different from every other subtype's 2-digit year | no clean ref number — dedup on `(sender, amount, date, accountLast4)` like the credit-card subtype |
 
-Every subtype above is a **debit or credit that already happened** — Axis's
-PIN-set message (and anything shaped like it) must return `null` from
-`parse()`, not a best-effort guess.
-
-No credit-side example exists yet for Axis — the implementer should ask
-the user for one rather than guessing the wording, same as before.
+Every subtype above is a **debit or credit that already happened**; see
+"Positive-match only" above for how everything else (which turned out to
+be most of a real Axis inbox) is handled — always `null`, never a guess.
 
 ## Testing
 
 - Per-parser tests (`kotakUpi.test.ts`, `kotakCreditCard.test.ts`,
   `axis.test.ts`) use the **exact real message bodies above** as fixtures —
   no synthetic/guessed SMS text — covering every subtype in the table
-  (including the credit-card no-decimal amount format and the IMPS
-  no-merchant case), plus one non-transactional message (Axis PIN-set)
-  asserting `parse()` returns `null`.
+  (including the credit-card no-decimal amount format, the IMPS
+  no-merchant case, the P2A trailing-`IST`/trailing-space case, and the
+  deposit message's 4-digit-year/6-digit-account case), plus every
+  non-transactional message captured (PIN-set, app-welcome, login alert,
+  limit-change alert, security-question reset) asserting `parse()` returns
+  `null` for each — this is the "positive-match only" principle's actual
+  regression test, not a formality, given how much of a real inbox is
+  non-transactional.
+- A dispatch-order test for the two Kotak parsers sharing a bank code:
+  a credit-card message must resolve to `kotakCreditCard`, not fall through
+  to `kotakUpi` and either misparse or wrongly return `null`.
 - A concatenation test for `SmsReceiver`'s JS-visible contract: given the
   two-part Kotak message (`"Sent Rs...."` + `"...Refer UM no....Kotak
   Bank"`), the parser only ever sees the correctly joined single body —
