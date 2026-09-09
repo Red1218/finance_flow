@@ -54,7 +54,9 @@ sends from two different sender IDs depending on product, each with its
 own set of message shapes. This reshapes the parser module structure (see
 below): dispatch is keyed by **sender ID + subtype**, not just "bank name."
 
-**`VK-KOTAKB-S`** — Kotak Bank savings account (UPI/IMPS):
+**Kotak Bank savings account** (UPI/IMPS) — bank code `KOTAKB`, confirmed
+sent from at least two sender-ID prefixes so far (`VK-`, `AD-KOTAKB-S`) with
+identical message shapes:
 ```
 # debit (UPI sent)
 Sent Rs.150.00 from Kotak Bank A/c X8721 to GUNREDDY RAMANUJA RE on 07-09-26.
@@ -71,15 +73,21 @@ Received Rs. 16486.30 on 07-09-26 in your Kotak Bank A/C x8721 by an A/C
 linked to mobile x163. IMPS Ref no 625010029187.
 ```
 
-**`AX-KOTAKB-S`** — Kotak Bank **credit card** (different sender ID from the
-savings account above — same bank, different product, must be matched and
-routed separately):
+**Kotak Bank credit card** — bank code `KOTAKB`, but a different product
+than the savings account above; also confirmed sent from at least three
+sender-ID prefixes (`AX-`, `AD-KOTAKB-S`, alongside the savings account's
+own `VK-`/`AD-` prefixes — see the note above about matching by bank code,
+not exact sender string):
 ```
 INR 351 spent on Kotak Credit Card x4030 on 06-09-26 at BLINK COMMERCE PVT LTD.
 Avl limit INR 3625.51 Not you? SMS CCLOST 4030 to 5676788
+
+# decimals appear when the amount isn't a whole rupee value — do not assume
+# credit-card amounts are always decimal-free, only 351/384/500 above happened
+# to be whole rupees
+INR 1885.64 spent on Kotak Credit Card x4030 on 02-09-26 at AIRTEL IN.
+Avl limit INR 5260.5 Not you? SMS CCLOST 4030 to 5676788
 ```
-Note the amount has **no decimal places** here ("INR 351", not "INR 351.00")
-— unlike every UPI/IMPS message above.
 
 **Axis Bank** — sent from **two different sender IDs** for the same
 message types (`VM-AXISBK-S` and `AX-AXISBK-S` both observed sending
@@ -259,7 +267,7 @@ this documents what each must capture, using the real samples above):
 | Kotak UPI sent | `Rs.150.00` → `Rs\.?\s?([\d,]+\.\d{2})` | literal `Sent` → debit | `A/c X8721` → `X(\d{4})` | between `to ` and ` on ` | `on 07-09-26` | `UPI Ref (\d+)` |
 | Kotak UPI received | `Rs.1500.00` (same amount regex) | literal `Received...UPI Ref` → credit | `AC 8721` → `AC (\d{4})` (no `X` prefix here) | between `from ` and ` on ` | `on 05-09-26` | `UPI Ref:(\d+)` (colon, no space) |
 | Kotak IMPS received | `Rs. 16486.30` (note the space after `Rs.`) | literal `Received...IMPS Ref` → credit | `A/C x8721` → `x(\d{4})` (lowercase) | not present in this message shape — leave blank, user fills in on review | `on 07-09-26` | `IMPS Ref no (\d+)` |
-| Kotak credit card spend | `INR 351` → `INR\s?(\d+)` (**no decimal group** — differs from every other subtype) | always debit (a card "spend") | `x4030` → `x(\d{4})` | after `at ` up to `. Avl limit` | `on 06-09-26` | no ref number in the message — dedup on `(sender, amount, date, merchant)` tuple instead |
+| Kotak credit card spend | **decimals are optional, not absent** — `INR 351` (whole rupees, no `.00` padding) and `INR 1885.64` (real paise) are both observed → `INR\s?(\d+(?:\.\d+)?)` | always debit (a card "spend") | `x4030` → `x(\d{4})` | after `at ` up to `. Avl limit` — merchant is sometimes a UPI routing string like `UPI-K-048831221119-THE` rather than a business name; passed through as-is, review screen is where the user makes sense of it | `on 06-09-26` | no ref number in the message — dedup on `(sender, amount, date, merchant)` tuple instead |
 | Axis debit (P2M) | `INR 6800.00` → `INR\s?([\d,]+\.\d{2})` | literal `debited` → debit | `A/c no. XX1994` → `XX(\d{4})` | text after the last `/` in the `UPI/P2M/<ref>/<name>` line (bank-truncates long names — exactly why review-before-save matters) | own line `07-09-26, 11:01:15` | ref embedded in the same `UPI/P2M/<ref>/...` line |
 | Axis credit (P2A) | `INR 15000.00` (same regex) | literal `credited` → credit | `A/c no. XX1994` → `XX(\d{4})` | text between the 3rd and 4th `/` in `UPI/P2A/<ref>/<name> /<bank-code>/Paym` — trailing space before the `/` is real, trim it | own line `03-09-26, 19:20:56 IST` (trailing `IST` must be stripped before date parsing) | ref embedded in the `UPI/P2A/<ref>/...` line |
 | Axis credit (deposit) | `INR 500.00` (same regex, but inline in prose, not its own line) | literal `credited to Axis Bank` → credit | `XX771994` → `XX(\d+)` (**not** a fixed 4 digits — capture the full run) | not a person — leave blank or set to a fixed label like `"Deposit"`, since the message only names `AXIS BANK LIMITED`/an internal code, not a payer | `on 09-02-2026 00:31:24` — **4-digit year**, different from every other subtype's 2-digit year | no clean ref number — dedup on `(sender, amount, date, accountLast4)` like the credit-card subtype |
@@ -323,7 +331,13 @@ deliberately skipped.
   either needs that compliance work or must be excluded from that build
   variant.
 - Any bank beyond Kotak and Axis: added later as additional parser
-  modules following the same pattern, not a redesign.
+  modules following the same pattern, not a redesign. **IDFC FIRST Bank
+  specifically** was seen unprompted in the user's real message samples
+  (sender `AD-IDFCFB-S`) and deliberately excluded from v1 per an explicit
+  scope decision — it introduces at least two more date formats (`DD/MM/YY`
+  and `DD-Mon-YY`, e.g. `18-Aug-26`) beyond the two Kotak/Axis already use.
+  Not spec'd here; if added later, it needs its own real-sample pass the
+  same way Kotak and Axis got one, not a guess from this note.
 - Editing/deleting a saved (not pending) transaction that originated from
   SMS detection differently from a manually-entered one — once saved, it's
   an ordinary transaction row, no provenance tracking needed.
