@@ -312,3 +312,55 @@ for the full design and [`docs/superpowers/plans/2026-09-07-email-bound-auth.md`
 for the implementation plan.
 
 **Validation:** TypeScript compiler clean (no errors or warnings). ESLint clean (0 errors). Jest suite: 182/182 tests passed across 25 unit/component suites; 4 integration test suites fail to load due to missing Supabase environment variables (EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY), which is expected outside a configured environment and does not indicate a failure of this feature's implementation. Live on-device verification (sign up a fresh test account, confirm every screen shows real content, sign out, sign back in, and verify data persistence) is outstanding, pending manual test-account creation with a real OTP-verified email address — this step requires human access to an email inbox and is the same external blocker as Task 17.
+
+## SMS Transaction Detection
+
+- **Implementation:** Approved & Frozen — 2026-09-09
+
+Detects bank/UPI transactions from incoming SMS on Android and turns them
+into reviewable, pre-filled transaction drafts without ever auto-saving.
+A manifest-registered Kotlin `BroadcastReceiver` catches `SMS_RECEIVED`
+immediately when a message arrives, persists it to a native `SharedPreferences`
+queue (surviving when the app process is fully closed), and emits it live
+if the JavaScript runtime is active. On app boot, a bootstrap hook drains
+the queue and subscribes to live events, feeding every raw message through
+per-bank parsers that generate transaction drafts. A pending-drafts screen
+lists detections; tapping one navigates into the existing `transaction/new.tsx`
+form pre-filled via route params, saving through the exact save path every
+other transaction already uses.
+
+**Scope and distribution:** Android-only and sideload-only, installed via
+`adb install` specifically to avoid Google Play Protect's enhanced-fraud-protection
+sideload block on `RECEIVE_SMS`/`READ_SMS` permissions — this feature must never
+ship in a Play Store build. Initial bank scope is Kotak (savings + credit card)
+and Axis Bank, with IDFC FIRST Bank deliberately deferred (seen in real
+samples captured during planning, excluded from v1 by explicit user decision).
+Account matching is automatic by bank name and product type, editable on
+the review screen.
+
+**Parser design — positive-match only:** Every parser returns `null` unless
+the SMS body clearly matches a known transactional shape (amount + debit/credit
+keyword + account number). The parser never attempts to enumerate or exclude
+non-transactional message shapes — bank inboxes are mostly non-transactional
+traffic. This means an unrecognized message type produces no draft and no
+error, allowing future parsers to be added without breaking existing flow
+for unseen message shapes.
+
+See [`docs/superpowers/specs/2026-09-09-sms-transaction-detection-design.md`](superpowers/specs/2026-09-09-sms-transaction-detection-design.md)
+for the full design specification (including real sample SMS messages from
+both banks) and [`docs/superpowers/plans/2026-09-09-sms-transaction-detection.md`](superpowers/plans/2026-09-09-sms-transaction-detection.md)
+for the implementation plan covering all 16 tasks: permissions and receiver
+(Task 1), native module (Task 2), JavaScript wrapper (Task 3), parser modules
+(Tasks 4–6), dispatcher (Task 7), pending queue (Task 8), account matching
+(Task 9), preference toggle (Tasks 10–11), review screen and hub row
+(Tasks 12–13), transaction form prefill (Task 14), bootstrap wiring (Task 15),
+and documentation (Task 16).
+
+**Validation:** All 16 tasks complete and approved. TypeScript compiler and
+ESLint clean. Jest suite passing across all new test suites covering parsers,
+dispatcher, account matching, and integration with existing screens.
+Live-device QA confirms background listener working while app is closed,
+draft generation for known SMS patterns, pending-draft review screen navigation,
+and transaction saving with pre-filled SMS data. See
+[`testing.md`](testing.md) for full detail and
+[`traceability.md`](traceability.md) for the requirement mapping.
