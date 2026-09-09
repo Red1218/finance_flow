@@ -5,13 +5,33 @@
 // @testing-library/react-native into the shipped app and breaking the
 // Metro/Android build. Tests for app/ screens live here instead.
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { Platform } from 'react-native';
+import { render, screen, userEvent, fireEvent, waitFor } from '@testing-library/react-native';
 import Settings from '../../../app/(tabs)/more/settings';
+import { updatePreferences } from '../../data/repositories/preferences';
+import { requestSmsPermission } from '../../data/native/smsListener';
+
+// react-native/jest-preset.js defaults Platform.OS to 'ios' for this
+// project's plain 'jest-expo' preset (confirmed by reading the preset
+// source), but the SMS Detection section only renders on Android — set
+// Platform.OS directly, same pattern already used for
+// useSmsDetectionBootstrap's tests in this plan.
+Platform.OS = 'android';
 
 jest.mock('../../hooks/usePreferences', () => ({
-  usePreferences: () => ({ data: { currency_code: 'INR', week_start: 'MONDAY', budget_alerts_enabled: true, daily_reminder_enabled: false }, refetch: jest.fn() }),
+  usePreferences: () => ({
+    data: {
+      currency_code: 'INR',
+      week_start: 'MONDAY',
+      budget_alerts_enabled: true,
+      daily_reminder_enabled: false,
+      sms_detection_enabled: false,
+    },
+    refetch: jest.fn(),
+  }),
 }));
 jest.mock('../../data/repositories/preferences', () => ({ updatePreferences: jest.fn() }));
+jest.mock('../../data/native/smsListener', () => ({ requestSmsPermission: jest.fn() }));
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -26,6 +46,8 @@ describe('Settings screen — Account section', () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockSignOut.mockReset();
+    (updatePreferences as jest.Mock).mockClear();
+    (requestSmsPermission as jest.Mock).mockClear();
     mockSession = null;
   });
 
@@ -50,5 +72,37 @@ describe('Settings screen — Account section', () => {
 
     await userEvent.press(screen.getByText('Sign out'));
     expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('requests SMS permission and enables the preference when the toggle is turned on', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestSmsPermission as jest.Mock).mockResolvedValue(true);
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('sms-detection-switch'), 'valueChange', true);
+    await waitFor(() => {
+      expect(requestSmsPermission).toHaveBeenCalled();
+      expect(updatePreferences).toHaveBeenCalledWith({ sms_detection_enabled: true });
+    });
+  });
+
+  it('does not enable the preference if the user denies the permission prompt', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestSmsPermission as jest.Mock).mockResolvedValue(false);
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('sms-detection-switch'), 'valueChange', true);
+    await waitFor(() => {
+      expect(requestSmsPermission).toHaveBeenCalled();
+    });
+    expect(updatePreferences).not.toHaveBeenCalledWith({ sms_detection_enabled: true });
+  });
+
+  it('turning the toggle off does not re-request permission', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('sms-detection-switch'), 'valueChange', false);
+    await waitFor(() => {
+      expect(updatePreferences).toHaveBeenCalledWith({ sms_detection_enabled: false });
+    });
+    expect(requestSmsPermission).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { usePreferences } from '../../../src/hooks/usePreferences';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
+import { requestSmsPermission } from '../../../src/data/native/smsListener';
 import { CURRENCIES } from '../../../src/domain/money';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { K, Muted } from '../../../src/ui/primitives';
@@ -81,6 +82,27 @@ export default function Settings() {
             />
           </View>
         </View>
+
+        {Platform.OS === 'android' && (
+          <View style={styles.section}>
+            <K style={styles.sectionLabel}>SMS Detection</K>
+            <View style={[styles.row, { borderBottomWidth: 0 }]}>
+              <Text style={styles.rowLabel}>Detect transactions from SMS</Text>
+              <Switch
+                testID="sms-detection-switch"
+                value={!!prefs.data?.sms_detection_enabled}
+                onValueChange={async (v) => {
+                  if (v) {
+                    const granted = await requestSmsPermission();
+                    if (!granted) return;
+                  }
+                  setPref({ sms_detection_enabled: v });
+                }}
+                trackColor={{ true: colors.accent, false: colors.neutral300 }}
+              />
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <K style={styles.sectionLabel}>Privacy &amp; data</K>
