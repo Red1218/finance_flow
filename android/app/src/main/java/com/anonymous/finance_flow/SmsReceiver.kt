@@ -6,7 +6,7 @@ import android.content.Intent
 import android.provider.Telephony
 import com.facebook.react.ReactApplication
 import com.facebook.react.bridge.Arguments
-import com.facebook.react.modules.core.DeviceEventEmitterModule
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -29,7 +29,11 @@ class SmsReceiver : BroadcastReceiver() {
 
   private fun persistToQueue(context: Context, sender: String, body: String, timestamp: Long) {
     val prefs = context.getSharedPreferences(QUEUE_PREFS, Context.MODE_PRIVATE)
-    val arr = JSONArray(prefs.getString(QUEUE_KEY, "[]"))
+    val arr = try {
+      JSONArray(prefs.getString(QUEUE_KEY, "[]"))
+    } catch (e: org.json.JSONException) {
+      JSONArray() // corrupted queue -- start fresh rather than crash the receiver
+    }
     val entry = JSONObject()
     entry.put("sender", sender)
     entry.put("body", body)
@@ -39,13 +43,19 @@ class SmsReceiver : BroadcastReceiver() {
   }
 
   private fun tryEmitLive(context: Context, sender: String, body: String, timestamp: Long) {
+    // reactHost (not the legacy reactNativeHost.reactInstanceManager) is the
+    // correct accessor under this project's confirmed New Architecture /
+    // Bridgeless config (newArchEnabled: true in app.json and
+    // android/gradle.properties) -- the legacy path resolves a separate,
+    // never-started ReactInstanceManager and its currentReactContext is
+    // always null here.
     val reactContext = (context.applicationContext as? ReactApplication)
-      ?.reactNativeHost?.reactInstanceManager?.currentReactContext ?: return
+      ?.reactHost?.currentReactContext ?: return
     val map = Arguments.createMap()
     map.putString("sender", sender)
     map.putString("body", body)
     map.putDouble("timestamp", timestamp.toDouble())
-    reactContext.getJSModule(DeviceEventEmitterModule::class.java).emit(EVENT_NAME, map)
+    reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java).emit(EVENT_NAME, map)
   }
 
   companion object {
