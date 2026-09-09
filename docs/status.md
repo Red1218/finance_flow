@@ -329,10 +329,22 @@ lists detections; tapping one navigates into the existing `transaction/new.tsx`
 form pre-filled via route params, saving through the exact save path every
 other transaction already uses.
 
+The Settings toggle gates the feature twice: it writes the
+`sms_detection_enabled` Supabase preference (the user-visible, cross-device
+value) and mirrors it to a local AsyncStorage flag. The bootstrap hook reads
+the local flag, not the preference — it runs before any session exists, so a
+Supabase-only toggle could not have stopped detection. An unset flag means
+enabled, so users who granted the OS permission before the mirror existed keep
+working until they explicitly turn the toggle off.
+
 **Scope and distribution:** Android-only and sideload-only, installed via
 `adb install` specifically to avoid Google Play Protect's enhanced-fraud-protection
-sideload block on `RECEIVE_SMS`/`READ_SMS` permissions — this feature must never
-ship in a Play Store build. Initial bank scope is Kotak (savings + credit card)
+sideload block on SMS permissions — this feature must never ship in a Play
+Store build. Only `RECEIVE_SMS` is requested: the receiver reads PDUs straight
+off the broadcast intent and never touches the `content://sms` provider, so
+`READ_SMS` (full inbox history) was dropped rather than asked for unused.
+The receiver additionally drops any message whose sender doesn't carry a known
+bank code, so non-bank SMS are never queued or stored at rest. Initial bank scope is Kotak (savings + credit card)
 and Axis Bank, with IDFC FIRST Bank deliberately deferred (seen in real
 samples captured during planning, excluded from v1 by explicit user decision).
 Account matching is automatic by bank name and product type, editable on
@@ -356,11 +368,24 @@ for the implementation plan covering all 16 tasks: permissions and receiver
 (Tasks 12–13), transaction form prefill (Task 14), bootstrap wiring (Task 15),
 and documentation (Task 16).
 
-**Validation:** All 16 tasks complete and approved. TypeScript compiler and
-ESLint clean. Jest suite passing across all new test suites covering parsers,
-dispatcher, account matching, and integration with existing screens.
-Live-device QA confirms background listener working while app is closed,
-draft generation for known SMS patterns, pending-draft review screen navigation,
-and transaction saving with pre-filled SMS data. See
-[`testing.md`](testing.md) for full detail and
-[`traceability.md`](traceability.md) for the requirement mapping.
+**Validation:** All 16 tasks complete and approved, plus a whole-branch review
+fix wave. TypeScript compiler clean (no errors or warnings). ESLint clean for
+this branch — the one remaining error (`__dirname` undefined in
+`jest.integration.setup.js`) is pre-existing and unrelated. Jest suite:
+252/252 tests passed across 37 unit/component suites, covering the parsers
+(including every real sample message and the non-transactional messages that
+must return `null`), the dispatcher, account matching, the AsyncStorage
+pending-detections queue, the bootstrap hook's permission and toggle gates,
+and the review/settings/hub screens.
+
+**Live-device verification is outstanding.** No device or emulator has been
+connected at any point during this feature's implementation, so the entire
+native Android path is unexercised: the `SmsReceiver` `BroadcastReceiver`
+firing on a real `SMS_RECEIVED` broadcast, the multi-part PDU join, the
+`SmsListenerModule` bridge and its `SharedPreferences` queue surviving a fully
+closed app process, and the runtime `RECEIVE_SMS` permission prompt. Those are
+native-only paths this repo's Jest suite cannot reach (consistent with how the
+repo already treats native code). Confirming them needs a real sideloaded
+build on a physical Android device receiving genuine bank SMS — the same kind
+of outstanding external step as the Email-Bound Data feature's on-device
+sign-in check above.

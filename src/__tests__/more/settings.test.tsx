@@ -10,6 +10,7 @@ import { render, screen, userEvent, fireEvent, waitFor } from '@testing-library/
 import Settings from '../../../app/(tabs)/more/settings';
 import { updatePreferences } from '../../data/repositories/preferences';
 import { requestSmsPermission } from '../../data/native/smsListener';
+import { setSmsDetectionEnabled } from '../../data/smsDetectionEnabled';
 
 // react-native/jest-preset.js defaults Platform.OS to 'ios' for this
 // project's plain 'jest-expo' preset (confirmed by reading the preset
@@ -32,6 +33,7 @@ jest.mock('../../hooks/usePreferences', () => ({
 }));
 jest.mock('../../data/repositories/preferences', () => ({ updatePreferences: jest.fn() }));
 jest.mock('../../data/native/smsListener', () => ({ requestSmsPermission: jest.fn() }));
+jest.mock('../../data/smsDetectionEnabled', () => ({ setSmsDetectionEnabled: jest.fn() }));
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -48,6 +50,7 @@ describe('Settings screen — Account section', () => {
     mockSignOut.mockReset();
     (updatePreferences as jest.Mock).mockClear();
     (requestSmsPermission as jest.Mock).mockClear();
+    (setSmsDetectionEnabled as jest.Mock).mockClear();
     mockSession = null;
   });
 
@@ -104,5 +107,32 @@ describe('Settings screen — Account section', () => {
       expect(updatePreferences).toHaveBeenCalledWith({ sms_detection_enabled: false });
     });
     expect(requestSmsPermission).not.toHaveBeenCalled();
+  });
+
+  // The Supabase preference alone can't stop detection — the bootstrap hook
+  // runs before any session exists — so the toggle must also write the local
+  // mirror the hook actually reads.
+  it('turning the toggle off writes the local kill-switch flag', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('sms-detection-switch'), 'valueChange', false);
+    await waitFor(() => expect(setSmsDetectionEnabled).toHaveBeenCalledWith(false));
+  });
+
+  it('turning the toggle on writes the local kill-switch flag once permission is granted', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestSmsPermission as jest.Mock).mockResolvedValue(true);
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('sms-detection-switch'), 'valueChange', true);
+    await waitFor(() => expect(setSmsDetectionEnabled).toHaveBeenCalledWith(true));
+  });
+
+  it('does not write the local flag when the permission prompt is denied', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestSmsPermission as jest.Mock).mockResolvedValue(false);
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('sms-detection-switch'), 'valueChange', true);
+    await waitFor(() => expect(requestSmsPermission).toHaveBeenCalled());
+    expect(setSmsDetectionEnabled).not.toHaveBeenCalled();
   });
 });

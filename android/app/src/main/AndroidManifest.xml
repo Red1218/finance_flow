@@ -4,8 +4,10 @@
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <!-- RECEIVE_SMS only. SmsReceiver reads PDUs straight off the SMS_RECEIVED
+       intent (Telephony.Sms.Intents.getMessagesFromIntent), never the
+       content://sms provider, so READ_SMS (full inbox history) buys nothing. -->
   <uses-permission android:name="android.permission.RECEIVE_SMS"/>
-  <uses-permission android:name="android.permission.READ_SMS"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>

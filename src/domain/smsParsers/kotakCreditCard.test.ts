@@ -24,6 +24,17 @@ describe('kotakCreditCardParser', () => {
     expect(kotakCreditCardParser.parse(body)?.amount).toBe(1885.64);
   });
 
+  it('parses a comma-thousands amount (regression: earlier regex silently returned null)', () => {
+    const body =
+      'INR 12,450.00 spent on Kotak Credit Card x4030 on 06-09-26 at SOME MERCHANT.' +
+      ' Avl limit INR 3625.51 Not you? SMS CCLOST 4030 to 5676788';
+    expect(kotakCreditCardParser.parse(body)).toMatchObject({
+      amount: 12450,
+      merchant: 'SOME MERCHANT',
+      dedupKey: 'KOTAKB-CC:12450:2026-09-06:SOME MERCHANT',
+    });
+  });
+
   it('passes through a UPI-routing merchant string as-is', () => {
     const body =
       'INR 1094.25 spent on Kotak Credit Card x4030 on 03-09-26 at UPI-K-048831221119-THE.' +

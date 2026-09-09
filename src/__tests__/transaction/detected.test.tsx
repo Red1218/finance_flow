@@ -12,11 +12,21 @@ jest.mock('../../data/AuthContext', () => ({ useAuth: () => ({ session: { user: 
 // all this screen needs, so stub focus effect as a plain mount effect.
 jest.mock('@react-navigation/native', () => {
   const { useEffect } = jest.requireActual('react');
+  // Mount-only by design — same false positive useLiveQuery.ts silences on its
+  // own useFocusEffect call.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return { useFocusEffect: (cb: () => void) => useEffect(cb, []) };
+});
+jest.mock('react-native-safe-area-context', () => {
+  const { View } = jest.requireActual('react-native');
+  return { SafeAreaView: View };
 });
 jest.mock('../../data/repositories/pendingDetections');
 jest.mock('../../hooks/useAccounts', () => ({
   useAccounts: () => ({ data: [{ id: 'acc-1', type: 'BANK', mask: '8721', archived_at: null }] }),
+}));
+jest.mock('../../hooks/usePreferences', () => ({
+  usePreferences: () => ({ data: { currency_code: 'INR' } }),
 }));
 
 const sampleDetection = {

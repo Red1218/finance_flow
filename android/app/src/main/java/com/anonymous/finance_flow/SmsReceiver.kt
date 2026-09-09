@@ -17,6 +17,10 @@ class SmsReceiver : BroadcastReceiver() {
     if (messages.isNullOrEmpty()) return
 
     val sender = messages[0].originatingAddress ?: return
+    // Only messages from a known bank sender go any further — everything else
+    // (OTPs, personal messages) is dropped here rather than stored at rest.
+    if (KNOWN_BANK_CODES.none { sender.contains(it) }) return
+
     // Multi-part SMS arrive as multiple PDUs in one intent — a message that
     // reads only messages[0] silently truncates long SMS. See the spec's
     // "Multi-part SMS gotcha" for a real example this caught.
@@ -59,6 +63,11 @@ class SmsReceiver : BroadcastReceiver() {
   }
 
   companion object {
+    // Duplicated from the JS parsers' `bankCode` values
+    // (src/domain/smsParsers/*.ts), which are the source of truth — there is no
+    // shared-code mechanism between Kotlin and TypeScript here, so adding a bank
+    // there means adding it here too.
+    private val KNOWN_BANK_CODES = listOf("KOTAKB", "AXISBK")
     const val QUEUE_PREFS = "sms_listener_queue"
     const val QUEUE_KEY = "pending"
     const val EVENT_NAME = "SmsListener:onSms"

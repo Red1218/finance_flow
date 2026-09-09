@@ -146,7 +146,16 @@ export default function NewTransaction() {
           occurredAt,
         });
       }
-      if (params.detectionId) await removeDetection(params.detectionId);
+      // Deliberately in its own try: the transaction is already saved by this
+      // point, so a failure clearing the pending draft must not surface as a
+      // save error — the user would tap Save again and create a duplicate.
+      if (params.detectionId) {
+        try {
+          await removeDetection(params.detectionId);
+        } catch (e) {
+          console.warn('Could not clear the pending SMS detection', e);
+        }
+      }
       router.back();
     } catch (e) {
       setError(transactionErrorMessage(e));

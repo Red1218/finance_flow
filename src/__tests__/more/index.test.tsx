@@ -27,6 +27,9 @@ jest.mock('../../data/repositories/pendingDetections');
 // these unit tests. Fetch-on-mount is all this screen needs.
 jest.mock('@react-navigation/native', () => {
   const { useEffect } = jest.requireActual('react');
+  // Mount-only by design — same false positive useLiveQuery.ts silences on its
+  // own useFocusEffect call.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return { useFocusEffect: (cb: () => void) => useEffect(cb, []) };
 });
 

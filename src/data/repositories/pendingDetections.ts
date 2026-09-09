@@ -10,7 +10,13 @@ export interface PendingDetection extends ParsedTransaction {
 async function readAll(): Promise<PendingDetection[]> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return [];
-  return JSON.parse(raw) as PendingDetection[];
+  try {
+    return JSON.parse(raw) as PendingDetection[];
+  } catch {
+    // A corrupted queue reads as empty rather than throwing on every call —
+    // the next write overwrites it with valid JSON.
+    return [];
+  }
 }
 
 async function writeAll(items: PendingDetection[]): Promise<void> {

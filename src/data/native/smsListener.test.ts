@@ -5,10 +5,10 @@ jest.mock('react-native', () => ({
   NativeModules: { SmsListenerModule: { drainQueue: jest.fn() } },
   DeviceEventEmitter: { addListener: jest.fn(() => ({ remove: jest.fn() })) },
   PermissionsAndroid: {
-    PERMISSIONS: { RECEIVE_SMS: 'android.permission.RECEIVE_SMS', READ_SMS: 'android.permission.READ_SMS' },
+    PERMISSIONS: { RECEIVE_SMS: 'android.permission.RECEIVE_SMS' },
     RESULTS: { GRANTED: 'granted' },
     check: jest.fn(),
-    requestMultiple: jest.fn(),
+    request: jest.fn(),
   },
   Platform: { OS: 'android' },
 }));
@@ -35,27 +35,22 @@ describe('smsListener', () => {
     NativeModules.SmsListenerModule = original;
   });
 
-  it('checks current permission grant', async () => {
-    (PermissionsAndroid.check as jest.Mock)
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce(false);
+  // Only RECEIVE_SMS is checked/requested: nothing here reads content://sms,
+  // so READ_SMS was dropped rather than asked for and never used.
+  it('checks the RECEIVE_SMS grant only', async () => {
+    (PermissionsAndroid.check as jest.Mock).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     await expect(checkSmsPermission()).resolves.toBe(true);
     await expect(checkSmsPermission()).resolves.toBe(false);
+    expect(PermissionsAndroid.check).toHaveBeenCalledTimes(2);
+    expect(PermissionsAndroid.check).toHaveBeenCalledWith('android.permission.RECEIVE_SMS');
   });
 
-  it('requests permission and returns true only if both are granted', async () => {
-    (PermissionsAndroid.requestMultiple as jest.Mock).mockResolvedValue({
-      'android.permission.RECEIVE_SMS': 'granted',
-      'android.permission.READ_SMS': 'granted',
-    });
+  it('requests RECEIVE_SMS and returns true only when granted', async () => {
+    (PermissionsAndroid.request as jest.Mock).mockResolvedValueOnce('granted');
     await expect(requestSmsPermission()).resolves.toBe(true);
+    expect(PermissionsAndroid.request).toHaveBeenCalledWith('android.permission.RECEIVE_SMS');
 
-    (PermissionsAndroid.requestMultiple as jest.Mock).mockResolvedValue({
-      'android.permission.RECEIVE_SMS': 'granted',
-      'android.permission.READ_SMS': 'denied',
-    });
+    (PermissionsAndroid.request as jest.Mock).mockResolvedValueOnce('denied');
     await expect(requestSmsPermission()).resolves.toBe(false);
   });
 });

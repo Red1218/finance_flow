@@ -41,6 +41,13 @@ describe('pendingDetections', () => {
     await expect(listDetections()).resolves.toEqual([]);
   });
 
+  it('reads a corrupted queue as empty instead of throwing, and recovers on the next write', async () => {
+    await AsyncStorage.setItem('financeflow.pendingSmsDetections', '{not json');
+    await expect(listDetections()).resolves.toEqual([]);
+    await addDetection(sample);
+    await expect(listDetections()).resolves.toHaveLength(1);
+  });
+
   it('handles the credit-card dedup shape (amount:date:merchant based) the same way as any other', async () => {
     const ccSample: ParsedTransaction = {
       amount: 351,

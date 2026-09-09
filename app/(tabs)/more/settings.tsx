@@ -4,6 +4,7 @@ import { usePreferences } from '../../../src/hooks/usePreferences';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
 import { requestSmsPermission } from '../../../src/data/native/smsListener';
+import { setSmsDetectionEnabled } from '../../../src/data/smsDetectionEnabled';
 import { CURRENCIES } from '../../../src/domain/money';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { K, Muted } from '../../../src/ui/primitives';
@@ -96,7 +97,11 @@ export default function Settings() {
                     const granted = await requestSmsPermission();
                     if (!granted) return;
                   }
-                  setPref({ sms_detection_enabled: v });
+                  await setPref({ sms_detection_enabled: v });
+                  // Local mirror: the bootstrap hook runs before any session
+                  // exists, so this — not the Supabase preference — is what
+                  // actually stops detection when the toggle goes off.
+                  await setSmsDetectionEnabled(v);
                 }}
                 trackColor={{ true: colors.accent, false: colors.neutral300 }}
               />
