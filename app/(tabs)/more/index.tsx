@@ -8,13 +8,15 @@ import { useGoals } from '../../../src/hooks/useGoals';
 import { useCategories } from '../../../src/hooks/useCategories';
 import { useBudgets } from '../../../src/hooks/useBudgets';
 import { usePreferences } from '../../../src/hooks/usePreferences';
+import { useLiveQuery } from '../../../src/hooks/useLiveQuery';
 import { transactionSign } from '../../../src/data/repositories/transactions';
+import { listDetections } from '../../../src/data/repositories/pendingDetections';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
-type Href = '/(tabs)/more/accounts' | '/(tabs)/more/recurring' | '/(tabs)/more/goals' | '/(tabs)/more/categories' | '/(tabs)/more/settings';
+type Href = '/(tabs)/more/accounts' | '/(tabs)/more/recurring' | '/(tabs)/more/goals' | '/(tabs)/more/categories' | '/(tabs)/more/settings' | '/transaction/detected';
 
 function dueInDays(iso: string, today: Date): string {
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -37,6 +39,7 @@ export default function MoreHub() {
   const categories = useCategories('EXPENSE');
   const budgets = useBudgets();
   const prefs = usePreferences();
+  const detections = useLiveQuery(() => listDetections(), []);
   const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const subtitles = useMemo(() => {
@@ -68,14 +71,16 @@ export default function MoreHub() {
       goals: `${activeGoals.length} running · ${formatCurrency(monthlyTarget, currencyCode)} put away this month`,
       categories: `${categoryList.length} categories · ${budgetedCategoryIds.size} with a budget`,
       settings: `${currencyCode} · Week starts ${prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}`,
+      detected: !detections.data?.length ? 'Nothing pending' : `${detections.data.length} pending`,
     };
-  }, [accounts.data, allTx.data, recurring.data, goals.data, categories.data, budgets.data, prefs.data, today, currencyCode]);
+  }, [accounts.data, allTx.data, recurring.data, goals.data, categories.data, budgets.data, prefs.data, detections.data, today, currencyCode]);
 
   const items: { label: string; href: Href; subtitle: string }[] = [
     { label: 'Accounts', href: '/(tabs)/more/accounts', subtitle: subtitles.accounts },
     { label: 'Recurring', href: '/(tabs)/more/recurring', subtitle: subtitles.recurring },
     { label: 'Goals', href: '/(tabs)/more/goals', subtitle: subtitles.goals },
     { label: 'Categories', href: '/(tabs)/more/categories', subtitle: subtitles.categories },
+    { label: 'Detected transactions', href: '/transaction/detected', subtitle: subtitles.detected },
     { label: 'Settings', href: '/(tabs)/more/settings', subtitle: subtitles.settings },
   ];
 
