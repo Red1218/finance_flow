@@ -4,6 +4,8 @@ import { Stack } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from '../src/data/AuthContext';
 import { useSmsDetectionBootstrap } from '../src/data/useSmsDetectionBootstrap';
+import { useNotificationTapObserver } from '../src/notifications/useNotificationTapObserver';
+import '../src/notifications/notificationSetup';
 import { Body, Button } from '../src/ui/primitives';
 import { colors, spacing } from '../src/theme/tokens';
 
@@ -81,6 +83,7 @@ export default function RootLayout() {
   // Runs regardless of session state (and independent of font-loading/retry
   // below) — it only reads device SMS and writes to a local queue.
   useSmsDetectionBootstrap();
+  useNotificationTapObserver();
   return <FontGate key={attempt} onRetry={() => setAttempt((a) => a + 1)} />;
 }
 

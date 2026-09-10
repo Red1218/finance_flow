@@ -8,6 +8,14 @@
        intent (Telephony.Sms.Intents.getMessagesFromIntent), never the
        content://sms provider, so READ_SMS (full inbox history) buys nothing. -->
   <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+  <!-- expo-notifications: POST_NOTIFICATIONS is required to show any
+       notification on Android 13+; SCHEDULE_EXACT_ALARM is required on
+       Android 12+ for the daily reminder's exact hour:minute trigger
+       (confirmed against the expo-notifications API reference — not
+       auto-added by the library's own bundled manifest the way
+       RECEIVE_BOOT_COMPLETED is). -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
