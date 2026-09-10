@@ -81,13 +81,14 @@ same "fail closed, visibly" rule the SMS feature's fix wave established.
 - `cancelDailyReminder(): Promise<void>` — cancels by stored id, clears
   local state. Called when the toggle turns off.
 - Settings' "Daily reminder" row, when tapped while the toggle is on,
-  opens a time picker and calls `scheduleDailyReminder` with the new
-  time. No time-input component exists anywhere in this repo today
-  (confirmed: no `datetimepicker` dependency) — this adds
-  `@react-native-community/datetimepicker`, the standard Expo-compatible
-  choice, as a second new dependency alongside `expo-notifications`,
-  rather than reusing this app's existing plain-text `YYYY-MM-DD` date
-  convention, which has no time-of-day component to repurpose.
+  shows a plain `HH:MM` text field (correction after a second look during
+  planning: this app already has a consistent convention for exactly this
+  — both `app/transaction/new.tsx` and `app/transaction/[id].tsx` parse a
+  plain `YYYY-MM-DD` date field with a hand-rolled `parseDateInput`,
+  never a native picker; `HH:MM` is the same idea with a different
+  regex), validated and passed to `scheduleDailyReminder`. No new
+  dependency needed for this part — `expo-notifications` remains the
+  only new package this spec introduces.
 
 ### Budget alerts (`src/domain/budgetAlerts.ts` + a hook into transaction save)
 
@@ -154,6 +155,35 @@ same "fail closed, visibly" rule the SMS feature's fix wave established.
 - The actual on-device firing of a notification cannot be asserted in
   Jest — an on-device check (same posture as the SMS feature's real-SMS
   verification pass) is the real proof, not a substitute for it.
+
+## Implementation refinements found during planning
+
+- **`nextAlertThreshold`'s actual signature is `(currentPct: number,
+  lastAlerted: 80 | 100 | null) => 80 | 100 | null`**, not
+  `(oldPct, newPct)` as the Architecture section above sketches. Reasoning:
+  an edit can change a transaction's category, amount, or both, which
+  makes "the old pct" ambiguous across two different budgets rather than
+  one. Recomputing the *current* pct from scratch (same query pattern the
+  Budgets screen already uses) and comparing it against "the highest
+  threshold already alerted for this budget row" is simpler, handles
+  every case (create/edit/category-change/archive) uniformly with the
+  same one function, and produces identical dedup behavior to what
+  Decision 1 and the Architecture section describe.
+- **The `archiveTransaction` hook point is a provable no-op today**:
+  archiving a transaction only ever removes spend, so the recomputed pct
+  can only move down, and `nextAlertThreshold` will always return `null`.
+  It's still wired up (per the Architecture section's hook list) for
+  structural uniformity and so a future change to what "archive" means
+  doesn't silently reintroduce a gap — not because it does anything yet.
+- **Daily-reminder survival across a full device reboot (not just an app
+  restart) is out of scope.** `expo-notifications`' local scheduling
+  normally regains boot-persistence via manifest additions its own Expo
+  config plugin would add during `expo prebuild` — a step this repo's
+  hand-maintained `android/` folder doesn't run (the same accepted gap
+  the SMS feature's own spec already documents for its manifest). The
+  reminder will keep firing across app restarts and normal backgrounding;
+  after a phone reboot, it fires again only once the app has been opened
+  at least once since.
 
 ## Deferred / out of scope
 
