@@ -21,7 +21,7 @@ describe('scheduleDailyReminder', () => {
     await scheduleDailyReminder(20, 30);
     expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
       content: expect.objectContaining({ title: expect.any(String), body: expect.any(String) }),
-      trigger: { type: 'daily', hour: 20, minute: 30 },
+      trigger: { type: 'daily', channelId: 'default', hour: 20, minute: 30 },
     });
   });
 

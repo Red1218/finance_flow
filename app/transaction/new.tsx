@@ -146,7 +146,9 @@ export default function NewTransaction() {
           description: note || null,
           occurredAt,
         });
-        await checkBudgetAlerts(created);
+        // Fire-and-forget: checkBudgetAlerts never rejects, and per the design
+        // spec the check must not block the save it's piggybacking on.
+        checkBudgetAlerts(created);
       }
       // Deliberately in its own try: the transaction is already saved by this
       // point, so a failure clearing the pending draft must not surface as a

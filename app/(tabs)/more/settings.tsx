@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { usePreferences } from '../../../src/hooks/usePreferences';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
 import { requestSmsPermission } from '../../../src/data/native/smsListener';
 import { setSmsDetectionEnabled } from '../../../src/data/smsDetectionEnabled';
-import { requestNotificationPermission } from '../../../src/data/native/notificationPermission';
+import { requestNotificationPermission, checkNotificationPermission } from '../../../src/data/native/notificationPermission';
 import { scheduleDailyReminder, cancelDailyReminder } from '../../../src/notifications/dailyReminder';
 import { CURRENCIES } from '../../../src/domain/money';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
@@ -30,6 +30,22 @@ export default function Settings() {
     await scheduleDailyReminder(Number(m[1]), Number(m[2]));
     await setPref({ reminder_time: text.trim() });
   };
+
+  const alertsEnabled = !!prefs.data?.budget_alerts_enabled;
+  // budget_alerts_enabled defaults to `true` at the database level (unlike the
+  // other two toggles), so users who never tapped it have it reading ON with
+  // the OS permission never requested — and scheduleNotificationAsync silently
+  // does nothing on Android 13+ without POST_NOTIFICATIONS. Ask once on mount;
+  // if denied, turn the preference off so the toggle stops claiming to be on.
+  useEffect(() => {
+    if (!session || !alertsEnabled) return;
+    (async () => {
+      if (await checkNotificationPermission()) return;
+      if (!(await requestNotificationPermission())) await setPref({ budget_alerts_enabled: false });
+    })().catch((e) => console.warn('Notification permission check failed', e));
+    // setPref is recreated every render and only closes over stable imports.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, alertsEnabled]);
 
   if (!session) {
     return (
@@ -120,7 +136,9 @@ export default function Settings() {
                 value={reminderTimeText ?? prefs.data?.reminder_time ?? '20:00'}
                 onChangeText={(text) => {
                   setReminderTimeText(text);
-                  commitReminderTime(text);
+                  // Non-async handler: catch here so a failed reschedule/save
+                  // never becomes an unhandled rejection.
+                  commitReminderTime(text).catch((e) => console.warn('Could not update the reminder time', e));
                 }}
                 placeholder="HH:MM"
                 maxLength={5}

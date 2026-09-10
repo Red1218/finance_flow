@@ -47,7 +47,10 @@ jest.mock('../../application/transactions', () => ({
 }));
 
 jest.mock('../../data/repositories/categories', () => ({
-  listCategories: async () => [{ id: 'cat-1', name: 'Groceries', kind: 'EXPENSE', is_system: false, user_id: null, archived_at: null }],
+  listCategories: async () => [
+    { id: 'cat-1', name: 'Groceries', kind: 'EXPENSE', is_system: false, user_id: null, archived_at: null },
+    { id: 'cat-2', name: 'Transport', kind: 'EXPENSE', is_system: false, user_id: null, archived_at: null },
+  ],
 }));
 jest.mock('../../data/repositories/accounts', () => ({
   listAccounts: async () => [
@@ -76,6 +79,9 @@ describe('Transaction Detail screen', () => {
   beforeEach(() => {
     mockGetTransactionById.mockReset();
     mockGetTransferPair.mockClear();
+    (checkBudgetAlerts as jest.Mock).mockClear();
+    (updateTransaction as jest.Mock).mockReset();
+    (archiveTransaction as jest.Mock).mockReset();
     mockSession = { user: { id: 'u1' } };
   });
 
@@ -130,15 +136,17 @@ describe('Transaction Detail screen', () => {
 
   it('checks budget alerts with the updated transaction after recategorising', async () => {
     mockGetTransactionById.mockResolvedValue(expenseTx);
-    const recategorised = { ...expenseTx, category_id: 'cat-1' };
+    // Deliberately a *different* category from expenseTx.category_id, so this
+    // object isn't deep-equal to expenseTx and the assertion below can only
+    // pass if recategorise() really forwards the updated transaction.
+    const recategorised = { ...expenseTx, category_id: 'cat-2' };
     (updateTransaction as jest.Mock).mockResolvedValue({ kind: 'regular', transaction: recategorised });
     render(<TransactionDetail />);
     await waitFor(() => expect(screen.getByText('Recategorise')).toBeTruthy());
     await userEvent.press(screen.getByText('Recategorise'));
     // SelectModal (src/ui/SelectModal.tsx) renders each option's label as
-    // plain pressable Text — 'Groceries' is the one category this file's
-    // categories mock provides (line 46).
-    await userEvent.press(screen.getByText('Groceries'));
+    // plain pressable Text.
+    await userEvent.press(screen.getByText('Transport'));
     await waitFor(() => expect(checkBudgetAlerts).toHaveBeenCalledWith(recategorised));
   });
 

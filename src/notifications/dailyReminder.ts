@@ -7,7 +7,9 @@ export async function scheduleDailyReminder(hour: number, minute: number): Promi
   await cancelDailyReminder();
   const id = await Notifications.scheduleNotificationAsync({
     content: { title: 'Finance Flow', body: "Don't forget to log today's spending." },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
+    // channelId names the channel created in data/native/notificationPermission.ts;
+    // without it the notification lands on expo-notifications' fallback channel.
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, channelId: 'default', hour, minute },
   });
   await AsyncStorage.setItem(NOTIFICATION_ID_KEY, id);
 }

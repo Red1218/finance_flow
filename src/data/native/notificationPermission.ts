@@ -16,3 +16,11 @@ export async function requestNotificationPermission(): Promise<boolean> {
   const { status } = await Notifications.requestPermissionsAsync();
   return status === 'granted';
 }
+
+// Read-only counterpart: never shows a prompt. Used to detect the case where a
+// preference reads "on" (budget_alerts_enabled defaults true in the database)
+// but the OS permission was never actually granted.
+export async function checkNotificationPermission(): Promise<boolean> {
+  const { status } = await Notifications.getPermissionsAsync();
+  return status === 'granted';
+}

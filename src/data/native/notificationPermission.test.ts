@@ -1,10 +1,11 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { requestNotificationPermission } from './notificationPermission';
+import { requestNotificationPermission, checkNotificationPermission } from './notificationPermission';
 
 jest.mock('expo-notifications', () => ({
   setNotificationChannelAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
+  getPermissionsAsync: jest.fn(),
   AndroidImportance: { DEFAULT: 3 },
 }));
 
@@ -36,5 +37,15 @@ describe('requestNotificationPermission', () => {
     (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
     await requestNotificationPermission();
     expect(Notifications.setNotificationChannelAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('checkNotificationPermission', () => {
+  it('reports the current status without ever prompting', async () => {
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    await expect(checkNotificationPermission()).resolves.toBe(true);
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'undetermined' });
+    await expect(checkNotificationPermission()).resolves.toBe(false);
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
   });
 });

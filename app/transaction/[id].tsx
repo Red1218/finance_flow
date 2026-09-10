@@ -158,7 +158,9 @@ export default function TransactionDetail() {
           occurredAt: pickedDate ? combineLocalDateWithCurrentTime(pickedDate) : undefined,
         },
       });
-      if (result.kind === 'regular') await checkBudgetAlerts(result.transaction);
+      // Fire-and-forget: checkBudgetAlerts never rejects, and per the design
+      // spec the check must not block the save it's piggybacking on.
+      if (result.kind === 'regular') checkBudgetAlerts(result.transaction);
       setEditing(false);
       await load();
     } catch (e) {
@@ -197,7 +199,7 @@ export default function TransactionDetail() {
     setError(null);
     try {
       const result = await updateTransaction({ kind: 'regular', id: tx.id, patch: { categoryId } });
-      if (result.kind === 'regular') await checkBudgetAlerts(result.transaction);
+      if (result.kind === 'regular') checkBudgetAlerts(result.transaction);
       await load();
     } catch (e) {
       setError(transactionErrorMessage(e));
@@ -208,7 +210,7 @@ export default function TransactionDetail() {
     setError(null);
     try {
       await archiveTransaction({ id: tx.id });
-      await checkBudgetAlerts(tx);
+      checkBudgetAlerts(tx);
       router.back();
     } catch (e) {
       setError(transactionErrorMessage(e));

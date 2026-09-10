@@ -389,3 +389,60 @@ repo already treats native code). Confirming them needs a real sideloaded
 build on a physical Android device receiving genuine bank SMS — the same kind
 of outstanding external step as the Email-Bound Data feature's on-device
 sign-in check above.
+
+## Budget Alerts & Daily Reminder Notifications
+
+- **Implementation:** Approved & Frozen — 2026-09-10
+
+Wires the two previously inert Settings toggles — "Budget alerts" and
+"Daily reminder" — to real local notifications via `expo-notifications`.
+No push service, no server: every notification is scheduled on-device.
+
+Budget alerts piggyback on the transaction save path. After a transaction is
+created, edited, recategorised, or archived, `checkBudgetAlerts` runs
+fire-and-forget (never awaited, and it never rejects) — it re-reads the
+month's spend, compares each active budget against the pure
+`nextAlertThreshold` rule, and fires at most one notification per budget per
+threshold crossing (80%, then 100%). Tapping a budget alert routes to the
+Budgets tab via a `data.url` on the notification payload. The daily reminder
+is a single repeating `DAILY` trigger, cancelled and rescheduled whenever the
+user edits the time.
+
+**Dedup state is keyed by budget *and* period.** The AsyncStorage key is
+`financeflow.budgetAlert.<budgetId>:<YYYY-MM>`. Budget rows are not rolled
+over on a schedule in this codebase — `setBudget()` only runs on an explicit
+user edit and `listActiveBudgets()` has no date filter — so a budget id alone
+is stable indefinitely and would have let the first month a budget crossed
+100% suppress every later month's alert. Including the period also means
+stale keys need no cleanup: a past period's key is simply never read again.
+
+**The default-on toggle asks for permission on mount.** Unlike
+`daily_reminder_enabled` and `sms_detection_enabled`, `budget_alerts_enabled`
+defaults to `true` at the database level, so existing and new users have it
+reading ON without ever having been prompted — and `scheduleNotificationAsync`
+silently does nothing on Android 13+ without `POST_NOTIFICATIONS`. The
+Settings screen therefore checks the permission on mount when the preference
+is on, requests it if missing, and turns the preference off if the user
+declines, so the toggle never claims to be on while doing nothing.
+
+**Validation:** All 8 tasks complete and approved, plus a whole-branch review
+fix wave. TypeScript compiler clean. Jest suite green, covering the pure
+threshold rule, the period-keyed dedup store (including the same budget
+re-alerting in a later period), the orchestration's preference/budget/spend
+gates and its per-budget failure isolation, the daily reminder's
+schedule/cancel/reschedule cycle, the cold-start notification-tap observer's
+navigation-readiness gate, the Settings toggles and their permission paths,
+and the four transaction-save call sites.
+
+**Native verification is outstanding.** No device or emulator was connected at
+any point during this feature's implementation — `adb devices` never returned
+a connected device in any task — so nothing on the native side has been
+exercised: the autolinked `expo-notifications` Gradle module actually
+building, the two new Android manifest permissions (`POST_NOTIFICATIONS`,
+`SCHEDULE_EXACT_ALARM`) being granted at runtime, the notification channel
+being created, a notification actually rendering in the system tray, the
+`DAILY` trigger firing at the scheduled time, and a real cold-start
+notification tap navigating to Budgets. Those are native-only paths this
+repo's Jest suite cannot reach. Confirming them needs a real build installed
+on a physical Android device — the same kind of outstanding external step as
+the SMS Transaction Detection feature above.

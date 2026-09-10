@@ -70,7 +70,11 @@ jest.mock('../../data/AuthContext', () => ({
 
 describe('Add Transaction screen', () => {
   beforeEach(() => {
-    mockCreateTransaction.mockClear();
+    // mockReset, not mockClear — a mockResolvedValue override set by one test
+    // otherwise leaks into every test after it. Reset also drops the original
+    // implementation, so re-apply its default result here.
+    mockCreateTransaction.mockReset();
+    mockCreateTransaction.mockResolvedValue({ id: 'tx-1' });
     mockCreateTransfer.mockClear();
     mockBack.mockClear();
     mockSession = { user: { id: 'u1' } };

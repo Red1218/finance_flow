@@ -11,7 +11,7 @@ import Settings from '../../../app/(tabs)/more/settings';
 import { updatePreferences } from '../../data/repositories/preferences';
 import { requestSmsPermission } from '../../data/native/smsListener';
 import { setSmsDetectionEnabled } from '../../data/smsDetectionEnabled';
-import { requestNotificationPermission } from '../../data/native/notificationPermission';
+import { requestNotificationPermission, checkNotificationPermission } from '../../data/native/notificationPermission';
 import { scheduleDailyReminder, cancelDailyReminder } from '../../notifications/dailyReminder';
 
 // react-native/jest-preset.js defaults Platform.OS to 'ios' for this
@@ -35,7 +35,10 @@ jest.mock('../../hooks/usePreferences', () => ({
 jest.mock('../../data/repositories/preferences', () => ({ updatePreferences: jest.fn() }));
 jest.mock('../../data/native/smsListener', () => ({ requestSmsPermission: jest.fn() }));
 jest.mock('../../data/smsDetectionEnabled', () => ({ setSmsDetectionEnabled: jest.fn() }));
-jest.mock('../../data/native/notificationPermission', () => ({ requestNotificationPermission: jest.fn() }));
+jest.mock('../../data/native/notificationPermission', () => ({
+  requestNotificationPermission: jest.fn(),
+  checkNotificationPermission: jest.fn(),
+}));
 jest.mock('../../notifications/dailyReminder', () => ({ scheduleDailyReminder: jest.fn(), cancelDailyReminder: jest.fn() }));
 
 const mockPush = jest.fn();
@@ -55,6 +58,9 @@ describe('Settings screen — Account section', () => {
     (requestSmsPermission as jest.Mock).mockClear();
     (setSmsDetectionEnabled as jest.Mock).mockClear();
     (requestNotificationPermission as jest.Mock).mockClear();
+    // Default to already-granted so the mount-time permission effect stays a
+    // no-op for every test that isn't specifically about it.
+    (checkNotificationPermission as jest.Mock).mockReset().mockResolvedValue(true);
     (scheduleDailyReminder as jest.Mock).mockClear();
     (cancelDailyReminder as jest.Mock).mockClear();
     mockSession = null;
@@ -167,6 +173,44 @@ describe('Settings screen — Account section', () => {
     await waitFor(() => expect(updatePreferences).toHaveBeenCalledWith({ budget_alerts_enabled: true }));
   });
 
+  // budget_alerts_enabled defaults to `true` in the database, so a user who
+  // never tapped the toggle has it reading ON with the OS permission never
+  // requested — and notifications then silently no-op on Android 13+.
+  describe('budget alerts default-on permission check', () => {
+    it('does nothing when the permission is already granted', async () => {
+      mockSession = { user: { email: 'a@b.com' } };
+      render(<Settings />);
+      await waitFor(() => expect(checkNotificationPermission).toHaveBeenCalled());
+      expect(requestNotificationPermission).not.toHaveBeenCalled();
+      expect(updatePreferences).not.toHaveBeenCalled();
+    });
+
+    it('turns the preference off when the permission is missing and the prompt is denied', async () => {
+      mockSession = { user: { email: 'a@b.com' } };
+      (checkNotificationPermission as jest.Mock).mockResolvedValue(false);
+      (requestNotificationPermission as jest.Mock).mockResolvedValue(false);
+      render(<Settings />);
+      await waitFor(() => expect(updatePreferences).toHaveBeenCalledWith({ budget_alerts_enabled: false }));
+    });
+
+    it('leaves the preference alone when the permission is missing but then granted', async () => {
+      mockSession = { user: { email: 'a@b.com' } };
+      (checkNotificationPermission as jest.Mock).mockResolvedValue(false);
+      (requestNotificationPermission as jest.Mock).mockResolvedValue(true);
+      render(<Settings />);
+      await waitFor(() => expect(requestNotificationPermission).toHaveBeenCalled());
+      expect(updatePreferences).not.toHaveBeenCalled();
+    });
+
+    it('does not check the permission while budget alerts are off', async () => {
+      mockSession = { user: { email: 'a@b.com' } };
+      mockPrefsData.budget_alerts_enabled = false;
+      render(<Settings />);
+      await waitFor(() => expect(screen.getByText('Budget alerts')).toBeTruthy());
+      expect(checkNotificationPermission).not.toHaveBeenCalled();
+    });
+  });
+
   it('schedules the daily reminder at the default time (20:00) when first enabled', async () => {
     mockSession = { user: { email: 'a@b.com' } };
     (requestNotificationPermission as jest.Mock).mockResolvedValue(true);
@@ -197,7 +241,7 @@ describe('Settings screen — Account section', () => {
 
   it('shows the reminder-time field only while the daily reminder is on, seeded from the stored time', async () => {
     mockSession = { user: { email: 'a@b.com' } };
-    const { queryByPlaceholderText, getByPlaceholderText } = render(<Settings />);
+    const { queryByPlaceholderText } = render(<Settings />);
     expect(queryByPlaceholderText('HH:MM')).toBeNull();
 
     mockPrefsData.daily_reminder_enabled = true;
