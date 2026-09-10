@@ -34,6 +34,23 @@ describe('axisParser', () => {
     });
   });
 
+  it('parses a P2A debit (person-to-person send, not just receive)', () => {
+    const body =
+      'INR 1.00 debited\nA/c no. XX1994\n10-09-26, 07:30:43\n' +
+      'UPI/P2A/671684758099/GUNREDDY VENKAT RED\n' +
+      'Not you? SMS BLOCKUPI Cust ID to\n919951860002\nAxis Bank';
+    expect(axisParser.parse(body)).toEqual({
+      amount: 1,
+      direction: 'debit',
+      accountType: 'bank_account',
+      accountLast4: '1994',
+      bankLabel: 'Axis',
+      merchant: 'GUNREDDY VENKAT RED',
+      date: '2026-09-10',
+      dedupKey: 'AXISBK:671684758099',
+    });
+  });
+
   it('parses a cash/cheque deposit, including its 4-digit year and 6-digit account tail', () => {
     const body =
       'INR 500.00 credited to Axis Bank A/c no. XX771994 on 09-02-2026 00:31:24.' +
