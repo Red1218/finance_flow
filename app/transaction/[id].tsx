@@ -11,6 +11,7 @@ import { toNumber } from '../../src/domain/money';
 import { indexById, buildTransactionDetailVM } from '../../src/domain/transactionView';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
+import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import type { Account, Category, Transaction } from '../../src/data/types';
 import { Body, Button, IconButton, Input, K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
@@ -148,7 +149,7 @@ export default function TransactionDetail() {
     try {
       const parsed = parseFloat(editAmount) || 0;
       const pickedDate = parseDateInput(editDateText);
-      await updateTransaction({
+      const result = await updateTransaction({
         kind: 'regular',
         id: tx.id,
         patch: {
@@ -157,6 +158,7 @@ export default function TransactionDetail() {
           occurredAt: pickedDate ? combineLocalDateWithCurrentTime(pickedDate) : undefined,
         },
       });
+      if (result.kind === 'regular') await checkBudgetAlerts(result.transaction);
       setEditing(false);
       await load();
     } catch (e) {
@@ -194,7 +196,8 @@ export default function TransactionDetail() {
   const recategorise = async (categoryId: string) => {
     setError(null);
     try {
-      await updateTransaction({ kind: 'regular', id: tx.id, patch: { categoryId } });
+      const result = await updateTransaction({ kind: 'regular', id: tx.id, patch: { categoryId } });
+      if (result.kind === 'regular') await checkBudgetAlerts(result.transaction);
       await load();
     } catch (e) {
       setError(transactionErrorMessage(e));
@@ -205,6 +208,7 @@ export default function TransactionDetail() {
     setError(null);
     try {
       await archiveTransaction({ id: tx.id });
+      await checkBudgetAlerts(tx);
       router.back();
     } catch (e) {
       setError(transactionErrorMessage(e));

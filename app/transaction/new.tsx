@@ -8,6 +8,7 @@ import { usePreferences } from '../../src/hooks/usePreferences';
 import { getCurrencyMeta } from '../../src/domain/money';
 import { createTransaction, createTransfer } from '../../src/application/transactions';
 import { removeDetection } from '../../src/data/repositories/pendingDetections';
+import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
@@ -137,7 +138,7 @@ export default function NewTransaction() {
           occurredAt,
         });
       } else {
-        await createTransaction({
+        const created = await createTransaction({
           accountId: accountId!,
           categoryId,
           type: kind === 'Income' ? 'INCOME' : 'EXPENSE',
@@ -145,6 +146,7 @@ export default function NewTransaction() {
           description: note || null,
           occurredAt,
         });
+        await checkBudgetAlerts(created);
       }
       // Deliberately in its own try: the transaction is already saved by this
       // point, so a failure clearing the pending draft must not surface as a

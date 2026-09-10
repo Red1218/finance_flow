@@ -9,6 +9,7 @@ import { render, screen, userEvent, waitFor } from '@testing-library/react-nativ
 import { useLocalSearchParams } from 'expo-router';
 import NewTransaction from '../../../app/transaction/new';
 import { removeDetection } from '../../data/repositories/pendingDetections';
+import { checkBudgetAlerts } from '../../notifications/checkBudgetAlerts';
 
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
@@ -18,12 +19,14 @@ jest.mock('expo-router', () => ({
 
 jest.mock('../../data/repositories/pendingDetections', () => ({ removeDetection: jest.fn() }));
 
+jest.mock('../../notifications/checkBudgetAlerts', () => ({ checkBudgetAlerts: jest.fn() }));
+
 jest.mock('react-native-safe-area-context', () => {
   const { View } = jest.requireActual('react-native');
   return { SafeAreaView: View };
 });
 
-const mockCreateTransaction = jest.fn(async (_input?: unknown) => ({ id: 'tx-1' }));
+const mockCreateTransaction = jest.fn(async (_input?: unknown): Promise<unknown> => ({ id: 'tx-1' }));
 const mockCreateTransfer = jest.fn(async (_input?: unknown) => ({ out: { id: 'o1' }, in: { id: 'i1' } }));
 jest.mock('../../application/transactions', () => ({
   createTransaction: (input: unknown) => mockCreateTransaction(input),
@@ -103,6 +106,17 @@ describe('Add Transaction screen', () => {
     await userEvent.press(save);
     expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
     expect(mockCreateTransaction.mock.calls[0][0]).toMatchObject({ amount: 5, categoryId: 'cat-1', type: 'EXPENSE' });
+  });
+
+  it('checks budget alerts with the newly created transaction after saving', async () => {
+    mockCreateTransaction.mockResolvedValue({ id: 'tx-1', type: 'EXPENSE', category_id: 'cat-1' });
+    render(<NewTransaction />);
+    // Default kind is Expense (no need to switch); amount starts at 0 so
+    // Save is disabled until a digit is pressed — same "press a digit,
+    // press Save" shape as this file's existing transfer-save test.
+    await userEvent.press(screen.getByText('1'));
+    await userEvent.press(screen.getByText('Save'));
+    await waitFor(() => expect(checkBudgetAlerts).toHaveBeenCalledWith({ id: 'tx-1', type: 'EXPENSE', category_id: 'cat-1' }));
   });
 
   it('the precision guard blocks a third decimal digit at precision 2', async () => {

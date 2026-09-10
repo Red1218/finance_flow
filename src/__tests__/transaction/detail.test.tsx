@@ -3,8 +3,10 @@
 // exclusion). Filename doesn't use "[id]" here since it's no longer inside
 // a routed directory and doesn't need to match the dynamic-segment pattern.
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { act, render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import TransactionDetail from '../../../app/transaction/[id]';
+import { checkBudgetAlerts } from '../../notifications/checkBudgetAlerts';
+import { updateTransaction, archiveTransaction } from '../../application/transactions';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
@@ -15,6 +17,8 @@ jest.mock('react-native-safe-area-context', () => {
   const { View } = jest.requireActual('react-native');
   return { SafeAreaView: View };
 });
+
+jest.mock('../../notifications/checkBudgetAlerts', () => ({ checkBudgetAlerts: jest.fn() }));
 
 const expenseTx = {
   id: 'tx-1',
@@ -111,5 +115,39 @@ describe('Transaction Detail screen', () => {
     mockGetTransferPair.mockResolvedValue(null);
     render(<TransactionDetail />);
     await waitFor(() => expect(screen.getByText(/can't be found or is no longer valid/)).toBeTruthy());
+  });
+
+  it('checks budget alerts with the updated transaction after saving a regular edit', async () => {
+    mockGetTransactionById.mockResolvedValue(expenseTx);
+    const updated = { ...expenseTx, amount: 600 };
+    (updateTransaction as jest.Mock).mockResolvedValue({ kind: 'regular', transaction: updated });
+    render(<TransactionDetail />);
+    await waitFor(() => expect(screen.getByText('Edit')).toBeTruthy());
+    await userEvent.press(screen.getByText('Edit'));
+    await userEvent.press(screen.getByText('Save'));
+    await waitFor(() => expect(checkBudgetAlerts).toHaveBeenCalledWith(updated));
+  });
+
+  it('checks budget alerts with the updated transaction after recategorising', async () => {
+    mockGetTransactionById.mockResolvedValue(expenseTx);
+    const recategorised = { ...expenseTx, category_id: 'cat-1' };
+    (updateTransaction as jest.Mock).mockResolvedValue({ kind: 'regular', transaction: recategorised });
+    render(<TransactionDetail />);
+    await waitFor(() => expect(screen.getByText('Recategorise')).toBeTruthy());
+    await userEvent.press(screen.getByText('Recategorise'));
+    // SelectModal (src/ui/SelectModal.tsx) renders each option's label as
+    // plain pressable Text — 'Groceries' is the one category this file's
+    // categories mock provides (line 46).
+    await userEvent.press(screen.getByText('Groceries'));
+    await waitFor(() => expect(checkBudgetAlerts).toHaveBeenCalledWith(recategorised));
+  });
+
+  it('checks budget alerts with the archived transaction after deleting', async () => {
+    mockGetTransactionById.mockResolvedValue(expenseTx);
+    (archiveTransaction as jest.Mock).mockResolvedValue(undefined);
+    render(<TransactionDetail />);
+    await waitFor(() => expect(screen.getByLabelText('Delete')).toBeTruthy());
+    await userEvent.press(screen.getByLabelText('Delete'));
+    await waitFor(() => expect(checkBudgetAlerts).toHaveBeenCalledWith(expenseTx));
   });
 });
