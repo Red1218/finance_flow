@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="1024" height="1024">
+  <rect width="512" height="512" fill="#f3f2f2"></rect>
+  <g style="mix-blend-mode:multiply" transform="translate(-6,-6.6)"><text x="256" y="377" text-anchor="middle" font-family="Source Serif 4, Georgia, serif" font-weight="600" font-size="380" fill="#0088b0">₹</text></g>
+  <g style="mix-blend-mode:multiply" transform="translate(6,6)"><text x="256" y="377" text-anchor="middle" font-family="Source Serif 4, Georgia, serif" font-weight="600" font-size="380" fill="#d6006c">₹</text></g>
+  <text x="256" y="377" text-anchor="middle" font-family="Source Serif 4, Georgia, serif" font-weight="600" font-size="380" fill="#201e1d">₹</text>
+</svg>
