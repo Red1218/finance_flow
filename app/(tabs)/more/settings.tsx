@@ -5,9 +5,11 @@ import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
 import { requestSmsPermission } from '../../../src/data/native/smsListener';
 import { setSmsDetectionEnabled } from '../../../src/data/smsDetectionEnabled';
+import { requestNotificationPermission } from '../../../src/data/native/notificationPermission';
+import { scheduleDailyReminder, cancelDailyReminder } from '../../../src/notifications/dailyReminder';
 import { CURRENCIES } from '../../../src/domain/money';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
-import { K, Muted } from '../../../src/ui/primitives';
+import { Input, K, Muted } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
@@ -15,10 +17,18 @@ export default function Settings() {
   const prefs = usePreferences();
   const { session, signOut } = useAuth();
   const [currencyOpen, setCurrencyOpen] = useState(false);
+  const [reminderTimeText, setReminderTimeText] = useState<string | null>(null);
 
   const setPref = async (patch: Parameters<typeof updatePreferences>[0]) => {
     await updatePreferences(patch);
     prefs.refetch();
+  };
+
+  const commitReminderTime = async (text: string) => {
+    const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(text.trim());
+    if (!m) return;
+    await scheduleDailyReminder(Number(m[1]), Number(m[2]));
+    await setPref({ reminder_time: text.trim() });
   };
 
   if (!session) {
@@ -69,19 +79,55 @@ export default function Settings() {
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Budget alerts</Text>
             <Switch
+              testID="budget-alerts-switch"
               value={!!prefs.data?.budget_alerts_enabled}
-              onValueChange={(v) => setPref({ budget_alerts_enabled: v })}
+              onValueChange={async (v) => {
+                if (v) {
+                  const granted = await requestNotificationPermission();
+                  if (!granted) return;
+                }
+                await setPref({ budget_alerts_enabled: v });
+              }}
               trackColor={{ true: colors.accent, false: colors.neutral300 }}
             />
           </View>
-          <View style={[styles.row, { borderBottomWidth: 0 }]}>
-            <Text style={styles.rowLabel}>Daily reminder{prefs.data?.reminder_time ? ` (${prefs.data.reminder_time})` : ''}</Text>
+          <View style={[styles.row, prefs.data?.daily_reminder_enabled && { borderBottomWidth: 0 }]}>
+            <Text style={styles.rowLabel}>Daily reminder</Text>
             <Switch
+              testID="daily-reminder-switch"
               value={!!prefs.data?.daily_reminder_enabled}
-              onValueChange={(v) => setPref({ daily_reminder_enabled: v })}
+              onValueChange={async (v) => {
+                if (v) {
+                  const granted = await requestNotificationPermission();
+                  if (!granted) return;
+                  const seed = prefs.data?.reminder_time ?? '20:00';
+                  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(seed);
+                  const [hour, minute] = m ? [Number(m[1]), Number(m[2])] : [20, 0];
+                  await scheduleDailyReminder(hour, minute);
+                  await setPref({ daily_reminder_enabled: true, reminder_time: m ? seed : '20:00' });
+                } else {
+                  await cancelDailyReminder();
+                  await setPref({ daily_reminder_enabled: false });
+                }
+              }}
               trackColor={{ true: colors.accent, false: colors.neutral300 }}
             />
           </View>
+          {!!prefs.data?.daily_reminder_enabled && (
+            <View style={[styles.row, { borderBottomWidth: 0 }]}>
+              <Text style={styles.rowLabel}>Reminder time</Text>
+              <Input
+                value={reminderTimeText ?? prefs.data?.reminder_time ?? '20:00'}
+                onChangeText={(text) => {
+                  setReminderTimeText(text);
+                  commitReminderTime(text);
+                }}
+                placeholder="HH:MM"
+                maxLength={5}
+                style={{ width: 80, textAlign: 'right' }}
+              />
+            </View>
+          )}
         </View>
 
         {Platform.OS === 'android' && (

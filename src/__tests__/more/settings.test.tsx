@@ -11,6 +11,8 @@ import Settings from '../../../app/(tabs)/more/settings';
 import { updatePreferences } from '../../data/repositories/preferences';
 import { requestSmsPermission } from '../../data/native/smsListener';
 import { setSmsDetectionEnabled } from '../../data/smsDetectionEnabled';
+import { requestNotificationPermission } from '../../data/native/notificationPermission';
+import { scheduleDailyReminder, cancelDailyReminder } from '../../notifications/dailyReminder';
 
 // react-native/jest-preset.js defaults Platform.OS to 'ios' for this
 // project's plain 'jest-expo' preset (confirmed by reading the preset
@@ -19,21 +21,22 @@ import { setSmsDetectionEnabled } from '../../data/smsDetectionEnabled';
 // useSmsDetectionBootstrap's tests in this plan.
 Platform.OS = 'android';
 
+let mockPrefsData = {
+  currency_code: 'INR',
+  week_start: 'MONDAY',
+  budget_alerts_enabled: true,
+  daily_reminder_enabled: false,
+  reminder_time: null as string | null,
+  sms_detection_enabled: false,
+};
 jest.mock('../../hooks/usePreferences', () => ({
-  usePreferences: () => ({
-    data: {
-      currency_code: 'INR',
-      week_start: 'MONDAY',
-      budget_alerts_enabled: true,
-      daily_reminder_enabled: false,
-      sms_detection_enabled: false,
-    },
-    refetch: jest.fn(),
-  }),
+  usePreferences: () => ({ data: mockPrefsData, refetch: jest.fn() }),
 }));
 jest.mock('../../data/repositories/preferences', () => ({ updatePreferences: jest.fn() }));
 jest.mock('../../data/native/smsListener', () => ({ requestSmsPermission: jest.fn() }));
 jest.mock('../../data/smsDetectionEnabled', () => ({ setSmsDetectionEnabled: jest.fn() }));
+jest.mock('../../data/native/notificationPermission', () => ({ requestNotificationPermission: jest.fn() }));
+jest.mock('../../notifications/dailyReminder', () => ({ scheduleDailyReminder: jest.fn(), cancelDailyReminder: jest.fn() }));
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -51,7 +54,18 @@ describe('Settings screen — Account section', () => {
     (updatePreferences as jest.Mock).mockClear();
     (requestSmsPermission as jest.Mock).mockClear();
     (setSmsDetectionEnabled as jest.Mock).mockClear();
+    (requestNotificationPermission as jest.Mock).mockClear();
+    (scheduleDailyReminder as jest.Mock).mockClear();
+    (cancelDailyReminder as jest.Mock).mockClear();
     mockSession = null;
+    mockPrefsData = {
+      currency_code: 'INR',
+      week_start: 'MONDAY',
+      budget_alerts_enabled: true,
+      daily_reminder_enabled: false,
+      reminder_time: null,
+      sms_detection_enabled: false,
+    };
   });
 
   it('shows a sign-in prompt and nothing else when signed out', () => {
@@ -134,5 +148,80 @@ describe('Settings screen — Account section', () => {
     fireEvent(getByTestId('sms-detection-switch'), 'valueChange', true);
     await waitFor(() => expect(requestSmsPermission).toHaveBeenCalled());
     expect(setSmsDetectionEnabled).not.toHaveBeenCalled();
+  });
+
+  it('requests notification permission before enabling budget alerts, and reverts if denied', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestNotificationPermission as jest.Mock).mockResolvedValue(false);
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('budget-alerts-switch'), 'valueChange', true);
+    await waitFor(() => expect(requestNotificationPermission).toHaveBeenCalled());
+    expect(updatePreferences).not.toHaveBeenCalledWith(expect.objectContaining({ budget_alerts_enabled: true }));
+  });
+
+  it('enables budget alerts once permission is granted', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestNotificationPermission as jest.Mock).mockResolvedValue(true);
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('budget-alerts-switch'), 'valueChange', true);
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledWith({ budget_alerts_enabled: true }));
+  });
+
+  it('schedules the daily reminder at the default time (20:00) when first enabled', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestNotificationPermission as jest.Mock).mockResolvedValue(true);
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('daily-reminder-switch'), 'valueChange', true);
+    await waitFor(() => expect(scheduleDailyReminder).toHaveBeenCalledWith(20, 0));
+    expect(updatePreferences).toHaveBeenCalledWith({ daily_reminder_enabled: true, reminder_time: '20:00' });
+  });
+
+  it('does not enable the daily reminder if permission is denied', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestNotificationPermission as jest.Mock).mockResolvedValue(false);
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('daily-reminder-switch'), 'valueChange', true);
+    await waitFor(() => expect(requestNotificationPermission).toHaveBeenCalled());
+    expect(scheduleDailyReminder).not.toHaveBeenCalled();
+    expect(updatePreferences).not.toHaveBeenCalledWith(expect.objectContaining({ daily_reminder_enabled: true }));
+  });
+
+  it('cancels the daily reminder when turned off', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    mockPrefsData.daily_reminder_enabled = true;
+    const { getByTestId } = render(<Settings />);
+    fireEvent(getByTestId('daily-reminder-switch'), 'valueChange', false);
+    await waitFor(() => expect(cancelDailyReminder).toHaveBeenCalled());
+    expect(updatePreferences).toHaveBeenCalledWith({ daily_reminder_enabled: false });
+  });
+
+  it('shows the reminder-time field only while the daily reminder is on, seeded from the stored time', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    const { queryByPlaceholderText, getByPlaceholderText } = render(<Settings />);
+    expect(queryByPlaceholderText('HH:MM')).toBeNull();
+
+    mockPrefsData.daily_reminder_enabled = true;
+    mockPrefsData.reminder_time = '07:30';
+    const { getByPlaceholderText: getByPlaceholderText2 } = render(<Settings />);
+    expect(getByPlaceholderText2('HH:MM').props.value).toBe('07:30');
+  });
+
+  it('reschedules the reminder when a valid new time is typed', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    mockPrefsData.daily_reminder_enabled = true;
+    mockPrefsData.reminder_time = '20:00';
+    const { getByPlaceholderText } = render(<Settings />);
+    fireEvent.changeText(getByPlaceholderText('HH:MM'), '07:45');
+    await waitFor(() => expect(scheduleDailyReminder).toHaveBeenCalledWith(7, 45));
+    expect(updatePreferences).toHaveBeenCalledWith({ reminder_time: '07:45' });
+  });
+
+  it('does not reschedule while the typed time is incomplete/invalid', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    mockPrefsData.daily_reminder_enabled = true;
+    mockPrefsData.reminder_time = '20:00';
+    const { getByPlaceholderText } = render(<Settings />);
+    fireEvent.changeText(getByPlaceholderText('HH:MM'), '7:4');
+    expect(scheduleDailyReminder).not.toHaveBeenCalled();
   });
 });
