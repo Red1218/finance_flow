@@ -107,7 +107,15 @@ export default function DetectedScreen() {
         // Fire-and-forget, same as every other save site — checkBudgetAlerts
         // never rejects and must not block or delay this loop.
         checkBudgetAlerts(created);
-        await removeDetection(detection.id);
+        // Deliberately isolated: the transaction is already saved by this
+        // point, so a failure clearing the pending draft must not surface as
+        // a save error — a retry would re-create it as a duplicate. Matches
+        // app/transaction/new.tsx's identical isolation for the same reason.
+        try {
+          await removeDetection(detection.id);
+        } catch (e) {
+          console.warn('Could not clear a saved detection from the pending queue', e);
+        }
       }
       setSelectMode(false);
       setSelectedIds(new Set());
