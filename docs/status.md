@@ -481,3 +481,38 @@ category picker were verified only by code inspection and the updated
 Jest coverage for `app/transaction/new.tsx`
 (`src/__tests__/transaction/new.test.tsx`), not by driving the signed-in
 app.
+
+## Detected transactions bulk assign (2026-09-11)
+
+The Detected screen supports selecting multiple pending SMS detections
+(long-press to start, tap to add more) and saving all of them as real
+transactions in one action by picking a single category — instead of
+opening and reviewing each one individually through the new-entry
+screen. Reuses the existing `createTransaction` save path (the same one
+`app/transaction/new.tsx` uses for a single detection) in a sequential
+loop, firing `checkBudgetAlerts` and removing each detection from the
+pending queue exactly as the single-save path already does. Depends on
+the same day's Unified Categories change landing first, so one chosen
+category can apply cleanly to a selection mixing Income and Expense
+detections.
+
+**Validation:** TypeScript compiler clean. Existing detected-screen unit
+tests pass unchanged (the pre-existing tap-to-open and dismiss flows are
+untouched), after adding mocks for the three new dependencies
+(`useCategories`, `createTransaction`, `checkBudgetAlerts`) the screen
+now pulls in — following the same `jest.mock` pattern already used
+elsewhere in this suite, empty/no-op since these tests don't exercise
+the new bulk-assign path. Full Jest suite green (43 suites, 303 tests).
+**Manual in-app verification was not completed:** the web dev server
+was started from the worktree and the app loads with no console errors
+(navigating directly to `/transaction/detected` while signed out
+redirects cleanly, with no runtime error from the new code), but the
+app sits behind a sign-in wall requiring real Supabase credentials —
+this environment has none, and creating an account or entering
+credentials is outside what an unattended agent may do. The multi-select
+UI (long-press, checkboxes, selection-count header, disabled-at-zero
+"Assign category"), the mixed credit/debit category picker, the bulk
+save producing correctly-categorized Ledger transactions, and the
+budget-alert firing on the new Expense transactions were **not**
+exercised in a running signed-in app — only by code inspection against
+the existing single-save path this reuses.

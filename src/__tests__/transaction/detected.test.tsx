@@ -28,6 +28,9 @@ jest.mock('../../hooks/useAccounts', () => ({
 jest.mock('../../hooks/usePreferences', () => ({
   usePreferences: () => ({ data: { currency_code: 'INR' } }),
 }));
+jest.mock('../../hooks/useCategories', () => ({ useCategories: () => ({ data: [] }) }));
+jest.mock('../../application/transactions', () => ({ createTransaction: jest.fn() }));
+jest.mock('../../notifications/checkBudgetAlerts', () => ({ checkBudgetAlerts: jest.fn() }));
 
 const sampleDetection = {
   id: 'KOTAKB:804121858190',
