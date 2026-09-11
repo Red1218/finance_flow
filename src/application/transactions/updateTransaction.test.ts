@@ -8,7 +8,6 @@ import {
 } from './errors';
 import {
   InvalidAmountError,
-  CategoryTypeMismatchError,
   SameAccountTransferError,
   TransferPairCorruptError,
 } from '../../domain/transactionRules';
@@ -41,15 +40,6 @@ describe('updateTransaction — regular branch', () => {
     await expect(updateTransaction({ kind: 'regular', id: 'tx-1', patch: { amount: -1 } }, deps)).rejects.toThrow(
       InvalidAmountError
     );
-  });
-
-  it('rejects an invalid category in the patch', async () => {
-    const deps = makeDeps({
-      categories: { getById: jest.fn(async () => ({ id: 'cat-1', kind: 'INCOME' as const, userId: 'u1', isSystem: false })) },
-    });
-    await expect(
-      updateTransaction({ kind: 'regular', id: 'tx-1', patch: { categoryId: 'cat-1' } }, deps)
-    ).rejects.toThrow(CategoryTypeMismatchError);
   });
 
   it('rejects a missing category in the patch', async () => {

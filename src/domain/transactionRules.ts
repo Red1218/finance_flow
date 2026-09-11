@@ -1,4 +1,4 @@
-import type { CategoryKind, TransactionType } from './types';
+import type { TransactionType } from './types';
 
 export class InvalidAmountError extends Error {
   constructor(message = 'Amount must be greater than zero') {
@@ -39,11 +39,6 @@ export function validateAmount(amount: number, precision: number): void {
       `Amount can't have more than ${precision} decimal digit${precision === 1 ? '' : 's'}`
     );
   }
-}
-
-export function validateCategoryType(categoryKind: CategoryKind | null, transactionType: 'EXPENSE' | 'INCOME'): void {
-  if (categoryKind === null) return;
-  if (categoryKind !== transactionType) throw new CategoryTypeMismatchError();
 }
 
 export function validateTransferHasNoCategory(categoryId: string | null): void {

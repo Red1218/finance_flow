@@ -1,5 +1,5 @@
 import type { Transaction } from '../../data/types';
-import { validateAmount, validateCategoryType } from '../../domain/transactionRules';
+import { validateAmount } from '../../domain/transactionRules';
 import { ArchivedAccountError, AccountNotFoundError, CategoryNotFoundError } from './errors';
 import type { NewTransaction, TransactionPort, AccountLookupPort, CategoryLookupPort, PreferencesPort } from './ports';
 
@@ -21,7 +21,6 @@ export async function createTransaction(input: NewTransaction, deps: CreateTrans
   if (input.categoryId) {
     const category = await deps.categories.getById(input.categoryId);
     if (!category) throw new CategoryNotFoundError();
-    validateCategoryType(category.kind, input.type);
   }
 
   return deps.transactions.create(input);

@@ -1,6 +1,5 @@
 import {
   validateAmount,
-  validateCategoryType,
   validateTransferHasNoCategory,
   validateDifferentAccounts,
   isValidTransferPair,
@@ -42,29 +41,6 @@ describe('validateAmount', () => {
   it('does not reject exact values that are only imprecise due to floating point', () => {
     // 12.1 * 100 is 1209.9999999999998 in IEEE754 — must not false-reject
     expect(() => validateAmount(12.1, 2)).not.toThrow();
-  });
-});
-
-describe('validateCategoryType', () => {
-  it('allows a null category on any type', () => {
-    expect(() => validateCategoryType(null, 'EXPENSE')).not.toThrow();
-    expect(() => validateCategoryType(null, 'INCOME')).not.toThrow();
-  });
-
-  it('allows a matching EXPENSE category on an EXPENSE transaction', () => {
-    expect(() => validateCategoryType('EXPENSE', 'EXPENSE')).not.toThrow();
-  });
-
-  it('allows a matching INCOME category on an INCOME transaction', () => {
-    expect(() => validateCategoryType('INCOME', 'INCOME')).not.toThrow();
-  });
-
-  it('rejects an INCOME category on an EXPENSE transaction', () => {
-    expect(() => validateCategoryType('INCOME', 'EXPENSE')).toThrow(CategoryTypeMismatchError);
-  });
-
-  it('rejects an EXPENSE category on an INCOME transaction', () => {
-    expect(() => validateCategoryType('EXPENSE', 'INCOME')).toThrow(CategoryTypeMismatchError);
   });
 });
 

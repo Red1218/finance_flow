@@ -1,6 +1,6 @@
 import { createTransaction } from './createTransaction';
 import { ArchivedAccountError, AccountNotFoundError, CategoryNotFoundError } from './errors';
-import { InvalidAmountError, CategoryTypeMismatchError } from '../../domain/transactionRules';
+import { InvalidAmountError } from '../../domain/transactionRules';
 import type { CreateTransactionDeps } from './createTransaction';
 
 function makeDeps(overrides: Partial<CreateTransactionDeps> = {}): CreateTransactionDeps {
@@ -62,12 +62,5 @@ describe('createTransaction', () => {
   it('rejects a missing category', async () => {
     const deps = makeDeps({ categories: { getById: jest.fn(async () => null) } });
     await expect(createTransaction(baseInput, deps)).rejects.toThrow(CategoryNotFoundError);
-  });
-
-  it('rejects an invalid category kind for the transaction type', async () => {
-    const deps = makeDeps({
-      categories: { getById: jest.fn(async () => ({ id: 'cat-1', kind: 'INCOME' as const, userId: 'u1', isSystem: false })) },
-    });
-    await expect(createTransaction(baseInput, deps)).rejects.toThrow(CategoryTypeMismatchError);
   });
 });

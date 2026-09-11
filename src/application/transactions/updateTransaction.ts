@@ -1,5 +1,5 @@
 import type { Transaction } from '../../data/types';
-import { validateAmount, validateCategoryType, validateDifferentAccounts } from '../../domain/transactionRules';
+import { validateAmount, validateDifferentAccounts } from '../../domain/transactionRules';
 import {
   ArchivedAccountError,
   AccountNotFoundError,
@@ -60,7 +60,6 @@ export async function updateTransaction(
     if (input.patch.categoryId) {
       const category = await deps.categories.getById(input.patch.categoryId);
       if (!category) throw new CategoryNotFoundError();
-      validateCategoryType(category.kind, existing.type as 'EXPENSE' | 'INCOME');
     }
 
     const transaction = await deps.transactions.update(input.id, input.patch);
