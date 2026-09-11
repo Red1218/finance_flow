@@ -120,8 +120,6 @@ export default function TransactionDetail() {
 
   const categoriesById = useMemo(() => indexById(categories), [categories]);
   const accountsById = useMemo(() => indexById(accounts), [accounts]);
-  const expenseCategories = useMemo(() => categories.filter((c) => c.kind === 'EXPENSE'), [categories]);
-  const incomeCategories = useMemo(() => categories.filter((c) => c.kind === 'INCOME'), [categories]);
 
   if (!session) {
     return (
@@ -352,7 +350,7 @@ export default function TransactionDetail() {
       <SelectModal
         visible={recatOpen}
         title="Choose category"
-        options={(tx.type === 'INCOME' ? incomeCategories : expenseCategories).map((c) => ({ id: c.id, label: c.name }))}
+        options={categories.map((c) => ({ id: c.id, label: c.name }))}
         onSelect={(opt) => recategorise(opt.id)}
         onClose={() => setRecatOpen(false)}
       />
