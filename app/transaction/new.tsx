@@ -76,10 +76,7 @@ export default function NewTransaction() {
     }
   }, [accounts.data, accountId]);
 
-  const relevantCategories = useMemo(
-    () => (categories.data ?? []).filter((c) => c.kind === (kind === 'Income' ? 'INCOME' : 'EXPENSE')),
-    [categories.data, kind]
-  );
+  const relevantCategories = useMemo(() => categories.data ?? [], [categories.data]);
 
   useEffect(() => {
     setCategoryId(null);

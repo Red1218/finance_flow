@@ -446,3 +446,32 @@ notification tap navigating to Budgets. Those are native-only paths this
 repo's Jest suite cannot reach. Confirming them needs a real build installed
 on a physical Android device — the same kind of outstanding external step as
 the SMS Transaction Detection feature above.
+
+## Unified categories (2026-09-11)
+
+Categories are no longer split by Expense/Income kind at the UI or
+validation level. Any category can be selected on any Expense or Income
+transaction, and Manage Categories/Budgets show one shared list instead
+of two filtered ones. This reverses the Expense/Income toggle shipped
+earlier the same day (`7128041`) once it became clear the two features
+wanted opposite things.
+
+The `categories.kind` database column and the `CategoryKind` TypeScript
+type are unchanged — `createCategory` still writes `kind: 'EXPENSE'` to
+satisfy the NOT NULL column, but nothing reads that value anymore.
+`categories.integration.test.ts` still exercises the (unchanged)
+`createCategory(name, kind)` / `listCategories(kind)` signatures
+directly and needed no changes.
+
+**Validation:** TypeScript compiler clean. Jest suite green (43 suites,
+301 tests). **Manual in-app verification was not completed:** the web
+dev server was started from the worktree and the app loads correctly
+(no runtime errors from this change), but it sits behind a sign-in wall
+requiring real Supabase credentials — this environment has none, and
+creating an account or entering credentials is outside what an
+unattended agent may do. The Expense/Income-tab category chip
+behavior, the Manage Categories toggle removal, and the Budgets
+category picker were verified only by code inspection and the updated
+Jest coverage for `app/transaction/new.tsx`
+(`src/__tests__/transaction/new.test.tsx`), not by driving the signed-in
+app.

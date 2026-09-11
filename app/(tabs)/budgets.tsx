@@ -26,7 +26,7 @@ export default function Budgets() {
 
   const tx = useTransactions({ from, to });
   const budgets = useBudgets();
-  const categories = useCategories('EXPENSE');
+  const categories = useCategories();
   const prefs = usePreferences();
   const currencyCode = prefs.data?.currency_code ?? 'INR';
 

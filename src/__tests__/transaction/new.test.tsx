@@ -185,12 +185,18 @@ describe('Add Transaction screen', () => {
     expect(screen.getByText('Show less ↑')).toBeTruthy();
   });
 
-  it('hides the expand control and shows all categories when there are 3 or fewer', async () => {
+  it('shows the same shared category list on the Income tab, not just income-kind ones', async () => {
     render(<NewTransaction />);
     await userEvent.press(screen.getByText('Income'));
+    // Categories are no longer filtered by kind: the Income tab shows the
+    // same unfiltered list as Expense, collapsed to the first 3 with Salary
+    // (an INCOME-kind category, last in fixture order) behind "Show all".
+    expect(screen.getByText('Groceries')).toBeTruthy();
+    expect(screen.queryByText('Salary')).toBeNull();
+    expect(screen.getByText('Show all ↓')).toBeTruthy();
+
+    await userEvent.press(screen.getByText('Show all ↓'));
     expect(screen.getByText('Salary')).toBeTruthy();
-    expect(screen.queryByText('Show all ↓')).toBeNull();
-    expect(screen.queryByText('Show less ↑')).toBeNull();
   });
 
   it('re-collapses categories when switching kind and back', async () => {

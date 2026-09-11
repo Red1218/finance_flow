@@ -36,7 +36,7 @@ export default function MoreHub() {
   const allTx = useTransactions({});
   const recurring = useRecurring();
   const goals = useGoals();
-  const categories = useCategories('EXPENSE');
+  const categories = useCategories();
   const budgets = useBudgets();
   const prefs = usePreferences();
   const detections = useLiveQuery(() => listDetections(), []);

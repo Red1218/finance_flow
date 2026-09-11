@@ -20,7 +20,7 @@ import {
 
 export function transactionErrorMessage(error: unknown): string {
   if (error instanceof InvalidAmountError) return error.message;
-  if (error instanceof CategoryTypeMismatchError) return "Choose a matching category for this type";
+  if (error instanceof CategoryTypeMismatchError) return "A transfer can't have a category";
   if (error instanceof SameAccountTransferError) return 'Choose two different accounts';
   if (error instanceof ArchivedAccountError) return 'That account is archived — choose another';
   if (error instanceof AccountNotFoundError) return "Something's missing — please try again";
