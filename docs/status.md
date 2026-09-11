@@ -496,13 +496,16 @@ the same day's Unified Categories change landing first, so one chosen
 category can apply cleanly to a selection mixing Income and Expense
 detections.
 
-**Validation:** TypeScript compiler clean. Existing detected-screen unit
-tests pass unchanged (the pre-existing tap-to-open and dismiss flows are
-untouched), after adding mocks for the three new dependencies
-(`useCategories`, `createTransaction`, `checkBudgetAlerts`) the screen
-now pulls in — following the same `jest.mock` pattern already used
-elsewhere in this suite, empty/no-op since these tests don't exercise
-the new bulk-assign path. Full Jest suite green (43 suites, 303 tests).
+**Validation:** TypeScript compiler clean (`npx tsc --noEmit -p .`). Full
+Jest suite green (43 suites, 306 tests, `npx jest --ci`). The bulk-assign
+path itself — entering selection mode via long-press and extending the
+selection by tap, one `createTransaction` call per selected detection with
+the resolved `accountId`/picked `categoryId`/per-detection `type`, a
+single post-batch `checkBudgetAlerts` call for the whole batch (not one
+per detection), and the `removeDetection`-failure isolation not
+surfacing as a save error — now has dedicated unit coverage in
+`src/__tests__/transaction/detected.test.tsx`, following this file's and
+`new.test.tsx`'s existing conventions.
 **Manual in-app verification was not completed:** the web dev server
 was started from the worktree and the app loads with no console errors
 (navigating directly to `/transaction/detected` while signed out

@@ -7,6 +7,7 @@ import { matchDetectionToAccount } from '../../src/domain/matchDetectionToAccoun
 import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
+import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
 import { useAccounts } from '../../src/hooks/useAccounts';
 import { useCategories } from '../../src/hooks/useCategories';
 import { usePreferences } from '../../src/hooks/usePreferences';
@@ -86,27 +87,28 @@ export default function DetectedScreen() {
   const handleAssignCategory = async (categoryId: string) => {
     setAssigning(true);
     setAssignError(null);
+    const noAccountMessage = 'No account to assign these to — add an account first.';
     const targets = items.filter((d) => selectedIds.has(d.id));
     try {
+      let createdExpense = false;
       for (const detection of targets) {
         const accountId =
           matchDetectionToAccount(detection, accounts.data ?? []) ??
           accounts.data?.find((a) => a.is_default)?.id ??
           accounts.data?.[0]?.id ??
           null;
-        if (!accountId) throw new Error('No account to assign these to — add an account first.');
+        if (!accountId) throw new Error(noAccountMessage);
 
-        const created = await createTransaction({
+        const type = detection.direction === 'credit' ? 'INCOME' : 'EXPENSE';
+        await createTransaction({
           accountId,
           categoryId,
-          type: detection.direction === 'credit' ? 'INCOME' : 'EXPENSE',
+          type,
           amount: detection.amount,
           description: detection.merchant,
           occurredAt: combineLocalDateWithCurrentTime(parseIsoDateLocal(detection.date)),
         });
-        // Fire-and-forget, same as every other save site — checkBudgetAlerts
-        // never rejects and must not block or delay this loop.
-        checkBudgetAlerts(created);
+        if (type === 'EXPENSE') createdExpense = true;
         // Deliberately isolated: the transaction is already saved by this
         // point, so a failure clearing the pending draft must not surface as
         // a save error — a retry would re-create it as a duplicate. Matches
@@ -117,10 +119,18 @@ export default function DetectedScreen() {
           console.warn('Could not clear a saved detection from the pending queue', e);
         }
       }
+      // One check for the whole batch, not one per detection — every
+      // detection in this batch shares categoryId, and checkBudgetAlerts
+      // recomputes the month's totals from the database itself, so N
+      // concurrent per-detection calls only race each other's
+      // read-modify-write over the same stored threshold (duplicate or
+      // dropped notifications) without adding any accuracy N=1 doesn't
+      // already have. Fire-and-forget, same as every other save site.
+      if (createdExpense) checkBudgetAlerts({ type: 'EXPENSE', category_id: categoryId });
       setSelectMode(false);
       setSelectedIds(new Set());
     } catch (e) {
-      setAssignError(e instanceof Error ? e.message : 'Could not save these transactions.');
+      setAssignError(e instanceof Error && e.message === noAccountMessage ? noAccountMessage : transactionErrorMessage(e));
     } finally {
       setAssigning(false);
       detections.refetch();
