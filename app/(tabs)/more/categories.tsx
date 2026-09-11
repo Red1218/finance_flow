@@ -7,10 +7,11 @@ import { usePreferences } from '../../../src/hooks/usePreferences';
 import { createCategory, deleteCategory } from '../../../src/data/repositories/categories';
 import { setBudget } from '../../../src/data/repositories/budgets';
 import { toNumber, formatCurrency, getCurrencyMeta } from '../../../src/domain/money';
-import { Button, IconButton, Input, K, Muted } from '../../../src/ui/primitives';
+import { Button, IconButton, Input, K, Muted, Seg } from '../../../src/ui/primitives';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
+import type { CategoryKind } from '../../../src/data/types';
 
 function monthRange(today: Date) {
   return {
@@ -23,7 +24,8 @@ export default function Categories() {
   const today = useMemo(() => new Date(), []);
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
-  const categories = useCategories('EXPENSE');
+  const [kind, setKind] = useState<CategoryKind>('EXPENSE');
+  const categories = useCategories(kind);
   const budgets = useBudgets();
   const tx = useTransactions({});
   const prefs = usePreferences();
@@ -75,8 +77,8 @@ export default function Categories() {
     if (!trimmed) return;
     setSaving(true);
     try {
-      const category = await createCategory(trimmed);
-      const parsedLimit = parseFloat(limit) || 0;
+      const category = await createCategory(trimmed, kind);
+      const parsedLimit = kind === 'EXPENSE' ? parseFloat(limit) || 0 : 0;
       if (parsedLimit > 0) {
         await setBudget({ category_id: category.id, amount: parsedLimit, currency_code: 'INR', start_date: from, end_date: to });
       }
@@ -118,17 +120,30 @@ export default function Categories() {
       >
         <Muted style={styles.intro}>These are the buckets every transaction and budget uses. Change them here and the rest of the app follows.</Muted>
 
+        <View style={styles.kindSeg}>
+          <Seg
+            options={[
+              { label: 'Expense', value: 'EXPENSE' as CategoryKind },
+              { label: 'Income', value: 'INCOME' as CategoryKind },
+            ]}
+            value={kind}
+            onChange={setKind}
+          />
+        </View>
+
         <View style={styles.addBlock}>
           <K style={styles.addLabel}>Add a category</K>
           <View style={styles.addRow}>
             <Input placeholder="Name, e.g. Pets" value={name} onChangeText={setName} style={{ flex: 1 }} />
-            <Input
-              placeholder={`${currencySymbol} budget`}
-              value={limit}
-              onChangeText={(v) => setLimit(v.replace(/[^0-9]/g, ''))}
-              keyboardType="numeric"
-              style={{ width: 96 }}
-            />
+            {kind === 'EXPENSE' && (
+              <Input
+                placeholder={`${currencySymbol} budget`}
+                value={limit}
+                onChangeText={(v) => setLimit(v.replace(/[^0-9]/g, ''))}
+                keyboardType="numeric"
+                style={{ width: 96 }}
+              />
+            )}
           </View>
           <Button title="Add category" onPress={addCategory} disabled={!name.trim()} loading={saving} block />
         </View>
@@ -187,6 +202,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.s4, paddingBottom: 100 },
   intro: { fontSize: 13.5, lineHeight: 20 },
+  kindSeg: { marginTop: spacing.s4 },
   addBlock: { marginTop: spacing.s4, gap: spacing.s2 },
   addLabel: { paddingBottom: 9, borderBottomWidth: 1, borderBottomColor: colors.text, marginBottom: 3 },
   addRow: { flexDirection: 'row', gap: spacing.s2 },
