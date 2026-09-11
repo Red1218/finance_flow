@@ -451,10 +451,16 @@ the SMS Transaction Detection feature above.
 
 Categories are no longer split by Expense/Income kind at the UI or
 validation level. Any category can be selected on any Expense or Income
-transaction, and Manage Categories/Budgets show one shared list instead
-of two filtered ones. This reverses the Expense/Income toggle shipped
-earlier the same day (`7128041`) once it became clear the two features
-wanted opposite things.
+transaction, and Manage Categories/Budgets/the transaction detail
+screen's recategorise picker all show one shared list instead of
+filtered ones. This reverses the Expense/Income toggle shipped earlier
+the same day (`7128041`) once it became clear the two features wanted
+opposite things.
+
+The plan's own file list for this change missed the recategorise
+picker (`app/transaction/[id].tsx`) — a task reviewer caught it still
+filtering by kind after the rest of the app stopped doing that, and it
+was fixed as an added task on this same branch.
 
 The `categories.kind` database column and the `CategoryKind` TypeScript
 type are unchanged — `createCategory` still writes `kind: 'EXPENSE'` to

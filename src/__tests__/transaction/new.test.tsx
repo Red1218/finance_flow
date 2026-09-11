@@ -10,6 +10,7 @@ import { useLocalSearchParams } from 'expo-router';
 import NewTransaction from '../../../app/transaction/new';
 import { removeDetection } from '../../data/repositories/pendingDetections';
 import { checkBudgetAlerts } from '../../notifications/checkBudgetAlerts';
+import { useCategories } from '../../hooks/useCategories';
 
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
@@ -44,7 +45,7 @@ jest.mock('../../hooks/useAccounts', () => ({
 }));
 
 jest.mock('../../hooks/useCategories', () => ({
-  useCategories: () => ({
+  useCategories: jest.fn(() => ({
     data: [
       { id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' },
       { id: 'cat-3', name: 'Transport', kind: 'EXPENSE' },
@@ -53,7 +54,7 @@ jest.mock('../../hooks/useCategories', () => ({
       { id: 'cat-2', name: 'Salary', kind: 'INCOME' },
     ],
     loading: false,
-  }),
+  })),
 }));
 
 jest.mock('../../hooks/usePreferences', () => ({
@@ -208,6 +209,21 @@ describe('Add Transaction screen', () => {
     await userEvent.press(screen.getByText('Expense'));
     expect(screen.queryByText('Utilities')).toBeNull();
     expect(screen.getByText('Show all ↓')).toBeTruthy();
+  });
+
+  it('hides the expand control when there are 3 or fewer categories', async () => {
+    const twoCategories = {
+      data: [
+        { id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' },
+        { id: 'cat-3', name: 'Transport', kind: 'EXPENSE' },
+      ],
+      loading: false,
+    };
+    (useCategories as jest.Mock).mockReturnValueOnce(twoCategories).mockReturnValueOnce(twoCategories);
+    render(<NewTransaction />);
+    expect(screen.getByText('Groceries')).toBeTruthy();
+    expect(screen.getByText('Transport')).toBeTruthy();
+    expect(screen.queryByText('Show all ↓')).toBeNull();
   });
 
   it('pre-fills fields from route params when present', () => {

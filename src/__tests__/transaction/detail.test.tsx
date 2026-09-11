@@ -50,6 +50,7 @@ jest.mock('../../data/repositories/categories', () => ({
   listCategories: async () => [
     { id: 'cat-1', name: 'Groceries', kind: 'EXPENSE', is_system: false, user_id: null, archived_at: null },
     { id: 'cat-2', name: 'Transport', kind: 'EXPENSE', is_system: false, user_id: null, archived_at: null },
+    { id: 'cat-3', name: 'Salary', kind: 'INCOME', is_system: false, user_id: null, archived_at: null },
   ],
 }));
 jest.mock('../../data/repositories/accounts', () => ({
@@ -148,6 +149,21 @@ describe('Transaction Detail screen', () => {
     // plain pressable Text.
     await userEvent.press(screen.getByText('Transport'));
     await waitFor(() => expect(checkBudgetAlerts).toHaveBeenCalledWith(recategorised));
+  });
+
+  it('shows every category in the recategorise picker, not just ones matching the transaction type', async () => {
+    mockGetTransactionById.mockResolvedValue(expenseTx);
+    render(<TransactionDetail />);
+    await waitFor(() => expect(screen.getByText('Recategorise')).toBeTruthy());
+    await userEvent.press(screen.getByText('Recategorise'));
+    // SelectModal renders each option's label as plain pressable Text.
+    // expenseTx is EXPENSE-typed, but 'Salary' (INCOME-kind) must still
+    // appear — categories are no longer filtered by kind (see
+    // app/transaction/[id].tsx, the categories.map(...) call feeding
+    // the "Choose category" SelectModal's options prop).
+    expect(screen.getByText('Groceries')).toBeTruthy();
+    expect(screen.getByText('Transport')).toBeTruthy();
+    expect(screen.getByText('Salary')).toBeTruthy();
   });
 
   it('checks budget alerts with the archived transaction after deleting', async () => {
