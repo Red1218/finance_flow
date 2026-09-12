@@ -16,6 +16,7 @@ import { colors, fonts, shadow, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { archiveTransaction } from '../../../src/application/transactions';
+import { TransactionNotFoundError } from '../../../src/application/transactions/errors';
 
 type Filter = 'All' | 'Expenses' | 'Income' | 'Transfers';
 const FILTERS: Filter[] = ['All', 'Expenses', 'Income', 'Transfers'];
@@ -65,7 +66,16 @@ export default function TransactionsList() {
     setDeleteError(null);
     try {
       for (const id of selectedIds) {
-        await archiveTransaction({ id });
+        try {
+          await archiveTransaction({ id });
+        } catch (e) {
+          // A transfer's two legs archive together (archiveTransaction's
+          // transfer branch archives both from either leg's id) — if this id
+          // was the second leg of a pair already archived earlier in this
+          // same batch, it's already gone, not a real failure.
+          if (e instanceof TransactionNotFoundError) continue;
+          throw e;
+        }
       }
       cancelSelect();
       tx.refetch();
