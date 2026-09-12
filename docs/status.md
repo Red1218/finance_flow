@@ -519,3 +519,33 @@ save producing correctly-categorized Ledger transactions, and the
 budget-alert firing on the new Expense transactions were **not**
 exercised in a running signed-in app — only by code inspection against
 the existing single-save path this reuses.
+
+## Ledger bulk delete (2026-09-11)
+
+The Transactions (Ledger) screen supports selecting multiple transactions
+(long-press to start, tap to add more) and deleting them in one action,
+instead of opening and deleting each one from its detail screen. Reuses
+the existing `archiveTransaction` per selected id — no new
+application-layer or schema changes. Deleting a selected transfer leg
+archives both legs of the pair, matching the existing single-delete
+behavior.
+
+**Validation:** TypeScript compiler clean (`npx tsc --noEmit -p .`). Full
+Jest suite green (43 suites, 306 tests, `npm test`). `TransactionRow` and
+this screen have no existing unit test coverage (confirmed no
+`app/**/*.test.tsx` files exist in this codebase), so there is no
+automated coverage of the new selection/delete wiring itself.
+**Manual in-app verification was partial:** the web dev server was
+started from this worktree and the app loaded with a live Supabase
+session already available, so the Ledger screen was reachable with real
+transaction data, including a transfer pair. Plain row-tap navigation to
+the transaction detail screen was confirmed still working unchanged. The
+long-press-driven selection flow itself — entering/exiting selection
+mode, toggling checkboxes, the disabled-Delete-at-zero-selected state,
+the confirm/cancel bar, a successful bulk delete, and the transfer-pair
+delete — was **not** exercised: this environment's browser automation
+can only dispatch synthetic pointer/mouse events, and react-native-web's
+`Pressable` long-press timer did not reliably fire from those synthetic
+events, so the selection UI could not be driven end-to-end here. This
+should be checked manually (a real device, simulator, or a hands-on web
+session) before merging.
