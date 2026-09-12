@@ -9,10 +9,9 @@ future UI.
 ## Date selection
 
 `app/transaction/new.tsx` and `app/transaction/[id].tsx` (edit forms) use
-a plain `YYYY-MM-DD` text `Input`, matching the date-entry convention
-already used elsewhere in the app (the Recurring screen's "Next due"
-field) rather than introducing a new native date-picker dependency. Both
-fields carry `accessibilityLabel="Transaction date, year-month-day"`.
+a plain `YYYY-MM-DD` text `Input` rather than introducing a new native
+date-picker dependency. Both fields carry
+`accessibilityLabel="Transaction date, year-month-day"`.
 Input is parsed and validated (`parseDateInput`) before save; an invalid
 or empty date disables Save.
 

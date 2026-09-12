@@ -19,7 +19,6 @@ type Href = '/(tabs)/more/accounts' | '/(tabs)/more/categories' | '/(tabs)/more/
 export default function MoreHub() {
   const router = useRouter();
   const { session } = useAuth();
-  const today = useMemo(() => new Date(), []);
 
   const accounts = useAccounts();
   const allTx = useTransactions({});
