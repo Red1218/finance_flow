@@ -25,9 +25,8 @@ function todayInputValue(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Plain YYYY-MM-DD text entry, matching the existing date-input convention
-// already used in this codebase (Recurring's "Next due" field) rather than
-// introducing a new native date-picker dependency.
+// Plain YYYY-MM-DD text entry rather than introducing a new native
+// date-picker dependency.
 function parseDateInput(value: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (!m) return null;

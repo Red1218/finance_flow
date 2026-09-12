@@ -73,29 +73,3 @@ export interface Preferences {
   reminder_time: string | null;
   sms_detection_enabled: boolean;
 }
-
-export interface RecurringItem {
-  id: string;
-  user_id: string;
-  name: string;
-  category_id: string | null;
-  account_id: string | null;
-  amount: number | string;
-  currency_code: string;
-  cadence: BudgetPeriod;
-  next_due_date: string;
-  is_paused: boolean;
-  archived_at: string | null;
-}
-
-export interface Goal {
-  id: string;
-  user_id: string;
-  name: string;
-  target_amount: number | string;
-  saved_amount: number | string;
-  monthly_target: number | string | null;
-  currency_code: string;
-  is_paused: boolean;
-  archived_at: string | null;
-}

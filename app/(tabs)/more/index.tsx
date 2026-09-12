@@ -3,8 +3,6 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAccounts } from '../../../src/hooks/useAccounts';
 import { useTransactions } from '../../../src/hooks/useTransactions';
-import { useRecurring } from '../../../src/hooks/useRecurring';
-import { useGoals } from '../../../src/hooks/useGoals';
 import { useCategories } from '../../../src/hooks/useCategories';
 import { useBudgets } from '../../../src/hooks/useBudgets';
 import { usePreferences } from '../../../src/hooks/usePreferences';
@@ -16,16 +14,7 @@ import { colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
-type Href = '/(tabs)/more/accounts' | '/(tabs)/more/recurring' | '/(tabs)/more/goals' | '/(tabs)/more/categories' | '/(tabs)/more/settings' | '/transaction/detected';
-
-function dueInDays(iso: string, today: Date): string {
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const diff = Math.round((startOfDay(new Date(iso)) - startOfDay(today)) / 86400000);
-  if (diff < 0) return 'overdue';
-  if (diff === 0) return 'due today';
-  if (diff === 1) return 'due tomorrow';
-  return `due in ${diff} days`;
-}
+type Href = '/(tabs)/more/accounts' | '/(tabs)/more/categories' | '/(tabs)/more/settings' | '/transaction/detected';
 
 export default function MoreHub() {
   const router = useRouter();
@@ -34,8 +23,6 @@ export default function MoreHub() {
 
   const accounts = useAccounts();
   const allTx = useTransactions({});
-  const recurring = useRecurring();
-  const goals = useGoals();
   const categories = useCategories();
   const budgets = useBudgets();
   const prefs = usePreferences();
@@ -49,36 +36,19 @@ export default function MoreHub() {
       0
     );
 
-    const recurringList = recurring.data ?? [];
-    const activeRecurring = recurringList.filter((r) => !r.is_paused);
-    const monthlyTotal = activeRecurring.reduce((sum, r) => sum + toNumber(r.amount), 0);
-    const nextDue = [...activeRecurring].sort(
-      (a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime()
-    )[0];
-
-    const goalList = goals.data ?? [];
-    const activeGoals = goalList.filter((g) => !g.is_paused);
-    const monthlyTarget = activeGoals.reduce((sum, g) => sum + toNumber(g.monthly_target ?? 0), 0);
-
     const categoryList = categories.data ?? [];
     const budgetedCategoryIds = new Set((budgets.data ?? []).filter((b) => b.category_id).map((b) => b.category_id));
 
     return {
       accounts: `${accountList.length} linked · ${formatCurrency(netWorth, currencyCode)} together`,
-      recurring: nextDue
-        ? `${formatCurrency(monthlyTotal, currencyCode)} a month · ${nextDue.name} ${dueInDays(nextDue.next_due_date, today)}`
-        : `${formatCurrency(monthlyTotal, currencyCode)} a month`,
-      goals: `${activeGoals.length} running · ${formatCurrency(monthlyTarget, currencyCode)} put away this month`,
       categories: `${categoryList.length} categories · ${budgetedCategoryIds.size} with a budget`,
       settings: `${currencyCode} · Week starts ${prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}`,
       detected: !detections.data?.length ? 'Nothing pending' : `${detections.data.length} pending`,
     };
-  }, [accounts.data, allTx.data, recurring.data, goals.data, categories.data, budgets.data, prefs.data, detections.data, today, currencyCode]);
+  }, [accounts.data, allTx.data, categories.data, budgets.data, prefs.data, detections.data, currencyCode]);
 
   const items: { label: string; href: Href; subtitle: string }[] = [
     { label: 'Accounts', href: '/(tabs)/more/accounts', subtitle: subtitles.accounts },
-    { label: 'Recurring', href: '/(tabs)/more/recurring', subtitle: subtitles.recurring },
-    { label: 'Goals', href: '/(tabs)/more/goals', subtitle: subtitles.goals },
     { label: 'Categories', href: '/(tabs)/more/categories', subtitle: subtitles.categories },
     { label: 'Detected transactions', href: '/transaction/detected', subtitle: subtitles.detected },
     { label: 'Settings', href: '/(tabs)/more/settings', subtitle: subtitles.settings },

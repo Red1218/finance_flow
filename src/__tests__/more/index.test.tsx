@@ -5,8 +5,6 @@ import { listDetections } from '../../data/repositories/pendingDetections';
 
 jest.mock('../../hooks/useAccounts', () => ({ useAccounts: () => ({ data: [] }) }));
 jest.mock('../../hooks/useTransactions', () => ({ useTransactions: () => ({ data: [] }) }));
-jest.mock('../../hooks/useRecurring', () => ({ useRecurring: () => ({ data: [] }) }));
-jest.mock('../../hooks/useGoals', () => ({ useGoals: () => ({ data: [] }) }));
 jest.mock('../../hooks/useCategories', () => ({ useCategories: () => ({ data: [] }) }));
 jest.mock('../../hooks/useBudgets', () => ({ useBudgets: () => ({ data: [] }) }));
 jest.mock('../../hooks/usePreferences', () => ({

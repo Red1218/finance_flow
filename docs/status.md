@@ -549,3 +549,26 @@ can only dispatch synthetic pointer/mouse events, and react-native-web's
 events, so the selection UI could not be driven end-to-end here. This
 should be checked manually (a real device, simulator, or a hands-on web
 session) before merging.
+
+## Recurring and Goals removed (2026-09-11)
+
+The Recurring and Goals features are fully removed at the app level:
+both screens, their hooks, their repositories, their route
+registrations, and their More-hub nav rows and subtitle computations are
+deleted. The underlying `recurring_items` and `goals` Supabase tables
+are untouched — this was an app-level removal, not a data migration; if
+the tables themselves should be dropped, that is a separate explicit
+request.
+
+**Validation:** TypeScript compiler clean (confirms no dangling
+references to the deleted hooks/types anywhere in the app). Full Jest
+suite green (43 suites, 306 tests). **Manual in-app verification was
+partial:** the web dev server was started from this worktree and the
+More screen loads with no runtime errors and no console errors when
+signed out, confirming the code compiles and renders. It was not
+possible to confirm the actual signed-in nav-row list (that Recurring
+and Goals no longer appear and that Accounts/Categories/Detected
+transactions/Settings still navigate correctly), because the app sits
+behind a real Supabase sign-in wall and this environment has no test
+credentials — the same limitation noted in the Unified categories and
+Detected transactions bulk assign entries above.
