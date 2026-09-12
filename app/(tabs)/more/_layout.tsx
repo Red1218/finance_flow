@@ -14,8 +14,6 @@ export default function MoreLayout() {
     >
       <Stack.Screen name="index" options={{ title: 'More' }} />
       <Stack.Screen name="accounts" options={{ title: 'Accounts' }} />
-      <Stack.Screen name="recurring" options={{ title: 'Recurring' }} />
-      <Stack.Screen name="goals" options={{ title: 'Goals' }} />
       <Stack.Screen name="categories" options={{ title: 'Categories' }} />
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
     </Stack>
