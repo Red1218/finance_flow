@@ -1,12 +1,12 @@
 // Real network integration test for the Update-path repository mapping fix.
-// transactionRepository.update() (transactions.ts) must translate
+// updateTransaction() (transactions.ts) must translate
 // TransactionPatch's camelCase fields (categoryId, occurredAt) to the
 // database's snake_case columns (category_id, occurred_at) before calling
 // Supabase — sending them unmapped fails with PGRST204 ("Could not find
 // the 'occurredAt' column..."), which is exactly the regression this test
 // guards against: if the mapping in transactions.ts were removed and the
 // raw TransactionPatch were passed straight to `.update()` again, the
-// `transactionRepository.update(...)` calls below would reject instead of
+// `updateTransaction(...)` calls below would reject instead of
 // resolving, and this test would fail. Not run by `npm test` — run
 // explicitly via `npm run test:integration`.
 //
@@ -17,9 +17,9 @@
 // archived again before the suite ends.
 import { supabase } from '../supabaseClient';
 import { signInTestAccount } from './testAuth';
-import { transactionRepository } from './transactions';
+import { updateTransaction } from './transactions';
 
-describe('transactionRepository.update (integration)', () => {
+describe('updateTransaction (integration)', () => {
   let accountId: string;
   let categoryId: string;
   let txId: string;
@@ -70,7 +70,7 @@ describe('transactionRepository.update (integration)', () => {
   }, 30000);
 
   it('persists amount, description, and occurredAt (mapped to occurred_at) through the repository', async () => {
-    const updated = await transactionRepository.update(txId, {
+    const updated = await updateTransaction(txId, {
       amount: 250,
       description: '__it_update_mapping_tx_v2',
       occurredAt: '2026-02-02T12:00:00.000Z',
@@ -89,7 +89,7 @@ describe('transactionRepository.update (integration)', () => {
   });
 
   it('persists categoryId mapped to category_id through the repository', async () => {
-    const updated = await transactionRepository.update(txId, { categoryId });
+    const updated = await updateTransaction(txId, { categoryId });
     expect(updated.category_id).toBe(categoryId);
 
     const { data: reread, error } = await supabase.from('transactions').select('category_id').eq('id', txId).single();
@@ -101,7 +101,7 @@ describe('transactionRepository.update (integration)', () => {
     const before = await supabase.from('transactions').select('description').eq('id', txId).single();
     if (before.error) throw before.error;
 
-    const updated = await transactionRepository.update(txId, { amount: 300 });
+    const updated = await updateTransaction(txId, { amount: 300 });
 
     expect(Number(updated.amount)).toBe(300);
     // description was not part of this patch — must be unchanged, not nulled.

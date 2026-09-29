@@ -44,9 +44,9 @@ inserts/updates from the client:
 
 | Operation | RPC | Called from |
 |---|---|---|
-| Create | `create_transfer(p_from_account_id, p_to_account_id, p_amount, p_description, p_occurred_at)` | `transactionRepository.createTransferPair` |
-| Edit | `update_transfer(p_transfer_group_id, p_amount, p_description, p_occurred_at, p_from_account_id, p_to_account_id)` | `transactionRepository.updateTransferPair` |
-| Archive | `archive_transfer(p_transfer_group_id)` | `transactionRepository.archiveTransferPair` |
+| Create | `create_transfer(p_from_account_id, p_to_account_id, p_amount, p_description, p_occurred_at)` | `createTransferPair` |
+| Edit | `update_transfer(p_transfer_group_id, p_amount, p_description, p_occurred_at, p_from_account_id, p_to_account_id)` | `updateTransferPair` |
+| Archive | `archive_transfer(p_transfer_group_id)` | `archiveTransferPair` |
 
 See [`rpc-security.md`](rpc-security.md) for the RPCs' security contract.
 
@@ -58,8 +58,8 @@ row through the regular (single-transaction) path with
 
 ## Corrupt-pair behavior
 
-`getTransferPair(transferGroupId)` (re-exported from the Application
-composition root, backed by `transactionRepository.getTransferPair`) has a
+`getTransferPair(transferGroupId)` (re-exported from
+`src/application/transactions`, backed by the repository's `getTransferPair`) has a
 three-way result contract:
 
 - **`null`** — no transfer visible to the caller for this id. This covers

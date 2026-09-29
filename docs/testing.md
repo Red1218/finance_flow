@@ -122,11 +122,11 @@ Add Expense/Income were confirmed working. See
 
 - `src/data/repositories/transactions.integration.test.ts` (3 tests, real
   network): proves `amount`/`description`/`occurredAt`/`categoryId` all
-  persist correctly through `transactionRepository.update()`, verified by
+  persist correctly through the repository's `updateTransaction()`, verified by
   an independent re-read (not just the mutation's own echoed response),
   and that a field omitted from a patch is not overwritten. Confirmed to
   fail with the original `PGRST204` error against the unmapped
-  pass-through before the fix, and to pass with `toUpdatePayload()`
+  pass-through before the fix, and to pass with the camelCase→snake_case mapping
   restored — a true regression guard.
 - Manual QA on a rebuilt release APK: Expense/Income edits, category
   changes, and Transfer edits/archive all persist correctly. Transfer and

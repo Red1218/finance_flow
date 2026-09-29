@@ -2,26 +2,62 @@ import { supabase } from '../supabaseClient';
 import type { Transaction, TransactionType } from '../types';
 import { ArchivedAccountError, PersistenceError, UnauthorizedError } from '../../application/transactions/errors';
 import { InvalidAmountError, SameAccountTransferError, TransferPairCorruptError, isValidTransferPair } from '../../domain/transactionRules';
-import type {
-  NewTransaction,
-  NewTransferPair,
-  TransactionFilter,
-  TransactionPatch,
-  TransferPair,
-  UpdateTransferPairInput,
-} from '../../application/transactions/ports';
 
-export interface ListTransactionsParams {
+export interface TransferPair {
+  out: Transaction;
+  in: Transaction;
+}
+
+export interface NewTransaction {
+  accountId: string;
+  categoryId: string | null;
+  type: Extract<TransactionType, 'EXPENSE' | 'INCOME'>;
+  amount: number;
+  description?: string | null;
+  occurredAt?: string;
+}
+
+export interface NewTransferPair {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  description?: string | null;
+  occurredAt?: string;
+}
+
+// from/to optional: Accounts' net-worth calculation lists every transaction
+// with no date range at all.
+export interface TransactionFilter {
   from?: string; // ISO inclusive
   to?: string; // ISO exclusive
   search?: string;
 }
 
-export async function listTransactions(params: ListTransactionsParams = {}): Promise<Transaction[]> {
+// Deliberately has no accountId/type fields — Expense/Income account and
+// transaction type are frozen immutable after creation (Core Transaction
+// Loop design). There is no signature through which a caller could attempt
+// to set them.
+export interface TransactionPatch {
+  amount?: number;
+  categoryId?: string | null;
+  description?: string | null;
+  occurredAt?: string;
+}
+
+export interface UpdateTransferPairInput {
+  transferGroupId: string;
+  amount: number;
+  description?: string | null;
+  occurredAt: string;
+  fromAccountId: string;
+  toAccountId: string;
+}
+
+export async function listTransactions(filter: TransactionFilter = {}): Promise<Transaction[]> {
   let query = supabase.from('transactions').select('*').is('archived_at', null);
-  if (params.from) query = query.gte('occurred_at', params.from);
-  if (params.to) query = query.lt('occurred_at', params.to);
-  if (params.search) query = query.ilike('description', `%${params.search}%`);
+  if (filter.from) query = query.gte('occurred_at', filter.from);
+  if (filter.to) query = query.lt('occurred_at', filter.to);
+  if (filter.search) query = query.ilike('description', `%${filter.search}%`);
   const { data, error } = await query.order('occurred_at', { ascending: false });
   if (error) throw error;
   return data as Transaction[];
@@ -33,17 +69,7 @@ export async function getTransaction(id: string): Promise<Transaction | null> {
   return data as Transaction | null;
 }
 
-export interface CreateTransactionInput {
-  account_id: string;
-  category_id: string | null;
-  type: Extract<TransactionType, 'EXPENSE' | 'INCOME'>;
-  amount: number;
-  currency_code: string;
-  description?: string | null;
-  occurred_at?: string;
-}
-
-export async function createTransaction(input: CreateTransactionInput): Promise<Transaction> {
+export async function createTransaction(input: NewTransaction): Promise<Transaction> {
   const { data: userRes } = await supabase.auth.getUser();
   const user_id = userRes.user?.id;
   if (!user_id) throw new Error('Not signed in');
@@ -51,13 +77,13 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     .from('transactions')
     .insert({
       user_id,
-      account_id: input.account_id,
-      category_id: input.category_id,
+      account_id: input.accountId,
+      category_id: input.categoryId,
       type: input.type,
       amount: input.amount,
-      currency_code: input.currency_code,
+      currency_code: 'INR',
       description: input.description ?? null,
-      occurred_at: input.occurred_at ?? new Date().toISOString(),
+      occurred_at: input.occurredAt ?? new Date().toISOString(),
     })
     .select('*')
     .single();
@@ -65,16 +91,23 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
   return data as Transaction;
 }
 
-export async function updateTransaction(
-  id: string,
-  patch: Partial<Pick<Transaction, 'category_id' | 'amount' | 'description' | 'occurred_at' | 'account_id'>>
-): Promise<Transaction> {
-  const { data, error } = await supabase.from('transactions').update(patch).eq('id', id).select('*').single();
+// Supabase forwards JSON body keys to Postgres column names literally, so
+// the camelCase patch must be mapped to snake_case — passing it straight
+// through fails with PGRST204 ("Could not find the 'occurredAt' column...").
+// Only fields present on the patch are sent, so an omitted field stays
+// omitted rather than being sent as `undefined`.
+export async function updateTransaction(id: string, patch: TransactionPatch): Promise<Transaction> {
+  const payload: Partial<Pick<Transaction, 'category_id' | 'amount' | 'description' | 'occurred_at'>> = {};
+  if (patch.amount !== undefined) payload.amount = patch.amount;
+  if (patch.categoryId !== undefined) payload.category_id = patch.categoryId;
+  if (patch.description !== undefined) payload.description = patch.description;
+  if (patch.occurredAt !== undefined) payload.occurred_at = patch.occurredAt;
+  const { data, error } = await supabase.from('transactions').update(payload).eq('id', id).select('*').single();
   if (error) throw error;
   return data as Transaction;
 }
 
-export async function deleteTransaction(id: string): Promise<void> {
+export async function archiveTransaction(id: string): Promise<void> {
   const { error } = await supabase
     .from('transactions')
     .update({ archived_at: new Date().toISOString() })
@@ -87,13 +120,6 @@ export function transactionSign(type: TransactionType): 1 | -1 | 0 {
   if (type === 'EXPENSE' || type === 'TRANSFER_OUT') return -1;
   return 0;
 }
-
-// ---------------------------------------------------------------------------
-// TransactionPort — the Application-layer contract. Everything below this
-// line exists to satisfy src/application/transactions/ports.ts; everything
-// above is the pre-existing repository API other screens still use directly
-// for plain (non-transfer) reads.
-// ---------------------------------------------------------------------------
 
 function translateTransferRpcError(error: { message: string }): never {
   const msg = error.message;
@@ -175,52 +201,3 @@ export async function getTransferPair(transferGroupId: string): Promise<Transfer
   const inLeg = a.type === 'TRANSFER_IN' ? a : b;
   return { out, in: inLeg };
 }
-
-// TransactionPatch (Application-layer, camelCase) -> the snake_case columns
-// updateTransaction() writes. Supabase forwards JSON body keys to Postgres
-// column names literally with no case translation, so passing the
-// camelCase patch straight through fails with PGRST204 ("Could not find
-// the 'occurredAt' column..."). Only maps fields actually present on the
-// patch, so an omitted field stays omitted rather than being sent as
-// `undefined`.
-function toUpdatePayload(
-  patch: TransactionPatch
-): Partial<Pick<Transaction, 'category_id' | 'amount' | 'description' | 'occurred_at'>> {
-  const payload: Partial<Pick<Transaction, 'category_id' | 'amount' | 'description' | 'occurred_at'>> = {};
-  if (patch.amount !== undefined) payload.amount = patch.amount;
-  if (patch.categoryId !== undefined) payload.category_id = patch.categoryId;
-  if (patch.description !== undefined) payload.description = patch.description;
-  if (patch.occurredAt !== undefined) payload.occurred_at = patch.occurredAt;
-  return payload;
-}
-
-// Adapter for the Application-layer TransactionPort — thin wrappers over the
-// functions above, translating NewTransaction/TransactionFilter/etc. (the
-// Application ports' shape) to what the existing functions already expect.
-export const transactionRepository = {
-  async create(input: NewTransaction): Promise<Transaction> {
-    return createTransaction({
-      account_id: input.accountId,
-      category_id: input.categoryId,
-      type: input.type,
-      amount: input.amount,
-      currency_code: 'INR',
-      description: input.description,
-      occurred_at: input.occurredAt,
-    });
-  },
-  createTransferPair,
-  async list(filter: TransactionFilter): Promise<Transaction[]> {
-    return listTransactions({ from: filter.from, to: filter.to, search: filter.search });
-  },
-  getById: getTransaction,
-  getTransferPair,
-  // Not-found is checked by the UpdateTransaction use case itself (it loads
-  // the row via getById before ever calling this) — no duplicate check here.
-  async update(id: string, patch: TransactionPatch): Promise<Transaction> {
-    return updateTransaction(id, toUpdatePayload(patch));
-  },
-  updateTransferPair,
-  archive: deleteTransaction,
-  archiveTransferPair,
-};

@@ -4,16 +4,14 @@
 
 ```
 Presentation (app/transaction/*.tsx, src/hooks/*)
-    → Application (src/application/transactions/*)
-        → TransactionPort (interface, src/application/transactions/ports.ts)
-            → Infrastructure adapter (transactionRepository, src/data/repositories/transactions.ts)
-                → Supabase (table operations for plain transactions; RPCs for transfers — see transfer-architecture.md)
+    → Application (src/application/transactions/index.ts)
+        → Repository (src/data/repositories/transactions.ts)
+            → Supabase (table operations for plain transactions; RPCs for transfers — see transfer-architecture.md)
 ```
 
 Presentation screens and hooks (`app/transaction/new.tsx`,
-`app/transaction/[id].tsx`, `src/hooks/useTransactions.ts`) call the five use cases and the two
-re-exported reads through `src/application/transactions`, the
-Application-layer composition root. They no longer call
+`app/transaction/[id].tsx`, `src/hooks/useTransactions.ts`) call the use cases and re-exported
+reads through `src/application/transactions`. They no longer call
 `src/data/repositories/transactions` functions directly for
 transaction reads or writes.
 
@@ -34,27 +32,24 @@ Presentation → Infrastructure data-access dependency.
   `src/ui/errorMessages.ts`. Raw Supabase/Postgres errors never
   reach a screen.
 - **Application** (`src/application/transactions/*`) orchestrates
-  validation (via Domain rules) and I/O (via the ports), and returns
-  Domain types.
-- **Infrastructure** (`transactionRepository` in
-  `src/data/repositories/transactions.ts`) implements `TransactionPort`
-  against Supabase: plain `insert`/`update`/`select` calls for
+  validation (via Domain rules) and I/O (via the repositories), and
+  returns Domain types.
+- **Infrastructure** (`src/data/repositories/transactions.ts`) talks to
+  Supabase: plain `insert`/`update`/`select` calls for
   Expense/Income transactions, and RPC calls for transfer-pair operations.
 
-See [`application-layer.md`](application-layer.md) for the use cases and
-ports, [`transfer-architecture.md`](transfer-architecture.md) for the
+See [`application-layer.md`](application-layer.md) for the use cases, [`transfer-architecture.md`](transfer-architecture.md) for the
 transfer-specific path, and [`presentation.md`](presentation.md) for the
 screen-level changes.
 
 ## Update-path field mapping (fixed 2026-09-02, commit `1604d8e`)
 
-`TransactionPatch` (`src/application/transactions/ports.ts`) is, like
-every other Application-layer type, camelCase (`categoryId`,
+`TransactionPatch` (`src/data/repositories/transactions.ts`) is camelCase (`categoryId`,
 `occurredAt`). The `transactions` table's own columns are snake_case
 (`category_id`, `occurred_at`). Supabase's `.update()` forwards JSON body
 keys to Postgres column names literally, with no case translation.
 
-`transactionRepository.update()` (`src/data/repositories/transactions.ts`)
+`updateTransaction()` (`src/data/repositories/transactions.ts`)
 previously forwarded the patch straight through unmapped. Every edit that
 touched the date or category therefore failed with an HTTP 400
 (`PGRST204`, "Could not find the `occurredAt` column..."), surfaced to the
@@ -66,16 +61,13 @@ Transfer edit/archive were never affected either — they go through the
 [`transfer-architecture.md`](transfer-architecture.md)), a separate code
 path with its own literal, already-correct parameter names.
 
-**Fix:** `toUpdatePayload()` in `transactions.ts` maps `TransactionPatch`'s
+**Fix:** `updateTransaction()` in `transactions.ts` maps `TransactionPatch`'s
 camelCase fields to their snake_case columns before calling Supabase,
 omitting any field not present on the patch rather than sending it as
 `undefined` (so an omitted field is left alone, not overwritten with
 `null`). This mirrors the same field-mapping responsibility
-`createTransaction()`/`transactionRepository.create()` already had —
-mapping camelCase Application types to snake_case columns is an
-Infrastructure-adapter concern, confined to `transactions.ts`; the
-Application layer's `TransactionPatch` type itself did not change and
-remains camelCase.
+`createTransaction()` already had — mapping camelCase types to
+snake_case columns is confined to `transactions.ts`.
 
 **Regression test:** `src/data/repositories/transactions.integration.test.ts`
 (real network, run via `npm run test:integration`, not `npm test`) proves

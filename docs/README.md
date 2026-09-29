@@ -4,7 +4,7 @@ Project documentation, organized by concern. Started with the Core
 Transaction Loop feature (Expense/Income/Transfer CRUD) — the first
 feature built against a written architecture.
 
-- [`architecture/application-layer.md`](architecture/application-layer.md) — the Application layer: use cases, ports, composition root.
+- [`architecture/application-layer.md`](architecture/application-layer.md) — the Application layer: use cases and validation.
 - [`architecture/transaction-architecture.md`](architecture/transaction-architecture.md) — the request flow from screen to database for a plain transaction, including the Update-path field-mapping fix.
 - [`architecture/transfer-architecture.md`](architecture/transfer-architecture.md) — the transfer-pair invariant and atomic pair operations.
 - [`architecture/rpc-security.md`](architecture/rpc-security.md) — the security contract for the transfer RPCs.

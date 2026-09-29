@@ -26,9 +26,9 @@ way a client can create, edit, or archive a transfer pair.
   it is not automatic.
 - **Account ownership and active-account status are re-validated inside
   each RPC's own transaction**, not just pre-checked by the Application
-  layer before calling. The Application layer (`createTransfer.ts`,
-  `updateTransaction.ts`'s transfer branch) does perform its own
-  pre-check via `AccountLookupPort` for a fast, friendly error — but that
+  layer before calling. The Application layer (`createTransfer`,
+  `updateTransaction`'s transfer branch) does perform its own
+  pre-check via `getAccountById` for a fast, friendly error — but that
   check happens outside the RPC's transaction and cannot close a race
   (an account could be archived between the pre-check and the RPC call).
   The RPC's own atomic re-validation is what actually makes archived- or
