@@ -1,6 +1,6 @@
 // Presentation-only error -> message mapping (frozen Error Model). Raw
 // Supabase/Postgres text never reaches here — the Infrastructure adapters
-// (src/data/repositories/transactions.ts, authCredentials.ts) have already
+// (src/data/repositories/transactions.ts, auth.ts) have already
 // translated everything into one of these typed errors by the time a screen
 // sees it.
 import {

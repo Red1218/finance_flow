@@ -5,18 +5,15 @@ import { AuthProvider, useAuth } from './AuthContext';
 
 const mockGetExistingSession = jest.fn();
 const mockSignOutUser = jest.fn();
-jest.mock('./repositories/auth', () => ({
-  getExistingSession: () => mockGetExistingSession(),
-  signOutUser: () => mockSignOutUser(),
-}));
-
 const mockSignUp = jest.fn();
 const mockVerifySignupOtp = jest.fn();
 const mockSetPassword = jest.fn();
 const mockSignInWithPassword = jest.fn();
 const mockSendPasswordResetEmail = jest.fn();
 const mockEstablishRecoverySession = jest.fn();
-jest.mock('./repositories/authCredentials', () => ({
+jest.mock('./repositories/auth', () => ({
+  getExistingSession: () => mockGetExistingSession(),
+  signOutUser: () => mockSignOutUser(),
   signUp: (email: string, password: string) => mockSignUp(email, password),
   verifySignupOtp: (email: string, token: string) => mockVerifySignupOtp(email, token),
   setPassword: (password: string) => mockSetPassword(password),

@@ -18,7 +18,7 @@ checkpoint.
 | TypeScript | `npx tsc --noEmit` | PASS — 0 errors |
 | ESLint | `npx expo lint` | PASS — exit 0, no warnings |
 | Unit / component tests | `npm test` | PASS — 148/148 tests, 21 suites |
-| Integration tests | `npm run test:integration` | PASS (Core Transaction Loop suites, 20/20 tests, 3 suites, real Supabase project) — see the Account Authentication section below for `authCredentials.integration.test.ts`'s separate, email-quota-sensitive status |
+| Integration tests | `npm run test:integration` | PASS (Core Transaction Loop suites, 20/20 tests, 3 suites, real Supabase project) — see the Account Authentication section below for `auth.integration.test.ts`'s separate, email-quota-sensitive status |
 | Android release build | `./gradlew assembleRelease` | PASS — release APK built and installed on a real Android device for native QA (see the Account Authentication, Mobile UX Reliability Fixes, and Release APK Startup Fix sections below) |
 | Manual transfer UI flow | End-to-end on the Android emulator (Pixel_8a), not via the integration tests | PASS — see below |
 | Accessibility | Source inspection of the required controls | `accessibilityLabel`/`accessibilityRole` present on the date input (`app/transaction/new.tsx`, `app/transaction/[id].tsx`), the transfer "View other side" control (`app/transaction/[id].tsx`), and the category expand/collapse toggle (`app/transaction/new.tsx`: `accessibilityRole="button"`, `accessibilityLabel` of "Show all categories"/"Show fewer categories", `accessibilityState={{ expanded }}`). These are not currently exercised by a dedicated automated accessibility test suite — none exists in this project; the component tests query by visible text, not by accessibility label. |
@@ -34,7 +34,7 @@ checkpoints:
   `src/ui/FormModal.test.tsx` (5 tests) and `src/data/AuthContext.test.tsx`
   (4 tests) — 9 unit/component tests, 2 new unit/component suites.
 - **Account Authentication & Anonymous Account Upgrade** added 7 new
-  unit/component suites — `authCredentials.test.ts` (22),
+  unit/component suites — `auth.test.ts` (22),
   `errorMessages.test.ts` (2), `create.test.tsx` (8), `sign-in.test.tsx`
   (3), `forgot-password.test.tsx` (1), `reset-password.test.tsx` (3),
   `settings.test.tsx` (3), 42 tests total — and grew the existing
@@ -181,7 +181,7 @@ for the mechanics.
 **Automated:** 42 new unit/component tests across 7 new suites plus 5 new
 tests in the existing `AuthContext.test.tsx` (identityKind derivation,
 credential orchestration) — see the breakdown above. TypeScript and ESLint
-clean. `authCredentials.integration.test.ts` (3 tests: `signInWithPassword`
+clean. `auth.integration.test.ts` (3 tests: `signInWithPassword`
 against a nonexistent account, `sendPasswordResetEmail` not throwing, and
 an `updateUser(email, password)` real-send test gated behind
 `RUN_EMAIL_TESTS=1`, opt-in only) was exercised selectively during
@@ -338,7 +338,7 @@ Only verified, observed risks are recorded here.
   is tightly rate-limited (observed exhaustion after a handful of sends in
   under an hour during this feature's own testing). Custom SMTP (Gmail) is
   configured for reliable manual testing of the account-authentication
-  flows; `authCredentials.integration.test.ts`'s real-send test stays
+  flows; `auth.integration.test.ts`'s real-send test stays
   opt-in (`RUN_EMAIL_TESTS=1`) specifically to avoid re-exhausting it on
   every `npm run test:integration`. Introduced by the Account
   Authentication & Anonymous Account Upgrade checkpoint (2026-09-04).

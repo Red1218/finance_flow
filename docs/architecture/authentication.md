@@ -3,7 +3,7 @@
 > for why, and this file's own content below for what anonymous-first used
 > to mean (kept for history, not current behavior). The "Anonymous →
 > permanent upgrade" flow described below no longer exists — signup now
-> goes straight through `supabase.auth.signUp()` (`src/data/repositories/authCredentials.ts`'s
+> goes straight through `supabase.auth.signUp()` (`src/data/repositories/auth.ts`'s
 > `signUp`/`verifySignupOtp`, `type: 'signup'`), not the anonymous-upgrade
 > `updateUser()`/`type: 'email_change'` path documented here.
 
@@ -30,10 +30,9 @@ src/data/AuthContext.tsx        — orchestration: sequences 1-2 repository
                                    calls per method, derives `identityKind`,
                                    never inspects a raw Supabase error
         ↓
-src/data/repositories/authCredentials.ts  — one function per Supabase Auth
-                                   call, the only place a raw Supabase
-                                   AuthError is ever inspected
-src/data/repositories/auth.ts     — UNCHANGED: anonymous session bootstrap
+src/data/repositories/auth.ts     — session bootstrap plus one function
+                                   per Supabase Auth call, the only place
+                                   a raw Supabase AuthError is inspected
         ↓
 src/data/supabaseClient.ts        — UNCHANGED
 ```
@@ -157,7 +156,7 @@ intended substitute, not a gap.
 `src/data/repositories/authErrors.ts` defines every error class; the
 project's frozen Error Model pattern (mirrors
 `src/application/transactions/errors.ts` / `errorMessages.ts`).
-`authCredentials.ts`'s `translateAuthError()` is the *only* place a raw
+`auth.ts`'s `translateAuthError()` is the *only* place a raw
 Supabase `AuthError`/`AuthApiError` is ever inspected — everything above
 that boundary (`AuthContext`, screens) only ever sees these typed classes:
 

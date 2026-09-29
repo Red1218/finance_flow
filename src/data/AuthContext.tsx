@@ -1,15 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
-import { getExistingSession, signOutUser } from './repositories/auth';
 import {
+  getExistingSession,
+  signOutUser,
   signUp as signUpCredential,
   verifySignupOtp as verifySignupOtpCredential,
   setPassword,
   signInWithPassword,
   sendPasswordResetEmail,
   establishRecoverySession,
-} from './repositories/authCredentials';
+} from './repositories/auth';
 
 export type AuthStatus = 'initializing' | 'authenticated' | 'signedOut' | 'error';
 
