@@ -192,7 +192,7 @@ export default function Settings() {
       <SelectModal
         visible={currencyOpen}
         title="Currency"
-        options={CURRENCIES.map((c) => ({ id: c.code, label: c.label }))}
+        options={CURRENCIES.map((c) => ({ id: c.code, label: c.code }))}
         onSelect={(opt) => setPref({ currency_code: opt.id })}
         onClose={() => setCurrencyOpen(false)}
       />

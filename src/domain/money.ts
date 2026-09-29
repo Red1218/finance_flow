@@ -5,17 +5,16 @@ export interface CurrencyMeta {
   code: string;
   symbol: string;
   locale: string;
-  label: string;
 }
 
 // The only currencies preferences.currency_code can hold (see Settings'
 // picker). USD/EUR/GBP use Western digit grouping (100,000); INR keeps its
 // own (1,00,000).
 export const CURRENCIES: CurrencyMeta[] = [
-  { code: 'INR', symbol: '₹', locale: 'en-IN', label: 'INR' },
-  { code: 'USD', symbol: '$', locale: 'en-US', label: 'USD' },
-  { code: 'EUR', symbol: '€', locale: 'en-US', label: 'EUR' },
-  { code: 'GBP', symbol: '£', locale: 'en-US', label: 'GBP' },
+  { code: 'INR', symbol: '₹', locale: 'en-IN' },
+  { code: 'USD', symbol: '$', locale: 'en-US' },
+  { code: 'EUR', symbol: '€', locale: 'en-US' },
+  { code: 'GBP', symbol: '£', locale: 'en-US' },
 ];
 
 const DEFAULT_CURRENCY = CURRENCIES[0];

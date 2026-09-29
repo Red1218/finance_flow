@@ -2,7 +2,7 @@ import { getCurrencyMeta, formatCurrency, formatMoney, toNumber } from './money'
 
 describe('getCurrencyMeta', () => {
   it('resolves a known code', () => {
-    expect(getCurrencyMeta('USD')).toEqual({ code: 'USD', symbol: '$', locale: 'en-US', label: 'USD' });
+    expect(getCurrencyMeta('USD')).toEqual({ code: 'USD', symbol: '$', locale: 'en-US' });
   });
 
   it('falls back to INR for an unknown or missing code', () => {
