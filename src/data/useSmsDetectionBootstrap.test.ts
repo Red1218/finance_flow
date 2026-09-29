@@ -8,7 +8,7 @@ import { isSmsDetectionEnabled } from './smsDetectionEnabled';
 jest.mock('./native/smsListener');
 jest.mock('./repositories/pendingDetections');
 jest.mock('./smsDetectionEnabled');
-jest.mock('../domain/smsTransactionParser', () => ({
+jest.mock('../domain/smsDetection', () => ({
   parseSmsTransaction: jest.fn(() => ({ dedupKey: 'KOTAKB:1', merchant: 'x' })),
 }));
 

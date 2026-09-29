@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { checkSmsPermission, subscribeToLiveSms, drainQueuedSms, type RawSmsEvent } from './native/smsListener';
-import { parseSmsTransaction } from '../domain/smsTransactionParser';
+import { parseSmsTransaction } from '../domain/smsDetection';
 import { addDetection } from './repositories/pendingDetections';
 import { isSmsDetectionEnabled } from './smsDetectionEnabled';
 

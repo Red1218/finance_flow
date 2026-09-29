@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { listDetections, removeDetection, type PendingDetection } from '../../src/data/repositories/pendingDetections';
-import { matchDetectionToAccount } from '../../src/domain/matchDetectionToAccount';
+import { matchDetectionToAccount } from '../../src/domain/smsDetection';
 import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
