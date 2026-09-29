@@ -3,7 +3,7 @@
 // Application never imports anything from this file.
 import { toNumber, formatCurrency, formatMoney } from './money';
 import type { Transaction, Category, Account } from '../data/types';
-import { transactionSign } from '../data/repositories/transactions';
+import { transactionSign } from './transactionRules';
 
 export interface TransactionRowVM {
   id: string;

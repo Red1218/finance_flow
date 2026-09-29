@@ -63,12 +63,6 @@ jest.mock('../../data/repositories/accounts', () => ({
 }));
 jest.mock('../../data/repositories/budgets', () => ({ listActiveBudgets: async () => [] }));
 jest.mock('../../data/repositories/preferences', () => ({ getPreferences: async () => ({ decimal_precision: 2 }) }));
-// transactionView.ts imports transactionSign from the real repository module,
-// which instantiates the Supabase client at import time — mock it here too
-// so this unit test never needs real credentials.
-jest.mock('../../data/repositories/transactions', () => ({
-  transactionSign: (type: string) => (type === 'INCOME' || type === 'TRANSFER_IN' ? 1 : type === 'EXPENSE' || type === 'TRANSFER_OUT' ? -1 : 0),
-}));
 
 // mockSession is read inside the jest.mock factory below — Jest allows
 // referencing variables prefixed with "mock" from within a mock factory

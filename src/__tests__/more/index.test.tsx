@@ -14,11 +14,6 @@ jest.mock('../../data/AuthContext', () => ({
   useAuth: () => ({ session: { user: { id: 'u1' } } }),
 }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
-// transactionSign is imported directly (unmocked) by the screen; mocking it
-// avoids pulling in the real transactions repo, which transitively requires
-// src/data/supabaseClient.ts and throws without EXPO_PUBLIC_SUPABASE_* env
-// vars set (those aren't loaded by the jest-expo preset in unit test runs).
-jest.mock('../../data/repositories/transactions', () => ({ transactionSign: jest.fn(() => 1) }));
 jest.mock('../../data/repositories/pendingDetections');
 // useLiveQuery (used for real here, same as detected.test.tsx) calls the
 // real useFocusEffect, which needs a NavigationContainer we don't render in

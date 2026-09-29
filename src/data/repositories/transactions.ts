@@ -115,12 +115,6 @@ export async function archiveTransaction(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export function transactionSign(type: TransactionType): 1 | -1 | 0 {
-  if (type === 'INCOME' || type === 'TRANSFER_IN') return 1;
-  if (type === 'EXPENSE' || type === 'TRANSFER_OUT') return -1;
-  return 0;
-}
-
 function translateTransferRpcError(error: { message: string }): never {
   const msg = error.message;
   if (msg.includes('archived or not found')) throw new ArchivedAccountError();

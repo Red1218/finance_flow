@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAccounts, useTransactions, useCategories, useBudgets, usePreferences } from '../../../src/hooks/queries';
 import { useLiveQuery } from '../../../src/hooks/useLiveQuery';
-import { transactionSign } from '../../../src/data/repositories/transactions';
+import { transactionSign } from '../../../src/domain/transactionRules';
 import { listDetections } from '../../../src/data/repositories/pendingDetections';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';

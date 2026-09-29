@@ -11,6 +11,12 @@ export class SameAccountTransferError extends Error { name = 'SameAccountTransfe
 
 export class TransferPairCorruptError extends Error { name = 'TransferPairCorruptError'; message = "This transfer can't be found or is no longer valid"; }
 
+export function transactionSign(type: TransactionType): 1 | -1 | 0 {
+  if (type === 'INCOME' || type === 'TRANSFER_IN') return 1;
+  if (type === 'EXPENSE' || type === 'TRANSFER_OUT') return -1;
+  return 0;
+}
+
 export function validateAmount(amount: number, precision: number): void {
   if (!(amount > 0)) throw new InvalidAmountError();
   const factor = 10 ** precision;

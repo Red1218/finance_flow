@@ -4,7 +4,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { useAccounts, useTransactions, usePreferences } from '../../../src/hooks/queries';
 import { createAccount } from '../../../src/data/repositories/accounts';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
-import { transactionSign } from '../../../src/data/repositories/transactions';
+import { transactionSign } from '../../../src/domain/transactionRules';
 import { monthRange } from '../../../src/domain/dateRange';
 import type { AccountType } from '../../../src/data/types';
 import { Button, Card, Input, K, Muted, Seg, Tag } from '../../../src/ui/primitives';

@@ -15,13 +15,9 @@ reads through `src/application/transactions`. They no longer call
 `src/data/repositories/transactions` functions directly for
 transaction reads or writes.
 
-The one narrow exception: `transactionSign(type)` — a pure function
-mapping a `TransactionType` to `1 | -1 | 0`, with no I/O — is imported
-directly from `src/data/repositories/transactions.ts` by
-`app/(tabs)/more/accounts.tsx`, `app/(tabs)/more/index.tsx`, and
-`src/domain/transactionView.ts`. It's a stateless helper, not a
-repository call, so importing it directly does not reintroduce a
-Presentation → Infrastructure data-access dependency.
+`transactionSign(type)` — the pure `TransactionType` → `1 | -1 | 0`
+mapping used for balances and amount labels — lives in
+`src/domain/transactionRules.ts`, not the repository.
 
 ## Layer responsibilities
 
