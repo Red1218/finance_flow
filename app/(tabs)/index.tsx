@@ -1,8 +1,17 @@
 import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDashboard } from '../../src/hooks/useDashboard';
-import { formatCurrency } from '../../src/domain/money';
+import { useMemo } from 'react';
+import { useTransactions } from '../../src/hooks/useTransactions';
+import { useBudgets } from '../../src/hooks/useBudgets';
+import { useCategories } from '../../src/hooks/useCategories';
+import { useAccounts } from '../../src/hooks/useAccounts';
+import { usePreferences } from '../../src/hooks/usePreferences';
+import { formatCurrency, toNumber } from '../../src/domain/money';
+import { budgetProgress } from '../../src/domain/budget';
+import { monthProgress, dailyAllowance, last7DaysTotals } from '../../src/domain/dashboard';
+import { monthRange } from '../../src/domain/dateRange';
+import { buildTransactionRowVM, indexById } from '../../src/domain/transactionView';
 import { Body, K, Muted, Num } from '../../src/ui/primitives';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { colors, fonts, shadow, spacing } from '../../src/theme/tokens';
@@ -11,9 +20,64 @@ import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
 export default function Home() {
   const router = useRouter();
-  const d = useDashboard();
   const { session } = useAuth();
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
+  const { from, to } = useMemo(() => monthRange(today), [today]);
+
+  const tx = useTransactions({ from, to });
+  const budgets = useBudgets();
+  const categories = useCategories();
+  const accounts = useAccounts();
+  const prefs = usePreferences();
+  const currencyCode = prefs.data?.currency_code ?? 'INR';
+
+  const derived = useMemo(() => {
+    const rows = tx.data ?? [];
+    const overallBudget = (budgets.data ?? []).find((b) => b.category_id === null);
+    const categoriesById = indexById(categories.data ?? []);
+    const accountsById = indexById(accounts.data ?? []);
+
+    let spent = 0;
+    for (const t of rows) {
+      if (t.type === 'EXPENSE' || t.type === 'TRANSFER_OUT') spent += toNumber(t.amount);
+    }
+
+    const limit = overallBudget ? toNumber(overallBudget.amount) : 0;
+    const progress = budgetProgress(spent, limit);
+    const { dayOfMonth, totalDays, daysLeft } = monthProgress(today);
+
+    const bars = last7DaysTotals(
+      rows.map((t) => ({ occurred_at: t.occurred_at, amount: toNumber(t.amount), type: t.type })),
+      today
+    );
+    const maxBar = Math.max(1, ...bars);
+
+    return {
+      currencyCode,
+      hasBudget: !!overallBudget,
+      leftToSpend: progress.remaining,
+      limit,
+      dayOfMonth,
+      totalDays,
+      daysLeft,
+      dailyAllowance: dailyAllowance(progress.remaining, daysLeft || 1),
+      bars: bars.map((v) => v / maxBar),
+      last7Total: bars.reduce((a, b) => a + b, 0),
+      recent: rows.slice(0, 6).map((t) => buildTransactionRowVM(t, categoriesById, accountsById, currencyCode)),
+      totalCount: rows.length,
+    };
+  }, [tx.data, budgets.data, categories.data, accounts.data, today, currencyCode]);
+
+  const d = {
+    ...derived,
+    loading: tx.loading || budgets.loading || categories.loading || accounts.loading,
+    refetch: () => {
+      tx.refetch();
+      budgets.refetch();
+      categories.refetch();
+      accounts.refetch();
+    },
+  };
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
   if (!session) {

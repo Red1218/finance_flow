@@ -11,8 +11,7 @@ Presentation (app/transaction/*.tsx, src/hooks/*)
 ```
 
 Presentation screens and hooks (`app/transaction/new.tsx`,
-`app/transaction/[id].tsx`, `src/hooks/useTransactions.ts`,
-`src/hooks/useDashboard.ts`) call the five use cases and the two
+`app/transaction/[id].tsx`, `src/hooks/useTransactions.ts`) call the five use cases and the two
 re-exported reads through `src/application/transactions`, the
 Application-layer composition root. They no longer call
 `src/data/repositories/transactions` functions directly for
