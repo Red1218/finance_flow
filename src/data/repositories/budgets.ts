@@ -55,8 +55,3 @@ export async function setBudget(input: SetBudgetInput): Promise<Budget> {
   if (error) throw error;
   return data as Budget;
 }
-
-export async function archiveBudget(id: string): Promise<void> {
-  const { error } = await supabase.from('budgets').update({ archived_at: new Date().toISOString() }).eq('id', id);
-  if (error) throw error;
-}
