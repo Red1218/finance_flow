@@ -1,13 +1,24 @@
 import { useState } from 'react';
 import { useFonts, SourceSerif4_400Regular, SourceSerif4_600SemiBold, SourceSerif4_400Regular_Italic } from '@expo-google-fonts/source-serif-4';
 import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from '../src/data/AuthContext';
 import { useSmsDetectionBootstrap } from '../src/data/useSmsDetectionBootstrap';
 import { useNotificationTapObserver } from '../src/notifications/useNotificationTapObserver';
-import '../src/notifications/notificationSetup';
 import { Body, Button } from '../src/ui/primitives';
 import { colors, spacing } from '../src/theme/tokens';
+
+// Module scope, run once on import: how a notification is shown while the
+// app is in the foreground.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 function RootNavigator() {
   const { status, error, retry } = useAuth();
