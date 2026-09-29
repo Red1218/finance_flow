@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTransactions, useCategories, useAccounts, usePreferences } from '../../../src/hooks/queries';
+import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { groupByDay } from '../../../src/domain/dashboard';
 import { monthRange } from '../../../src/domain/dateRange';
 import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
@@ -91,6 +92,13 @@ export default function TransactionsList() {
   const accounts = useAccounts();
   const prefs = usePreferences();
   const currencyCode = prefs.data?.currency_code ?? 'INR';
+  const { ready, error } = firstLoad(tx, categories, accounts);
+  const loading = tx.loading || categories.loading || accounts.loading;
+  const refetch = () => {
+    tx.refetch();
+    categories.refetch();
+    accounts.refetch();
+  };
 
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'short' });
 
@@ -140,7 +148,7 @@ export default function TransactionsList() {
                 </Pressable>
               </View>
             ) : (
-              <K>{monthLabel} · {formatCurrency(monthOut, currencyCode)} out</K>
+              <K>{monthLabel}{ready ? ` · ${formatCurrency(monthOut, currencyCode)} out` : ''}</K>
             )
           }
         />
@@ -173,8 +181,15 @@ export default function TransactionsList() {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {groups.length === 0 ? (
+      <ScrollView
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.accent} />}
+      >
+        {!ready ? (
+          error ? (
+            <Muted style={{ marginTop: spacing.s4 }}>Couldn&rsquo;t load your transactions. Pull down to try again.</Muted>
+          ) : null
+        ) : groups.length === 0 ? (
           <Muted style={{ marginTop: spacing.s4 }}>No transactions match.</Muted>
         ) : (
           groups.map((g) => (

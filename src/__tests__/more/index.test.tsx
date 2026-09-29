@@ -42,6 +42,13 @@ describe('More hub — Detected transactions row', () => {
     expect(await screen.findByText('3 pending')).toBeTruthy();
   });
 
+  it('does not claim "Nothing pending" while detections are still loading', async () => {
+    (listDetections as jest.Mock).mockReturnValue(new Promise(() => {}));
+    render(<MoreHub />);
+    expect(await screen.findByText('Detected transactions')).toBeTruthy();
+    expect(screen.queryByText('Nothing pending')).toBeNull();
+  });
+
   it('shows "Nothing pending" when the queue is empty', async () => {
     render(<MoreHub />);
     expect(await screen.findByText('Nothing pending')).toBeTruthy();

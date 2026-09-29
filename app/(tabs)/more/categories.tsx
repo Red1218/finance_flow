@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCategories, useBudgets, useTransactions, usePreferences } from '../../../src/hooks/queries';
+import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { createCategory, deleteCategory } from '../../../src/data/repositories/categories';
 import { setBudget } from '../../../src/data/repositories/budgets';
 import { toNumber, formatCurrency, getCurrencyMeta } from '../../../src/domain/money';
@@ -29,6 +30,7 @@ export default function Categories() {
   const { session } = useAuth();
 
   const loading = categories.loading || budgets.loading || tx.loading;
+  const { ready, error } = firstLoad(categories, budgets, tx);
   const refetch = () => {
     categories.refetch();
     budgets.refetch();
@@ -130,51 +132,57 @@ export default function Categories() {
           <Button title="Add category" onPress={addCategory} disabled={!name.trim()} loading={saving} block />
         </View>
 
-        <View style={styles.list}>
-          <K style={styles.listLabel}>
-            {rows.length} categor{rows.length === 1 ? 'y' : 'ies'} · {rows.filter((r) => r.hasBudget).length} with a budget
-          </K>
-          {rows.length === 0 ? (
-            <Muted>No categories yet.</Muted>
-          ) : (
-            rows.map((r) => (
-              <View key={r.id} style={styles.row}>
-                <View style={styles.rowTop}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowName}>{r.name}</Text>
-                    <Muted style={styles.rowMeta}>{r.meta}</Muted>
-                  </View>
-                  <IconButton
-                    label="Delete category"
-                    onPress={() => {
-                      setDeleteError(null);
-                      setPendingId(r.id);
-                    }}
-                  >
-                    <Text style={{ color: colors.accent2_700, fontSize: 16 }}>✕</Text>
-                  </IconButton>
-                </View>
-                {pendingId === r.id && (
-                  <View style={styles.confirm}>
-                    <Text style={styles.confirmText}>{r.isSystem ? "This is a default category and can't be removed." : r.warn}</Text>
-                    {deleteError && <Text style={[styles.confirmText, styles.confirmError]}>{deleteError}</Text>}
-                    <View style={styles.confirmActions}>
-                      {!r.isSystem && (
-                        <Button
-                          title="Delete anyway"
-                          variant="secondary"
-                          onPress={() => confirmDelete(r.id, r.isSystem)}
-                          loading={deletingId === r.id}
-                        />
-                      )}
-                      <Button title="Keep it" variant="ghost" onPress={() => setPendingId(null)} />
+        {!ready ? (
+          error ? <Muted>Couldn&rsquo;t load your categories. Pull down to try again.</Muted> : null
+        ) : (
+          <>
+            <View style={styles.list}>
+              <K style={styles.listLabel}>
+                {rows.length} categor{rows.length === 1 ? 'y' : 'ies'} · {rows.filter((r) => r.hasBudget).length} with a budget
+              </K>
+              {rows.length === 0 ? (
+                <Muted>No categories yet.</Muted>
+              ) : (
+                rows.map((r) => (
+                  <View key={r.id} style={styles.row}>
+                    <View style={styles.rowTop}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.rowName}>{r.name}</Text>
+                        <Muted style={styles.rowMeta}>{r.meta}</Muted>
+                      </View>
+                      <IconButton
+                        label="Delete category"
+                        onPress={() => {
+                          setDeleteError(null);
+                          setPendingId(r.id);
+                        }}
+                      >
+                        <Text style={{ color: colors.accent2_700, fontSize: 16 }}>✕</Text>
+                      </IconButton>
                     </View>
+                    {pendingId === r.id && (
+                      <View style={styles.confirm}>
+                        <Text style={styles.confirmText}>{r.isSystem ? "This is a default category and can't be removed." : r.warn}</Text>
+                        {deleteError && <Text style={[styles.confirmText, styles.confirmError]}>{deleteError}</Text>}
+                        <View style={styles.confirmActions}>
+                          {!r.isSystem && (
+                            <Button
+                              title="Delete anyway"
+                              variant="secondary"
+                              onPress={() => confirmDelete(r.id, r.isSystem)}
+                              loading={deletingId === r.id}
+                            />
+                          )}
+                          <Button title="Keep it" variant="ghost" onPress={() => setPendingId(null)} />
+                        </View>
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
-            ))
-          )}
-        </View>
+                ))
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );

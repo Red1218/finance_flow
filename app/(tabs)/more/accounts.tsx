@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAccounts, useTransactions, usePreferences } from '../../../src/hooks/queries';
+import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { createAccount } from '../../../src/data/repositories/accounts';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { transactionSign } from '../../../src/domain/transactionRules';
@@ -40,6 +41,7 @@ export default function Accounts() {
   const [saving, setSaving] = useState(false);
 
   const loading = accounts.loading || allTx.loading || monthTx.loading;
+  const { ready, error } = firstLoad(accounts, allTx, monthTx);
   const refetch = () => {
     accounts.refetch();
     allTx.refetch();
@@ -107,37 +109,43 @@ export default function Accounts() {
           </Pressable>
         </View>
 
-        <View style={styles.netWorth}>
-          <K>Everything together</K>
-          <Text style={styles.netAmount}>{formatCurrency(data.netWorth, currencyCode)}</Text>
-          <Muted>
-            {data.monthChange >= 0 ? 'Up' : 'Down'} {formatCurrency(Math.abs(data.monthChange), currencyCode)} this month · {(accounts.data ?? []).length} accounts
-          </Muted>
-        </View>
+        {!ready ? (
+          error ? <Muted>Couldn&rsquo;t load your accounts. Pull down to try again.</Muted> : null
+        ) : (
+          <>
+            <View style={styles.netWorth}>
+              <K>Everything together</K>
+              <Text style={styles.netAmount}>{formatCurrency(data.netWorth, currencyCode)}</Text>
+              <Muted>
+                {data.monthChange >= 0 ? 'Up' : 'Down'} {formatCurrency(Math.abs(data.monthChange), currencyCode)} this month · {(accounts.data ?? []).length} accounts
+              </Muted>
+            </View>
 
-        <View style={styles.list}>
-          {(accounts.data ?? []).map((a) => {
-            const balance = data.balanceByAccount.get(a.id) ?? 0;
-            return (
-              <Card key={a.id}>
-                <View style={styles.rowBetween}>
-                  <View>
-                    <Text style={styles.accountName}>{a.name}</Text>
-                    <View style={styles.tags}>
-                      <Tag label={TYPE_LABEL[a.type]} variant="outline" />
-                      {a.is_default && <Tag label="Default" variant="accent" />}
+            <View style={styles.list}>
+              {(accounts.data ?? []).map((a) => {
+                const balance = data.balanceByAccount.get(a.id) ?? 0;
+                return (
+                  <Card key={a.id}>
+                    <View style={styles.rowBetween}>
+                      <View>
+                        <Text style={styles.accountName}>{a.name}</Text>
+                        <View style={styles.tags}>
+                          <Tag label={TYPE_LABEL[a.type]} variant="outline" />
+                          {a.is_default && <Tag label="Default" variant="accent" />}
+                        </View>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.balance, balance < 0 && { color: colors.accent2_700 }]}>{formatCurrency(balance, currencyCode)}</Text>
+                        {a.mask ? <Muted style={{ fontSize: 11.5, marginTop: 2 }}>••{a.mask}</Muted> : null}
+                      </View>
                     </View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.balance, balance < 0 && { color: colors.accent2_700 }]}>{formatCurrency(balance, currencyCode)}</Text>
-                    {a.mask ? <Muted style={{ fontSize: 11.5, marginTop: 2 }}>••{a.mask}</Muted> : null}
-                  </View>
-                </View>
-              </Card>
-            );
-          })}
-          {(accounts.data ?? []).length === 0 && <Muted>No accounts yet.</Muted>}
-        </View>
+                  </Card>
+                );
+              })}
+              {(accounts.data ?? []).length === 0 && <Muted>No accounts yet.</Muted>}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <FormModal visible={addOpen} onClose={() => setAddOpen(false)}>

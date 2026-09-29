@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { usePreferences } from '../../../src/hooks/queries';
+import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
 import { requestSmsPermission } from '../../../src/data/native/smsListener';
@@ -15,6 +16,7 @@ import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
 export default function Settings() {
   const prefs = usePreferences();
+  const { ready, error } = firstLoad(prefs);
   const { session, signOut } = useAuth();
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const [reminderTimeText, setReminderTimeText] = useState<string | null>(null);
@@ -78,99 +80,105 @@ export default function Settings() {
           </Pressable>
         </View>
 
-        <View style={styles.section}>
-          <K style={styles.sectionLabel}>Money</K>
-          <Pressable style={styles.row} onPress={() => setCurrencyOpen(true)}>
-            <Text style={styles.rowLabel}>Currency</Text>
-            <Text style={styles.rowValue}>{prefs.data?.currency_code ?? '—'} ›</Text>
-          </Pressable>
-          <View style={[styles.row, { borderBottomWidth: 0 }]}>
-            <Text style={styles.rowLabel}>Week starts on</Text>
-            <Text style={styles.rowValue}>{prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <K style={styles.sectionLabel}>Nudges</K>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Budget alerts</Text>
-            <Switch
-              testID="budget-alerts-switch"
-              value={!!prefs.data?.budget_alerts_enabled}
-              onValueChange={async (v) => {
-                if (v) {
-                  const granted = await requestNotificationPermission();
-                  if (!granted) return;
-                }
-                await setPref({ budget_alerts_enabled: v });
-              }}
-              trackColor={{ true: colors.accent, false: colors.neutral300 }}
-            />
-          </View>
-          <View style={[styles.row, prefs.data?.daily_reminder_enabled && { borderBottomWidth: 0 }]}>
-            <Text style={styles.rowLabel}>Daily reminder</Text>
-            <Switch
-              testID="daily-reminder-switch"
-              value={!!prefs.data?.daily_reminder_enabled}
-              onValueChange={async (v) => {
-                if (v) {
-                  const granted = await requestNotificationPermission();
-                  if (!granted) return;
-                  const seed = prefs.data?.reminder_time ?? '20:00';
-                  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(seed);
-                  const [hour, minute] = m ? [Number(m[1]), Number(m[2])] : [20, 0];
-                  await scheduleDailyReminder(hour, minute);
-                  await setPref({ daily_reminder_enabled: true, reminder_time: m ? seed : '20:00' });
-                } else {
-                  await cancelDailyReminder();
-                  await setPref({ daily_reminder_enabled: false });
-                }
-              }}
-              trackColor={{ true: colors.accent, false: colors.neutral300 }}
-            />
-          </View>
-          {!!prefs.data?.daily_reminder_enabled && (
-            <View style={[styles.row, { borderBottomWidth: 0 }]}>
-              <Text style={styles.rowLabel}>Reminder time</Text>
-              <Input
-                value={reminderTimeText ?? prefs.data?.reminder_time ?? '20:00'}
-                onChangeText={(text) => {
-                  setReminderTimeText(text);
-                  // Non-async handler: catch here so a failed reschedule/save
-                  // never becomes an unhandled rejection.
-                  commitReminderTime(text).catch((e) => console.warn('Could not update the reminder time', e));
-                }}
-                placeholder="HH:MM"
-                maxLength={5}
-                style={{ width: 80, textAlign: 'right' }}
-              />
+        {!ready ? (
+          error ? <Muted>Couldn&rsquo;t load your preferences. Leave and come back to try again.</Muted> : null
+        ) : (
+          <>
+            <View style={styles.section}>
+              <K style={styles.sectionLabel}>Money</K>
+              <Pressable style={styles.row} onPress={() => setCurrencyOpen(true)}>
+                <Text style={styles.rowLabel}>Currency</Text>
+                <Text style={styles.rowValue}>{prefs.data?.currency_code ?? '—'} ›</Text>
+              </Pressable>
+              <View style={[styles.row, { borderBottomWidth: 0 }]}>
+                <Text style={styles.rowLabel}>Week starts on</Text>
+                <Text style={styles.rowValue}>{prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}</Text>
+              </View>
             </View>
-          )}
-        </View>
 
-        {Platform.OS === 'android' && (
-          <View style={styles.section}>
-            <K style={styles.sectionLabel}>SMS Detection</K>
-            <View style={[styles.row, { borderBottomWidth: 0 }]}>
-              <Text style={styles.rowLabel}>Detect transactions from SMS</Text>
-              <Switch
-                testID="sms-detection-switch"
-                value={!!prefs.data?.sms_detection_enabled}
-                onValueChange={async (v) => {
-                  if (v) {
-                    const granted = await requestSmsPermission();
-                    if (!granted) return;
-                  }
-                  await setPref({ sms_detection_enabled: v });
-                  // Local mirror: the bootstrap hook runs before any session
-                  // exists, so this — not the Supabase preference — is what
-                  // actually stops detection when the toggle goes off.
-                  await setSmsDetectionEnabled(v);
-                }}
-                trackColor={{ true: colors.accent, false: colors.neutral300 }}
-              />
+            <View style={styles.section}>
+              <K style={styles.sectionLabel}>Nudges</K>
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>Budget alerts</Text>
+                <Switch
+                  testID="budget-alerts-switch"
+                  value={!!prefs.data?.budget_alerts_enabled}
+                  onValueChange={async (v) => {
+                    if (v) {
+                      const granted = await requestNotificationPermission();
+                      if (!granted) return;
+                    }
+                    await setPref({ budget_alerts_enabled: v });
+                  }}
+                  trackColor={{ true: colors.accent, false: colors.neutral300 }}
+                />
+              </View>
+              <View style={[styles.row, prefs.data?.daily_reminder_enabled && { borderBottomWidth: 0 }]}>
+                <Text style={styles.rowLabel}>Daily reminder</Text>
+                <Switch
+                  testID="daily-reminder-switch"
+                  value={!!prefs.data?.daily_reminder_enabled}
+                  onValueChange={async (v) => {
+                    if (v) {
+                      const granted = await requestNotificationPermission();
+                      if (!granted) return;
+                      const seed = prefs.data?.reminder_time ?? '20:00';
+                      const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(seed);
+                      const [hour, minute] = m ? [Number(m[1]), Number(m[2])] : [20, 0];
+                      await scheduleDailyReminder(hour, minute);
+                      await setPref({ daily_reminder_enabled: true, reminder_time: m ? seed : '20:00' });
+                    } else {
+                      await cancelDailyReminder();
+                      await setPref({ daily_reminder_enabled: false });
+                    }
+                  }}
+                  trackColor={{ true: colors.accent, false: colors.neutral300 }}
+                />
+              </View>
+              {!!prefs.data?.daily_reminder_enabled && (
+                <View style={[styles.row, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.rowLabel}>Reminder time</Text>
+                  <Input
+                    value={reminderTimeText ?? prefs.data?.reminder_time ?? '20:00'}
+                    onChangeText={(text) => {
+                      setReminderTimeText(text);
+                      // Non-async handler: catch here so a failed reschedule/save
+                      // never becomes an unhandled rejection.
+                      commitReminderTime(text).catch((e) => console.warn('Could not update the reminder time', e));
+                    }}
+                    placeholder="HH:MM"
+                    maxLength={5}
+                    style={{ width: 80, textAlign: 'right' }}
+                  />
+                </View>
+              )}
             </View>
-          </View>
+
+            {Platform.OS === 'android' && (
+              <View style={styles.section}>
+                <K style={styles.sectionLabel}>SMS Detection</K>
+                <View style={[styles.row, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.rowLabel}>Detect transactions from SMS</Text>
+                  <Switch
+                    testID="sms-detection-switch"
+                    value={!!prefs.data?.sms_detection_enabled}
+                    onValueChange={async (v) => {
+                      if (v) {
+                        const granted = await requestSmsPermission();
+                        if (!granted) return;
+                      }
+                      await setPref({ sms_detection_enabled: v });
+                      // Local mirror: the bootstrap hook runs before any session
+                      // exists, so this — not the Supabase preference — is what
+                      // actually stops detection when the toggle goes off.
+                      await setSmsDetectionEnabled(v);
+                    }}
+                    trackColor={{ true: colors.accent, false: colors.neutral300 }}
+                  />
+                </View>
+              </View>
+            )}
+          </>
         )}
 
         <View style={styles.section}>

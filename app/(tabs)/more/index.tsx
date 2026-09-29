@@ -34,11 +34,15 @@ export default function MoreHub() {
     const categoryList = categories.data ?? [];
     const budgetedCategoryIds = new Set((budgets.data ?? []).filter((b) => b.category_id).map((b) => b.category_id));
 
+    // A subtitle stays blank (not wrong) until the data it summarises has
+    // loaded; data is null until a query's first fetch lands. The
+    // non-breaking space keeps the row's height steady while it's blank.
+    const once = (loaded: unknown[], text: () => string) => (loaded.every((d) => d !== null) ? text() : '\u00a0');
     return {
-      accounts: `${accountList.length} linked · ${formatCurrency(netWorth, currencyCode)} together`,
-      categories: `${categoryList.length} categories · ${budgetedCategoryIds.size} with a budget`,
-      settings: `${currencyCode} · Week starts ${prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}`,
-      detected: !detections.data?.length ? 'Nothing pending' : `${detections.data.length} pending`,
+      accounts: once([accounts.data, allTx.data], () => `${accountList.length} linked · ${formatCurrency(netWorth, currencyCode)} together`),
+      categories: once([categories.data, budgets.data], () => `${categoryList.length} categories · ${budgetedCategoryIds.size} with a budget`),
+      settings: once([prefs.data], () => `${currencyCode} · Week starts ${prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}`),
+      detected: once([detections.data], () => (!detections.data?.length ? 'Nothing pending' : `${detections.data.length} pending`)),
     };
   }, [accounts.data, allTx.data, categories.data, budgets.data, prefs.data, detections.data, currencyCode]);
 

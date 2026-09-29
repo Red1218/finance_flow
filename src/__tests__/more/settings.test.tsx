@@ -81,6 +81,16 @@ describe('Settings screen — Account section', () => {
     expect(screen.queryByText('Sign out')).toBeNull();
   });
 
+  it('keeps the account section but hides preference controls until preferences have loaded', () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    mockPrefsData = null as unknown as typeof mockPrefsData;
+    render(<Settings />);
+    expect(screen.getByText('Sign out')).toBeTruthy();
+    expect(screen.queryByText('Currency')).toBeNull();
+    expect(screen.queryByText('Budget alerts')).toBeNull();
+    expect(screen.queryByTestId('sms-detection-switch')).toBeNull();
+  });
+
   it('navigates to sign-in from the signed-out prompt', async () => {
     render(<Settings />);
     await userEvent.press(screen.getByText('Sign in'));
