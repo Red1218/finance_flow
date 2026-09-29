@@ -106,7 +106,7 @@ describe('Add Transaction screen', () => {
     await userEvent.press(save);
     expect(mockCreateTransaction).not.toHaveBeenCalled();
 
-    await userEvent.press(screen.getByText('5'));
+    await userEvent.press(screen.getByLabelText('5'));
     await userEvent.press(screen.getByText('Groceries'));
     await userEvent.press(save);
     expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
@@ -119,7 +119,7 @@ describe('Add Transaction screen', () => {
     // Default kind is Expense (no need to switch); amount starts at 0 so
     // Save is disabled until a digit is pressed — same "press a digit,
     // press Save" shape as this file's existing transfer-save test.
-    await userEvent.press(screen.getByText('1'));
+    await userEvent.press(screen.getByLabelText('1'));
     await userEvent.press(screen.getByText('Save'));
     await waitFor(() => expect(checkBudgetAlerts).toHaveBeenCalledWith({ id: 'tx-1', type: 'EXPENSE', category_id: 'cat-1' }));
   });
@@ -127,7 +127,7 @@ describe('Add Transaction screen', () => {
   it('the precision guard blocks a third decimal digit at precision 2', async () => {
     render(<NewTransaction />);
     for (const digit of ['1', '2', '.', '3', '4', '5']) {
-      await userEvent.press(screen.getByText(digit));
+      await userEvent.press(screen.getByLabelText(digit));
     }
     await userEvent.press(screen.getByText('Groceries'));
     await userEvent.press(screen.getByText('Save'));
@@ -147,7 +147,7 @@ describe('Add Transaction screen', () => {
     await userEvent.press(screen.getByText('To: Choose account'));
     await userEvent.press(screen.getByText('Bank'));
 
-    await userEvent.press(screen.getByText('5'));
+    await userEvent.press(screen.getByLabelText('5'));
     await userEvent.press(screen.getByText('Save'));
     expect(mockCreateTransfer).toHaveBeenCalledTimes(1);
     expect(mockCreateTransfer.mock.calls[0][0]).toMatchObject({ fromAccountId: 'acc-1', toAccountId: 'acc-2', amount: 5 });

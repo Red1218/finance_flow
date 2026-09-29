@@ -251,7 +251,13 @@ export default function NewTransaction() {
 
       <View style={styles.keypad}>
         {KEYS.map((k) => (
-          <Pressable key={k} style={styles.key} onPress={() => tapKey(k)}>
+          <Pressable
+            key={k}
+            style={styles.key}
+            onPress={() => tapKey(k)}
+            accessibilityRole="button"
+            accessibilityLabel={k === '⌫' ? 'Delete' : k}
+          >
             <Text style={styles.keyText}>{k}</Text>
           </Pressable>
         ))}
