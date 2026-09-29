@@ -19,11 +19,6 @@
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.finance_flow"
     },
-    "web": {
-      "bundler": "metro",
-      "output": "single",
-      "favicon": "./assets/icon/favicon.png"
-    },
     "plugins": [
       "expo-router",
       [
