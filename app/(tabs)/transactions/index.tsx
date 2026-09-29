@@ -162,7 +162,7 @@ export default function TransactionsList() {
         {deleteConfirmOpen && (
           <View style={styles.confirm}>
             <Text style={styles.confirmText}>
-              Delete {selectedIds.size} transaction{selectedIds.size === 1 ? '' : 's'}? This can't be undone.
+              Delete {selectedIds.size} transaction{selectedIds.size === 1 ? '' : 's'}? This can&rsquo;t be undone.
             </Text>
             {deleteError && <Text style={[styles.confirmText, styles.confirmError]}>{deleteError}</Text>}
             <View style={styles.confirmActions}>
