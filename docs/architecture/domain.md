@@ -24,11 +24,6 @@ from `../data/types` like every other layer.
 - `validateAmount(amount, precision)` — amount must be greater than zero
   and have no more than `precision` decimal digits (guarded against
   floating-point noise, e.g. `12.1 * 100 !== 1210` exactly).
-- `validateCategoryType(categoryKind, transactionType)` — an
-  Expense/Income transaction's category, if set, must match the
-  transaction's own EXPENSE/INCOME kind.
-- `validateTransferHasNoCategory(categoryId)` — a transfer leg must not
-  carry a category.
 - `validateDifferentAccounts(fromAccountId, toAccountId)` — a transfer's
   source and destination must differ.
 - `isValidTransferPair(a, b)` — the 9-condition transfer-pair invariant.
@@ -36,8 +31,8 @@ from `../data/types` like every other layer.
   list of conditions.
 
 Each rule throws a dedicated error class on failure
-(`InvalidAmountError`, `CategoryTypeMismatchError`,
-`SameAccountTransferError`, `TransferPairCorruptError`) — Application-layer
+(`InvalidAmountError`, `SameAccountTransferError`,
+`TransferPairCorruptError`) — Application-layer
 use cases call these directly; Presentation never re-implements validation.
 
 ## Centralized date behavior

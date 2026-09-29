@@ -7,13 +7,6 @@ export class InvalidAmountError extends Error {
   }
 }
 
-export class CategoryTypeMismatchError extends Error {
-  constructor(message = "Category doesn't match this transaction type") {
-    super(message);
-    this.name = 'CategoryTypeMismatchError';
-  }
-}
-
 export class SameAccountTransferError extends Error { name = 'SameAccountTransferError'; message = 'Choose two different accounts'; }
 
 export class TransferPairCorruptError extends Error { name = 'TransferPairCorruptError'; message = "This transfer can't be found or is no longer valid"; }
@@ -29,10 +22,6 @@ export function validateAmount(amount: number, precision: number): void {
       `Amount can't have more than ${precision} decimal digit${precision === 1 ? '' : 's'}`
     );
   }
-}
-
-export function validateTransferHasNoCategory(categoryId: string | null): void {
-  if (categoryId !== null) throw new CategoryTypeMismatchError('A transfer cannot have a category');
 }
 
 export function validateDifferentAccounts(fromAccountId: string, toAccountId: string): void {

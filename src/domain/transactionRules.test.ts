@@ -1,10 +1,8 @@
 import {
   validateAmount,
-  validateTransferHasNoCategory,
   validateDifferentAccounts,
   isValidTransferPair,
   InvalidAmountError,
-  CategoryTypeMismatchError,
   SameAccountTransferError,
   type TransferLeg,
 } from './transactionRules';
@@ -41,16 +39,6 @@ describe('validateAmount', () => {
   it('does not reject exact values that are only imprecise due to floating point', () => {
     // 12.1 * 100 is 1209.9999999999998 in IEEE754 — must not false-reject
     expect(() => validateAmount(12.1, 2)).not.toThrow();
-  });
-});
-
-describe('validateTransferHasNoCategory', () => {
-  it('allows null', () => {
-    expect(() => validateTransferHasNoCategory(null)).not.toThrow();
-  });
-
-  it('rejects any category id', () => {
-    expect(() => validateTransferHasNoCategory('cat-1')).toThrow(CategoryTypeMismatchError);
   });
 });
 
