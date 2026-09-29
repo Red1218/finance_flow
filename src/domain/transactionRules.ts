@@ -1,4 +1,4 @@
-import type { TransactionType } from './types';
+import type { TransactionType } from '../data/types';
 
 export class InvalidAmountError extends Error {
   constructor(message = 'Amount must be greater than zero') {

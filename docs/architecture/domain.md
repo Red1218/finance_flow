@@ -4,9 +4,9 @@
 dependency. Everything here is exercised by unit tests with no mocking of
 Supabase, React, or Expo.
 
-## Domain-owned types
+## Transaction and category types
 
-`src/domain/types.ts` is the single source of truth for the transaction
+`src/data/types.ts` is the single source of truth for the transaction
 and category vocabulary:
 
 ```ts
@@ -14,12 +14,8 @@ export type TransactionType = 'EXPENSE' | 'INCOME' | 'TRANSFER_OUT' | 'TRANSFER_
 export type CategoryKind = 'EXPENSE' | 'INCOME';
 ```
 
-There is no `ADJUSTMENT` transaction type. `src/data/types.ts` imports
-these two types from `src/domain/types.ts` and re-exports them, so every
-existing `import type { TransactionType } from '../data/types'` call site
-across the codebase keeps working unchanged — Data depends on Domain,
-never the reverse. `src/domain/transactionRules.ts` imports the same
-vocabulary from `./types` (Domain-owned), not from `../data/types`.
+There is no `ADJUSTMENT` transaction type. Domain modules import these
+from `../data/types` like every other layer.
 
 ## Validation rules
 

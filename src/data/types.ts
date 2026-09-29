@@ -1,9 +1,5 @@
-// CategoryKind/TransactionType are Domain-owned vocabulary (src/domain/types.ts)
-// — imported and re-exported here so every existing `import type {
-// TransactionType } from '../data/types'` call site keeps working unchanged.
-// Data depends on Domain, never the reverse.
-import type { CategoryKind, TransactionType } from '../domain/types';
-export type { CategoryKind, TransactionType };
+export type TransactionType = 'EXPENSE' | 'INCOME' | 'TRANSFER_OUT' | 'TRANSFER_IN';
+export type CategoryKind = 'EXPENSE' | 'INCOME';
 
 export type AccountType = 'CASH' | 'BANK' | 'CREDIT_CARD' | 'WALLET';
 export type BudgetPeriod = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CUSTOM';
