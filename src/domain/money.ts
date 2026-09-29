@@ -25,13 +25,7 @@ export function getCurrencyMeta(code: string | null | undefined): CurrencyMeta {
 }
 
 export function formatCurrency(amount: number, currencyCode: string, opts?: { sign?: boolean }): string {
-  const { symbol, locale } = getCurrencyMeta(currencyCode);
-  const rounded = Math.round(amount);
-  const magnitude = Math.abs(rounded).toLocaleString(locale);
-  if (opts?.sign) {
-    return (rounded < 0 ? '-' : rounded > 0 ? '+' : '') + symbol + magnitude;
-  }
-  return (rounded < 0 ? '-' : '') + symbol + magnitude;
+  return formatMoney(amount, currencyCode, 0, opts);
 }
 
 // Precision-aware formatter for the Core Transaction Loop's own screens
