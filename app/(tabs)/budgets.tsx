@@ -4,6 +4,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { useTransactions, useBudgets, useCategories, usePreferences } from '../../src/hooks/queries';
+import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { setBudget } from '../../src/data/repositories/budgets';
 import { toNumber, formatCurrency } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
@@ -34,6 +35,7 @@ export default function Budgets() {
   const [saving, setSaving] = useState(false);
 
   const loading = tx.loading || budgets.loading || categories.loading;
+  const { ready, error } = firstLoad(tx, budgets, categories);
   const refetch = () => {
     tx.refetch();
     budgets.refetch();
@@ -128,90 +130,96 @@ export default function Budgets() {
       >
         <ScreenHeader title="Budgets" right={<K style={{ color: colors.accent700 }}>{monthLabel}</K>} />
 
-        <Pressable
-          style={styles.ringSection}
-          onPress={() => {
-            setOverallAmount(data.overall ? String(toNumber(data.overall.amount)) : '');
-            setOverallEditOpen(true);
-          }}
-        >
-          {data.hasOverall ? (
-            <>
-              <View style={styles.ringBox}>
-                <Svg width={118} height={118} viewBox="0 0 118 118">
-                  <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
-                  <Circle
-                    cx={59}
-                    cy={59}
-                    r={ringRadius}
-                    fill="none"
-                    stroke={data.overallProgress.isOver ? colors.accent2 : colors.accent}
-                    strokeWidth={10}
-                    strokeDasharray={`${circumference} ${circumference}`}
-                    strokeDashoffset={offset}
-                    strokeLinecap="round"
-                    transform="rotate(-90 59 59)"
-                  />
-                </Svg>
-                <View style={styles.ringLabel}>
-                  <Num style={styles.ringPct}>{data.overallProgress.pct}%</Num>
-                  <K>Used</K>
+        {!ready ? (
+          error ? <Muted>Couldn&rsquo;t load your budgets. Pull down to try again.</Muted> : null
+        ) : (
+          <>
+            <Pressable
+              style={styles.ringSection}
+              onPress={() => {
+                setOverallAmount(data.overall ? String(toNumber(data.overall.amount)) : '');
+                setOverallEditOpen(true);
+              }}
+            >
+              {data.hasOverall ? (
+                <>
+                  <View style={styles.ringBox}>
+                    <Svg width={118} height={118} viewBox="0 0 118 118">
+                      <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
+                      <Circle
+                        cx={59}
+                        cy={59}
+                        r={ringRadius}
+                        fill="none"
+                        stroke={data.overallProgress.isOver ? colors.accent2 : colors.accent}
+                        strokeWidth={10}
+                        strokeDasharray={`${circumference} ${circumference}`}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        transform="rotate(-90 59 59)"
+                      />
+                    </Svg>
+                    <View style={styles.ringLabel}>
+                      <Num style={styles.ringPct}>{data.overallProgress.pct}%</Num>
+                      <K>Used</K>
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Muted>Left across {data.rows.length + 1} budgets</Muted>
+                    <Num style={styles.leftAmount}>{formatCurrency(data.overallProgress.remaining, currencyCode)}</Num>
+                    <Muted>
+                      {formatCurrency(data.overallProgress.spent, currencyCode)} spent of {formatCurrency(data.overallProgress.limit, currencyCode)}
+                    </Muted>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.ringBox}>
+                  <Svg width={118} height={118} viewBox="0 0 118 118">
+                    <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
+                  </Svg>
                 </View>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Muted>Left across {data.rows.length + 1} budgets</Muted>
-                <Num style={styles.leftAmount}>{formatCurrency(data.overallProgress.remaining, currencyCode)}</Num>
-                <Muted>
-                  {formatCurrency(data.overallProgress.spent, currencyCode)} spent of {formatCurrency(data.overallProgress.limit, currencyCode)}
-                </Muted>
-              </View>
-            </>
-          ) : (
-            <View style={styles.ringBox}>
-              <Svg width={118} height={118} viewBox="0 0 118 118">
-                <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
-              </Svg>
-            </View>
-          )}
-          {!data.hasOverall && (
-            <View style={{ flex: 1 }}>
-              <Muted>No overall budget set</Muted>
-              <Text style={styles.emptyOverallCta}>Set a monthly limit →</Text>
-            </View>
-          )}
-        </Pressable>
-
-        <View style={styles.overTag}>
-          {data.overBudgetCount > 0 ? (
-            <Tag label={`● ${data.overBudgetCount} over budget`} variant="accent2" />
-          ) : (
-            <View />
-          )}
-          <Pressable onPress={() => router.push('/(tabs)/more/categories')}>
-            <Text style={styles.manageLink}>Manage categories →</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.rows}>
-          {data.rows.map((r) => (
-            <Pressable key={r.categoryId} style={styles.row} onPress={() => openAddForCategory(r.categoryId, r.limit)}>
-              <View style={styles.rowTop}>
-                <Text style={styles.rowName}>{r.name}</Text>
-                <Text style={[styles.rowStatus, r.isOver && { color: colors.accent2_700 }]}>
-                  {r.isOver ? `${formatCurrency(r.spent - r.limit, currencyCode)} over` : `${formatCurrency(r.remaining, currencyCode)} left`}
-                </Text>
-              </View>
-              <Muted style={{ fontSize: 12, marginBottom: 7 }}>
-                {formatCurrency(r.spent, currencyCode)} of {formatCurrency(r.limit, currencyCode)} spent
-              </Muted>
-              <Bar pct={r.pct} color={r.isOver ? colors.accent2 : colors.accent} />
+              )}
+              {!data.hasOverall && (
+                <View style={{ flex: 1 }}>
+                  <Muted>No overall budget set</Muted>
+                  <Text style={styles.emptyOverallCta}>Set a monthly limit →</Text>
+                </View>
+              )}
             </Pressable>
-          ))}
 
-          {data.availableForNewBudget.length > 0 && (
-            <Button title="Add a category budget" variant="secondary" onPress={() => setCategoryPickerOpen(true)} />
-          )}
-        </View>
+            <View style={styles.overTag}>
+              {data.overBudgetCount > 0 ? (
+                <Tag label={`● ${data.overBudgetCount} over budget`} variant="accent2" />
+              ) : (
+                <View />
+              )}
+              <Pressable onPress={() => router.push('/(tabs)/more/categories')}>
+                <Text style={styles.manageLink}>Manage categories →</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.rows}>
+              {data.rows.map((r) => (
+                <Pressable key={r.categoryId} style={styles.row} onPress={() => openAddForCategory(r.categoryId, r.limit)}>
+                  <View style={styles.rowTop}>
+                    <Text style={styles.rowName}>{r.name}</Text>
+                    <Text style={[styles.rowStatus, r.isOver && { color: colors.accent2_700 }]}>
+                      {r.isOver ? `${formatCurrency(r.spent - r.limit, currencyCode)} over` : `${formatCurrency(r.remaining, currencyCode)} left`}
+                    </Text>
+                  </View>
+                  <Muted style={{ fontSize: 12, marginBottom: 7 }}>
+                    {formatCurrency(r.spent, currencyCode)} of {formatCurrency(r.limit, currencyCode)} spent
+                  </Muted>
+                  <Bar pct={r.pct} color={r.isOver ? colors.accent2 : colors.accent} />
+                </Pressable>
+              ))}
+
+              {data.availableForNewBudget.length > 0 && (
+                <Button title="Add a category budget" variant="secondary" onPress={() => setCategoryPickerOpen(true)} />
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <SelectModal

@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMemo } from 'react';
 import { useTransactions, useBudgets, useCategories, useAccounts, usePreferences } from '../../src/hooks/queries';
+import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { formatCurrency, toNumber } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthProgress, dailyAllowance, last7DaysTotals } from '../../src/domain/dashboard';
@@ -74,11 +75,7 @@ export default function Home() {
       accounts.refetch();
     },
   };
-  // data stays null until each query's first fetch lands; until then "no
-  // budget" / "no transactions" would be a lie, so render nothing but the
-  // refresh spinner (or the error, if a first fetch failed).
-  const ready = [tx, budgets, categories, accounts].every((q) => q.data !== null);
-  const error = tx.error || budgets.error || categories.error || accounts.error;
+  const { ready, error } = firstLoad(tx, budgets, categories, accounts);
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
   if (!session) {

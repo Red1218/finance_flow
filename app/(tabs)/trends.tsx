@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTransactions, useBudgets, useCategories, usePreferences } from '../../src/hooks/queries';
+import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { toNumber, formatCurrency } from '../../src/domain/money';
 import { monthlyExpenseTotals, findCategoryWatch } from '../../src/domain/trends';
 import { monthProgress } from '../../src/domain/dashboard';
@@ -27,6 +28,7 @@ export default function Trends() {
   const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const loading = tx.loading || budgets.loading || categories.loading;
+  const { ready, error } = firstLoad(tx, budgets, categories);
   const refetch = () => {
     tx.refetch();
     budgets.refetch();
@@ -79,76 +81,82 @@ export default function Trends() {
     >
       <ScreenHeader title="Trends" right={<K style={{ color: colors.accent700 }}>Last {MONTHS_BACK} months</K>} />
 
-      <View style={styles.chartBlock}>
-        <K>Monthly spend</K>
-        <Svg
-          width="100%"
-          height={CHART_H}
-          viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-          preserveAspectRatio="none"
-          style={{ marginTop: 8 }}
-        >
-          <Path d={data.areaPath} fill={colors.accent200} />
-          <Path d={data.linePath} fill="none" stroke={colors.accent} strokeWidth={2} />
-          {data.lastPoint && <Circle cx={data.lastPoint.x} cy={data.lastPoint.y} r={3.5} fill={colors.accent2} />}
-        </Svg>
-        <View style={styles.monthLabels}>
-          {data.months.map((m, i) => (
-            <K key={i}>{m.label}</K>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.insights}>
-        {data.watch ? (
-          <View style={styles.insight}>
-            <View style={styles.insightHead}>
-              <Tag label="Watch" variant="accent2" />
-              <K>Category trend</K>
+      {!ready ? (
+        error ? <Muted>Couldn&rsquo;t load your trends. Pull down to try again.</Muted> : null
+      ) : (
+        <>
+          <View style={styles.chartBlock}>
+            <K>Monthly spend</K>
+            <Svg
+              width="100%"
+              height={CHART_H}
+              viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+              preserveAspectRatio="none"
+              style={{ marginTop: 8 }}
+            >
+              <Path d={data.areaPath} fill={colors.accent200} />
+              <Path d={data.linePath} fill="none" stroke={colors.accent} strokeWidth={2} />
+              {data.lastPoint && <Circle cx={data.lastPoint.x} cy={data.lastPoint.y} r={3.5} fill={colors.accent2} />}
+            </Svg>
+            <View style={styles.monthLabels}>
+              {data.months.map((m, i) => (
+                <K key={i}>{m.label}</K>
+              ))}
             </View>
-            <Body style={styles.insightBody}>
-              <Text style={styles.bold}>
-                {data.watch.categoryName} is running {data.watch.pctAboveAverage}% above your recent average
-              </Text>{' '}
-              — {formatCurrency(data.watch.currentTotal, currencyCode)} this month vs an average of {formatCurrency(data.watch.priorAverage, currencyCode)}.
-            </Body>
           </View>
-        ) : null}
 
-        {data.monthOverMonth !== null ? (
-          <View style={styles.insight}>
-            <View style={styles.insightHead}>
-              <Tag label={data.monthOverMonth <= 0 ? 'Good news' : 'Heads up'} variant={data.monthOverMonth <= 0 ? 'accent' : 'accent2'} />
-              <K>Month on month</K>
+          <View style={styles.insights}>
+            {data.watch ? (
+              <View style={styles.insight}>
+                <View style={styles.insightHead}>
+                  <Tag label="Watch" variant="accent2" />
+                  <K>Category trend</K>
+                </View>
+                <Body style={styles.insightBody}>
+                  <Text style={styles.bold}>
+                    {data.watch.categoryName} is running {data.watch.pctAboveAverage}% above your recent average
+                  </Text>{' '}
+                  — {formatCurrency(data.watch.currentTotal, currencyCode)} this month vs an average of {formatCurrency(data.watch.priorAverage, currencyCode)}.
+                </Body>
+              </View>
+            ) : null}
+
+            {data.monthOverMonth !== null ? (
+              <View style={styles.insight}>
+                <View style={styles.insightHead}>
+                  <Tag label={data.monthOverMonth <= 0 ? 'Good news' : 'Heads up'} variant={data.monthOverMonth <= 0 ? 'accent' : 'accent2'} />
+                  <K>Month on month</K>
+                </View>
+                <Body style={styles.insightBody}>
+                  You&rsquo;re{' '}
+                  <Text style={styles.bold}>
+                    {formatCurrency(Math.abs(data.thisMonth - (data.months[data.months.length - 2]?.total ?? 0)), currencyCode)} {data.monthOverMonth <= 0 ? 'under' : 'over'}
+                  </Text>{' '}
+                  where you were last month ({data.monthOverMonth > 0 ? '+' : ''}
+                  {data.monthOverMonth}%).
+                </Body>
+              </View>
+            ) : (
+              <Muted>Keep logging — trends need at least two months of history.</Muted>
+            )}
+
+            <View style={styles.insight}>
+              <View style={styles.insightHead}>
+                <Tag label="Forecast" variant="neutral" />
+                <K>End of month</K>
+              </View>
+              <Body style={styles.insightBody}>
+                At today&rsquo;s pace, this month closes around <Text style={styles.bold}>{formatCurrency(data.pace, currencyCode)}</Text>
+                {data.budgetLimit
+                  ? data.pace <= data.budgetLimit
+                    ? ` — ${formatCurrency(data.budgetLimit - data.pace, currencyCode)} under budget.`
+                    : ` — ${formatCurrency(data.pace - data.budgetLimit, currencyCode)} over budget.`
+                  : '.'}
+              </Body>
             </View>
-            <Body style={styles.insightBody}>
-              You&rsquo;re{' '}
-              <Text style={styles.bold}>
-                {formatCurrency(Math.abs(data.thisMonth - (data.months[data.months.length - 2]?.total ?? 0)), currencyCode)} {data.monthOverMonth <= 0 ? 'under' : 'over'}
-              </Text>{' '}
-              where you were last month ({data.monthOverMonth > 0 ? '+' : ''}
-              {data.monthOverMonth}%).
-            </Body>
           </View>
-        ) : (
-          <Muted>Keep logging — trends need at least two months of history.</Muted>
-        )}
-
-        <View style={styles.insight}>
-          <View style={styles.insightHead}>
-            <Tag label="Forecast" variant="neutral" />
-            <K>End of month</K>
-          </View>
-          <Body style={styles.insightBody}>
-            At today&rsquo;s pace, this month closes around <Text style={styles.bold}>{formatCurrency(data.pace, currencyCode)}</Text>
-            {data.budgetLimit
-              ? data.pace <= data.budgetLimit
-                ? ` — ${formatCurrency(data.budgetLimit - data.pace, currencyCode)} under budget.`
-                : ` — ${formatCurrency(data.pace - data.budgetLimit, currencyCode)} over budget.`
-              : '.'}
-          </Body>
-        </View>
-      </View>
+        </>
+      )}
     </ScrollView>
     </SafeAreaView>
   );

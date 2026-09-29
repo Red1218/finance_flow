@@ -28,3 +28,13 @@ export function useLiveQuery<T>(fetcher: () => Promise<T>, deps: DependencyList)
 
   return { data, loading, error, refetch: load };
 }
+
+// data stays null until a query's first fetch lands, so until every query a
+// screen depends on is `ready`, "no budget" / "no transactions" would be a lie.
+// `error` is only meaningful while not ready (a first fetch failed).
+export function firstLoad(...queries: { data: unknown; error: string | null }[]) {
+  return {
+    ready: queries.every((q) => q.data !== null),
+    error: queries.find((q) => q.error)?.error ?? null,
+  };
+}
