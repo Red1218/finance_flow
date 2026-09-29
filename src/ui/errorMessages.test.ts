@@ -11,6 +11,7 @@ import {
   InvalidRecoveryLinkError,
   AuthNetworkError,
 } from '../data/repositories/authErrors';
+import { TransactionNotFoundError } from '../application/transactions/errors';
 
 describe('authErrorMessage', () => {
   it('maps each typed error to its message', () => {
@@ -32,5 +33,17 @@ describe('authErrorMessage', () => {
   it('falls back to a generic message for AuthNetworkError and anything unrecognized', () => {
     expect(authErrorMessage(new AuthNetworkError())).toBe("Couldn't connect — check your connection and try again");
     expect(authErrorMessage(new Error('something else'))).toBe("Couldn't connect — check your connection and try again");
+  });
+});
+
+// Error classes set message/name as class fields; this proves the fields
+// override Error's own (empty) message, since some screens show e.message.
+describe('field-style error classes', () => {
+  it('carry their message and name', () => {
+    const e = new TransactionNotFoundError();
+    expect(e).toBeInstanceOf(Error);
+    expect(e.message).toBe("That transaction couldn't be found");
+    expect(e.name).toBe('TransactionNotFoundError');
+    expect(new InvalidEmailError().message).toBe('Invalid email address');
   });
 });

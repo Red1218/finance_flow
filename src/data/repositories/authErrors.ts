@@ -6,19 +6,9 @@
 // AuthError/AuthApiError is ever inspected; everything above that boundary
 // (AuthContext, screens) only ever sees these classes.
 
-export class InvalidEmailError extends Error {
-  constructor() {
-    super('Invalid email address');
-    this.name = 'InvalidEmailError';
-  }
-}
+export class InvalidEmailError extends Error { name = 'InvalidEmailError'; message = 'Invalid email address'; }
 
-export class EmailAlreadyRegisteredError extends Error {
-  constructor() {
-    super('This email is already registered');
-    this.name = 'EmailAlreadyRegisteredError';
-  }
-}
+export class EmailAlreadyRegisteredError extends Error { name = 'EmailAlreadyRegisteredError'; message = 'This email is already registered'; }
 
 export class WeakPasswordError extends Error {
   constructor(message = 'Password is too weak') {
@@ -27,51 +17,21 @@ export class WeakPasswordError extends Error {
   }
 }
 
-export class SamePasswordError extends Error {
-  constructor() {
-    super('New password must be different from the current password');
-    this.name = 'SamePasswordError';
-  }
-}
+export class SamePasswordError extends Error { name = 'SamePasswordError'; message = 'New password must be different from the current password'; }
 
-export class InvalidCredentialsError extends Error {
-  constructor() {
-    super('Incorrect email or password');
-    this.name = 'InvalidCredentialsError';
-  }
-}
+export class InvalidCredentialsError extends Error { name = 'InvalidCredentialsError'; message = 'Incorrect email or password'; }
 
-export class InvalidOtpError extends Error {
-  constructor() {
-    super('That code is incorrect');
-    this.name = 'InvalidOtpError';
-  }
-}
+export class InvalidOtpError extends Error { name = 'InvalidOtpError'; message = 'That code is incorrect'; }
 
-export class ExpiredOtpError extends Error {
-  constructor() {
-    super('That code has expired');
-    this.name = 'ExpiredOtpError';
-  }
-}
+export class ExpiredOtpError extends Error { name = 'ExpiredOtpError'; message = 'That code has expired'; }
 
-export class RateLimitedError extends Error {
-  constructor() {
-    super('Too many attempts — try again shortly');
-    this.name = 'RateLimitedError';
-  }
-}
+export class RateLimitedError extends Error { name = 'RateLimitedError'; message = 'Too many attempts — try again shortly'; }
 
 // Thrown by establishRecoverySession() for any reason a recovery link fails
 // to produce a session — missing tokens, expired, or already used. Collapsed
 // to one class because the UI response is the same in every case: "request
 // a new link."
-export class InvalidRecoveryLinkError extends Error {
-  constructor() {
-    super('This link is invalid or has expired');
-    this.name = 'InvalidRecoveryLinkError';
-  }
-}
+export class InvalidRecoveryLinkError extends Error { name = 'InvalidRecoveryLinkError'; message = 'This link is invalid or has expired'; }
 
 // Fallback for anything not specifically recognized (offline, 5xx, an
 // AuthError with no code). Carries the original error for logs only —

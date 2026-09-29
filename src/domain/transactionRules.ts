@@ -14,19 +14,9 @@ export class CategoryTypeMismatchError extends Error {
   }
 }
 
-export class SameAccountTransferError extends Error {
-  constructor(message = 'Choose two different accounts') {
-    super(message);
-    this.name = 'SameAccountTransferError';
-  }
-}
+export class SameAccountTransferError extends Error { name = 'SameAccountTransferError'; message = 'Choose two different accounts'; }
 
-export class TransferPairCorruptError extends Error {
-  constructor(message = "This transfer can't be found or is no longer valid") {
-    super(message);
-    this.name = 'TransferPairCorruptError';
-  }
-}
+export class TransferPairCorruptError extends Error { name = 'TransferPairCorruptError'; message = "This transfer can't be found or is no longer valid"; }
 
 export function validateAmount(amount: number, precision: number): void {
   if (!(amount > 0)) throw new InvalidAmountError();
