@@ -32,7 +32,7 @@ Presentation → Infrastructure data-access dependency.
   `buildTransactionDetailVM` in `src/domain/transactionView.ts`) from the
   Domain `Transaction`/`TransferPair` values the Application layer
   returns, and maps thrown error classes to user-facing strings via
-  `src/ui/transactionErrorMessages.ts`. Raw Supabase/Postgres errors never
+  `src/ui/errorMessages.ts`. Raw Supabase/Postgres errors never
   reach a screen.
 - **Application** (`src/application/transactions/*`) orchestrates
   validation (via Domain rules) and I/O (via the ports), and returns
@@ -60,7 +60,7 @@ previously forwarded the patch straight through unmapped. Every edit that
 touched the date or category therefore failed with an HTTP 400
 (`PGRST204`, "Could not find the `occurredAt` column..."), surfaced to the
 user as a generic "Couldn't save" error via
-`src/ui/transactionErrorMessages.ts`. Create was never affected — it
+`src/ui/errorMessages.ts`. Create was never affected — it
 already built its insert body with the correct snake_case keys directly.
 Transfer edit/archive were never affected either — they go through the
 `update_transfer`/`archive_transfer` RPCs (see

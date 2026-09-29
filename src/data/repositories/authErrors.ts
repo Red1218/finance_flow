@@ -1,7 +1,7 @@
 // src/data/repositories/authErrors.ts
 //
 // Typed auth errors — mirrors the frozen Error Model in
-// src/application/transactions/errors.ts / src/ui/transactionErrorMessages.ts.
+// src/application/transactions/errors.ts / src/ui/errorMessages.ts.
 // src/data/repositories/authCredentials.ts is the only place a raw Supabase
 // AuthError/AuthApiError is ever inspected; everything above that boundary
 // (AuthContext, screens) only ever sees these classes.

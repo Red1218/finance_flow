@@ -117,7 +117,7 @@ lines inside the gate itself, `src/data/repositories/auth.ts` and
 files were added; Infrastructure (`src/data/repositories/authCredentials.ts`,
 `authErrors.ts`), orchestration (`AuthContext.tsx`), and Presentation
 (`app/account/*`, `app/reset-password.tsx`, error-message mapping in
-`src/ui/authErrorMessages.ts`) are the only layers touched.
+`src/ui/errorMessages.ts`) are the only layers touched.
 
 **The corrective evolution (real-device testing found and fixed three
 distinct defects after the original implementation):**

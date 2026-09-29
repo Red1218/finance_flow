@@ -1,4 +1,4 @@
-import { authErrorMessage } from './authErrorMessages';
+import { authErrorMessage } from './errorMessages';
 import {
   InvalidEmailError,
   EmailAlreadyRegisteredError,

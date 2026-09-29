@@ -35,7 +35,7 @@ checkpoints:
   (4 tests) — 9 unit/component tests, 2 new unit/component suites.
 - **Account Authentication & Anonymous Account Upgrade** added 7 new
   unit/component suites — `authCredentials.test.ts` (22),
-  `authErrorMessages.test.ts` (2), `create.test.tsx` (8), `sign-in.test.tsx`
+  `errorMessages.test.ts` (2), `create.test.tsx` (8), `sign-in.test.tsx`
   (3), `forgot-password.test.tsx` (1), `reset-password.test.tsx` (3),
   `settings.test.tsx` (3), 42 tests total — and grew the existing
   `AuthContext.test.tsx` from 4 to 9 tests (+5, covering `identityKind`

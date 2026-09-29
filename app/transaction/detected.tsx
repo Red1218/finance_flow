@@ -7,7 +7,7 @@ import { matchDetectionToAccount } from '../../src/domain/matchDetectionToAccoun
 import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
-import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
+import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { useAccounts } from '../../src/hooks/useAccounts';
 import { useCategories } from '../../src/hooks/useCategories';
 import { usePreferences } from '../../src/hooks/usePreferences';

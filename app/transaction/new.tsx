@@ -10,7 +10,7 @@ import { createTransaction, createTransfer } from '../../src/application/transac
 import { removeDetection } from '../../src/data/repositories/pendingDetections';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
-import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
+import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
 import { DatePickerField } from '../../src/ui/DatePickerField';
 import { SelectModal } from '../../src/ui/SelectModal';

@@ -71,7 +71,7 @@ the Application layer returns into display-ready ViewModels
 [`application-layer.md`](application-layer.md).
 
 Errors thrown by the Domain/Application layers are mapped to user-facing
-strings by `src/ui/transactionErrorMessages.ts` (`transactionErrorMessage`)
+strings by `src/ui/errorMessages.ts` (`transactionErrorMessage`)
 — every error class from `src/domain/transactionRules.ts` and
 `src/application/transactions/errors.ts` has a corresponding message; raw
 Supabase/Postgres errors never reach a screen.

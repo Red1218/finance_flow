@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/data/AuthContext';
-import { authErrorMessage } from '../../src/ui/authErrorMessages';
+import { authErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Heading, Input, K } from '../../src/ui/primitives';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
 

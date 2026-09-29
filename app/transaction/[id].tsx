@@ -10,7 +10,7 @@ import { getPreferences } from '../../src/data/repositories/preferences';
 import { toNumber } from '../../src/domain/money';
 import { indexById, buildTransactionDetailVM } from '../../src/domain/transactionView';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
-import { transactionErrorMessage } from '../../src/ui/transactionErrorMessages';
+import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import type { Account, Category, Transaction } from '../../src/data/types';
 import { Body, Button, IconButton, Input, K } from '../../src/ui/primitives';

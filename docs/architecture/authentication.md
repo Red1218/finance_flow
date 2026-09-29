@@ -156,7 +156,7 @@ intended substitute, not a gap.
 
 `src/data/repositories/authErrors.ts` defines every error class; the
 project's frozen Error Model pattern (mirrors
-`src/application/transactions/errors.ts` / `transactionErrorMessages.ts`).
+`src/application/transactions/errors.ts` / `errorMessages.ts`).
 `authCredentials.ts`'s `translateAuthError()` is the *only* place a raw
 Supabase `AuthError`/`AuthApiError` is ever inspected — everything above
 that boundary (`AuthContext`, screens) only ever sees these typed classes:
@@ -174,11 +174,11 @@ that boundary (`AuthContext`, screens) only ever sees these typed classes:
 | `InvalidRecoveryLinkError` | any failure inside `establishRecoverySession` (missing tokens, expired/replayed link) | Password reset |
 | `AuthNetworkError` | fallback for anything else (offline, 5xx, an unrecognized code) | Any call — never shown verbatim, only via the generic "Couldn't connect" copy |
 
-`src/ui/authErrorMessages.ts` is the only place with user-facing copy —
+`src/ui/errorMessages.ts` is the only place with user-facing copy —
 `instanceof`-switches over the classes above and returns a string. Adding
 a new Supabase error code that needs distinct handling means adding one
 `case` in `translateAuthError()`, one class in `authErrors.ts`, and one
-`if` in `authErrorMessages.ts` — the `SamePasswordError` addition is the
+`if` in `errorMessages.ts` — the `SamePasswordError` addition is the
 reference example for this pattern.
 
 ## Status
