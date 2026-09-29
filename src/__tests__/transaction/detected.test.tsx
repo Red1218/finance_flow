@@ -24,13 +24,9 @@ jest.mock('react-native-safe-area-context', () => {
   return { SafeAreaView: View };
 });
 jest.mock('../../data/repositories/pendingDetections');
-jest.mock('../../hooks/useAccounts', () => ({
+jest.mock('../../hooks/queries', () => ({
   useAccounts: () => ({ data: [{ id: 'acc-1', type: 'BANK', mask: '8721', archived_at: null }] }),
-}));
-jest.mock('../../hooks/usePreferences', () => ({
   usePreferences: () => ({ data: { currency_code: 'INR' } }),
-}));
-jest.mock('../../hooks/useCategories', () => ({
   useCategories: () => ({ data: [{ id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' }] }),
 }));
 jest.mock('../../application/transactions', () => ({ createTransaction: jest.fn() }));

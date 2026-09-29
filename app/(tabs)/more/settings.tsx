@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { usePreferences } from '../../../src/hooks/usePreferences';
+import { usePreferences } from '../../../src/hooks/queries';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
 import { requestSmsPermission } from '../../../src/data/native/smsListener';

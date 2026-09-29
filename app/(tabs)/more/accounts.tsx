@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useAccounts } from '../../../src/hooks/useAccounts';
-import { useTransactions } from '../../../src/hooks/useTransactions';
-import { usePreferences } from '../../../src/hooks/usePreferences';
+import { useAccounts, useTransactions, usePreferences } from '../../../src/hooks/queries';
 import { createAccount } from '../../../src/data/repositories/accounts';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { transactionSign } from '../../../src/data/repositories/transactions';

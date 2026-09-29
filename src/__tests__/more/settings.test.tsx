@@ -29,7 +29,7 @@ let mockPrefsData = {
   reminder_time: null as string | null,
   sms_detection_enabled: false,
 };
-jest.mock('../../hooks/usePreferences', () => ({
+jest.mock('../../hooks/queries', () => ({
   usePreferences: () => ({ data: mockPrefsData, refetch: jest.fn() }),
 }));
 jest.mock('../../data/repositories/preferences', () => ({ updatePreferences: jest.fn() }));

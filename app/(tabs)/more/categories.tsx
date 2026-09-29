@@ -1,9 +1,6 @@
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useCategories } from '../../../src/hooks/useCategories';
-import { useBudgets } from '../../../src/hooks/useBudgets';
-import { useTransactions } from '../../../src/hooks/useTransactions';
-import { usePreferences } from '../../../src/hooks/usePreferences';
+import { useCategories, useBudgets, useTransactions, usePreferences } from '../../../src/hooks/queries';
 import { createCategory, deleteCategory } from '../../../src/data/repositories/categories';
 import { setBudget } from '../../../src/data/repositories/budgets';
 import { toNumber, formatCurrency, getCurrencyMeta } from '../../../src/domain/money';

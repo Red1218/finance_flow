@@ -10,7 +10,7 @@ import { useLocalSearchParams } from 'expo-router';
 import NewTransaction from '../../../app/transaction/new';
 import { removeDetection } from '../../data/repositories/pendingDetections';
 import { checkBudgetAlerts } from '../../notifications/checkBudgetAlerts';
-import { useCategories } from '../../hooks/useCategories';
+import { useCategories } from '../../hooks/queries';
 
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
@@ -34,7 +34,7 @@ jest.mock('../../application/transactions', () => ({
   createTransfer: (input: unknown) => mockCreateTransfer(input),
 }));
 
-jest.mock('../../hooks/useAccounts', () => ({
+jest.mock('../../hooks/queries', () => ({
   useAccounts: () => ({
     data: [
       { id: 'acc-1', name: 'Cash', is_default: true, mask: null },
@@ -42,9 +42,6 @@ jest.mock('../../hooks/useAccounts', () => ({
     ],
     loading: false,
   }),
-}));
-
-jest.mock('../../hooks/useCategories', () => ({
   useCategories: jest.fn(() => ({
     data: [
       { id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' },
@@ -55,9 +52,6 @@ jest.mock('../../hooks/useCategories', () => ({
     ],
     loading: false,
   })),
-}));
-
-jest.mock('../../hooks/usePreferences', () => ({
   usePreferences: () => ({ data: { decimal_precision: 2 }, loading: false }),
 }));
 

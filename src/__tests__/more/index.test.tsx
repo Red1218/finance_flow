@@ -3,11 +3,11 @@ import { render, screen } from '@testing-library/react-native';
 import MoreHub from '../../../app/(tabs)/more/index';
 import { listDetections } from '../../data/repositories/pendingDetections';
 
-jest.mock('../../hooks/useAccounts', () => ({ useAccounts: () => ({ data: [] }) }));
-jest.mock('../../hooks/useTransactions', () => ({ useTransactions: () => ({ data: [] }) }));
-jest.mock('../../hooks/useCategories', () => ({ useCategories: () => ({ data: [] }) }));
-jest.mock('../../hooks/useBudgets', () => ({ useBudgets: () => ({ data: [] }) }));
-jest.mock('../../hooks/usePreferences', () => ({
+jest.mock('../../hooks/queries', () => ({
+  useAccounts: () => ({ data: [] }),
+  useTransactions: () => ({ data: [] }),
+  useCategories: () => ({ data: [] }),
+  useBudgets: () => ({ data: [] }),
   usePreferences: () => ({ data: { currency_code: 'INR', week_start: 'MONDAY' } }),
 }));
 jest.mock('../../data/AuthContext', () => ({

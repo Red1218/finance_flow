@@ -1,11 +1,7 @@
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useAccounts } from '../../../src/hooks/useAccounts';
-import { useTransactions } from '../../../src/hooks/useTransactions';
-import { useCategories } from '../../../src/hooks/useCategories';
-import { useBudgets } from '../../../src/hooks/useBudgets';
-import { usePreferences } from '../../../src/hooks/usePreferences';
+import { useAccounts, useTransactions, useCategories, useBudgets, usePreferences } from '../../../src/hooks/queries';
 import { useLiveQuery } from '../../../src/hooks/useLiveQuery';
 import { transactionSign } from '../../../src/data/repositories/transactions';
 import { listDetections } from '../../../src/data/repositories/pendingDetections';

@@ -10,7 +10,7 @@ Presentation (app/transaction/*.tsx, src/hooks/*)
 ```
 
 Presentation screens and hooks (`app/transaction/new.tsx`,
-`app/transaction/[id].tsx`, `src/hooks/useTransactions.ts`) call the use cases and re-exported
+`app/transaction/[id].tsx`, `src/hooks/queries.ts`) call the use cases and re-exported
 reads through `src/application/transactions`. They no longer call
 `src/data/repositories/transactions` functions directly for
 transaction reads or writes.
