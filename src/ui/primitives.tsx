@@ -188,12 +188,6 @@ export function Card({ style, ...props }: ViewProps) {
   return <View {...props} style={[cardStyles.base, style]} />;
 }
 
-// ---- Divider -----------------------------------------------------------
-
-export function Divider({ style, ...props }: ViewProps) {
-  return <View {...props} style={[{ height: 1, backgroundColor: colors.divider }, style]} />;
-}
-
 // ---- Screen header -----------------------------------------------------------
 
 export function ScreenHeader({ title, right }: { title: string; right?: React.ReactNode }) {
