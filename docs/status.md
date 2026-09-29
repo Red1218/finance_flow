@@ -308,8 +308,7 @@ Integration tests sign in as a shared, pre-created real account instead of
 a fresh anonymous identity per run — no `service_role` key introduced.
 
 See [`docs/superpowers/specs/2026-09-07-email-bound-auth-design.md`](superpowers/specs/2026-09-07-email-bound-auth-design.md)
-for the full design and [`docs/superpowers/plans/2026-09-07-email-bound-auth.md`](superpowers/plans/2026-09-07-email-bound-auth.md)
-for the implementation plan.
+for the full design.
 
 **Validation:** TypeScript compiler clean (no errors or warnings). ESLint clean (0 errors). Jest suite: 182/182 tests passed across 25 unit/component suites; 4 integration test suites fail to load due to missing Supabase environment variables (EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY), which is expected outside a configured environment and does not indicate a failure of this feature's implementation. Live on-device verification (sign up a fresh test account, confirm every screen shows real content, sign out, sign back in, and verify data persistence) is outstanding, pending manual test-account creation with a real OTP-verified email address — this step requires human access to an email inbox and is the same external blocker as Task 17.
 
@@ -360,13 +359,7 @@ for unseen message shapes.
 
 See [`docs/superpowers/specs/2026-09-09-sms-transaction-detection-design.md`](superpowers/specs/2026-09-09-sms-transaction-detection-design.md)
 for the full design specification (including real sample SMS messages from
-both banks) and [`docs/superpowers/plans/2026-09-09-sms-transaction-detection.md`](superpowers/plans/2026-09-09-sms-transaction-detection.md)
-for the implementation plan covering all 16 tasks: permissions and receiver
-(Task 1), native module (Task 2), JavaScript wrapper (Task 3), parser modules
-(Tasks 4–6), dispatcher (Task 7), pending queue (Task 8), account matching
-(Task 9), preference toggle (Tasks 10–11), review screen and hub row
-(Tasks 12–13), transaction form prefill (Task 14), bootstrap wiring (Task 15),
-and documentation (Task 16).
+both banks).
 
 **Validation:** All 16 tasks complete and approved, plus a whole-branch review
 fix wave. TypeScript compiler clean (no errors or warnings). ESLint clean for
