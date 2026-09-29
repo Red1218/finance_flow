@@ -74,6 +74,11 @@ export default function Home() {
       accounts.refetch();
     },
   };
+  // data stays null until each query's first fetch lands; until then "no
+  // budget" / "no transactions" would be a lie, so render nothing but the
+  // refresh spinner (or the error, if a first fetch failed).
+  const ready = [tx, budgets, categories, accounts].every((q) => q.data !== null);
+  const error = tx.error || budgets.error || categories.error || accounts.error;
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
   if (!session) {
@@ -100,48 +105,56 @@ export default function Home() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <K>Left to spend</K>
-          <View style={styles.leftRow}>
-            <Num style={styles.leftAmount}>{formatCurrency(d.leftToSpend, d.currencyCode)}</Num>
-            <Muted>of {formatCurrency(d.limit, d.currencyCode)}</Muted>
-          </View>
-          <Body style={styles.coach}>
-            {d.hasBudget
-              ? `${d.daysLeft} days left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
-              : 'No budget set for this month yet — set one from the Budgets tab.'}
-          </Body>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.bars}>
-            {d.bars.map((v, i) => (
-              <View key={i} style={styles.barTrack}>
-                <View style={[styles.barFill, { height: `${Math.max(4, v * 100)}%` }]} />
+        {!ready ? (
+          error ? (
+            <Muted style={styles.section}>Couldn&rsquo;t load your spending. Pull down to try again.</Muted>
+          ) : null
+        ) : (
+          <>
+            <View style={styles.section}>
+              <K>Left to spend</K>
+              <View style={styles.leftRow}>
+                <Num style={styles.leftAmount}>{formatCurrency(d.leftToSpend, d.currencyCode)}</Num>
+                <Muted>of {formatCurrency(d.limit, d.currencyCode)}</Muted>
               </View>
-            ))}
-          </View>
-          <View style={styles.rowBetween}>
-            <K>Last 7 days</K>
-            <K style={styles.num}>{formatCurrency(d.last7Total, d.currencyCode)}</K>
-          </View>
-        </View>
+              <Body style={styles.coach}>
+                {d.hasBudget
+                  ? `${d.daysLeft} days left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
+                  : 'No budget set for this month yet — set one from the Budgets tab.'}
+              </Body>
+            </View>
 
-        <View style={styles.section}>
-          <View style={styles.rowBetween}>
-            <K>The ledger</K>
-            <Pressable onPress={() => router.push('/(tabs)/transactions')}>
-              <Text style={styles.link}>All {d.totalCount} →</Text>
-            </Pressable>
-          </View>
-          {d.recent.length === 0 ? (
-            <Muted style={{ marginTop: spacing.s2 }}>No transactions yet this month.</Muted>
-          ) : (
-            d.recent.map((tx) => (
-              <TransactionRow key={tx.id} tx={tx} onPress={() => router.push(`/transaction/${tx.id}`)} />
-            ))
-          )}
-        </View>
+            <View style={styles.section}>
+              <View style={styles.bars}>
+                {d.bars.map((v, i) => (
+                  <View key={i} style={styles.barTrack}>
+                    <View style={[styles.barFill, { height: `${Math.max(4, v * 100)}%` }]} />
+                  </View>
+                ))}
+              </View>
+              <View style={styles.rowBetween}>
+                <K>Last 7 days</K>
+                <K style={styles.num}>{formatCurrency(d.last7Total, d.currencyCode)}</K>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <View style={styles.rowBetween}>
+                <K>The ledger</K>
+                <Pressable onPress={() => router.push('/(tabs)/transactions')}>
+                  <Text style={styles.link}>All {d.totalCount} →</Text>
+                </Pressable>
+              </View>
+              {d.recent.length === 0 ? (
+                <Muted style={{ marginTop: spacing.s2 }}>No transactions yet this month.</Muted>
+              ) : (
+                d.recent.map((tx) => (
+                  <TransactionRow key={tx.id} tx={tx} onPress={() => router.push(`/transaction/${tx.id}`)} />
+                ))
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <Pressable style={styles.fab} onPress={() => router.push('/transaction/new')}>
