@@ -259,7 +259,7 @@ export default function TransactionDetail() {
             {vm.transfer ? (
               <Pressable
                 style={styles.transferRow}
-                onPress={() => router.push(`/transaction/${vm.transfer!.otherLegId}`)}
+                onPress={() => router.replace(`/transaction/${vm.transfer!.otherLegId}`)}
                 accessibilityRole="button"
                 accessibilityLabel={`View the other side of this transfer, ${vm.transfer.direction === 'out' ? 'to' : 'from'} ${vm.transfer.otherAccountLabel}`}
               >

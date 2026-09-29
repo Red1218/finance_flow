@@ -8,8 +8,10 @@ import TransactionDetail from '../../../app/transaction/[id]';
 import { checkBudgetAlerts } from '../../notifications/checkBudgetAlerts';
 import { updateTransaction, archiveTransaction } from '../../application/transactions';
 
+const mockPush = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+  useRouter: () => ({ back: jest.fn(), push: mockPush, replace: mockReplace }),
   useLocalSearchParams: () => ({ id: 'tx-1' }),
 }));
 
@@ -115,6 +117,18 @@ describe('Transaction Detail screen', () => {
     await waitFor(() => expect(screen.getByText('Transfer')).toBeTruthy());
     expect(screen.getByText('View other side ›')).toBeTruthy();
     expect(screen.queryByText('Cleared')).toBeNull();
+  });
+
+  // Replace, not push: deleting or editing either leg changes both, so a
+  // pushed first leg left underneath would show stale data on back().
+  it('replaces (not pushes) the screen when viewing the other leg', async () => {
+    mockGetTransactionById.mockResolvedValue(transferOutTx);
+    mockGetTransferPair.mockResolvedValue({ out: transferOutTx, in: transferInTx });
+    render(<TransactionDetail />);
+    await waitFor(() => expect(screen.getByText('View other side ›')).toBeTruthy());
+    await userEvent.press(screen.getByText('View other side ›'));
+    expect(mockReplace).toHaveBeenCalledWith('/transaction/tx-in');
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('shows a translated message, not raw data, when the pair is missing/corrupt', async () => {
