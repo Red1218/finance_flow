@@ -4,9 +4,7 @@
 > is now a single `getExistingSession()` read with no fallback sign-in;
 > `AuthStatus` gained a `'signedOut'` resting state for "no session found."
 > The font-loading section and the dual-signal readiness-gate mechanism
-> itself (kept, not removed — see
-> [`docs/superpowers/specs/2026-09-07-email-bound-auth-design.md`](../superpowers/specs/2026-09-07-email-bound-auth-design.md))
-> are both still accurate.
+> itself (kept, not removed) are both still accurate.
 
 ---
 

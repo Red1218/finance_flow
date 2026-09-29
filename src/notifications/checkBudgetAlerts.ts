@@ -14,7 +14,7 @@ import { getLastAlertedThreshold, setLastAlertedThreshold } from './lastAlertedT
 // create, an amount edit, a category-change edit, and an archive uniformly
 // (an edit that moves a transaction to a different category only ever needs
 // the *new* category checked; the old one can only have gone down, which
-// never fires — see the design spec's "Implementation refinements" section).
+// never fires).
 export function nextAlertThreshold(currentPct: number, lastAlerted: 80 | 100 | null): 80 | 100 | null {
   if (currentPct >= 100) return lastAlerted === 100 ? null : 100;
   if (currentPct >= 80) return lastAlerted === null ? 80 : null;
@@ -66,8 +66,8 @@ export async function checkBudgetAlerts(tx: Pick<Transaction, 'type' | 'category
               threshold === 100
                 ? `You've gone over ${budgetLabel} for this month.`
                 : `You've used ${threshold}% of ${budgetLabel} this month.`,
-            // Read by useNotificationTapObserver.ts (Task 1) to route a
-            // notification tap to the Budgets tab, per the spec's Decision 3.
+            // Read by useNotificationTapObserver.ts to route a notification
+            // tap to the Budgets tab.
             data: { url: '/(tabs)/budgets' },
           },
           // ChannelAwareTriggerInput: an immediate delivery that still lands on
