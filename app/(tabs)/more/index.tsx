@@ -1,16 +1,17 @@
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useAccounts, useTransactions, useCategories, useBudgets, usePreferences } from '../../../src/hooks/queries';
+import { useAccounts, useTransactions, useCategories, useBudgets, useBills, usePreferences } from '../../../src/hooks/queries';
 import { useLiveQuery } from '../../../src/hooks/useLiveQuery';
 import { transactionSign } from '../../../src/domain/transactionRules';
 import { listDetections } from '../../../src/data/repositories/pendingDetections';
+import { shortDate } from '../../../src/domain/bills';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
-type Href = '/(tabs)/more/accounts' | '/(tabs)/more/categories' | '/(tabs)/more/settings' | '/transaction/detected';
+type Href = '/(tabs)/more/accounts' | '/(tabs)/more/categories' | '/(tabs)/more/bills' | '/(tabs)/more/settings' | '/transaction/detected';
 
 export default function MoreHub() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function MoreHub() {
   const categories = useCategories();
   const budgets = useBudgets();
   const prefs = usePreferences();
+  const bills = useBills();
   const detections = useLiveQuery(() => listDetections(), []);
   const currencyCode = prefs.data?.currency_code ?? 'INR';
 
@@ -41,14 +43,20 @@ export default function MoreHub() {
     return {
       accounts: once([accounts.data, allTx.data], () => `${accountList.length} linked · ${formatCurrency(netWorth, currencyCode)} together`),
       categories: once([categories.data, budgets.data], () => `${categoryList.length} categories · ${budgetedCategoryIds.size} with a budget`),
+      bills: once([bills.data], () => {
+        const list = bills.data ?? [];
+        if (list.length === 0) return 'No bills yet';
+        return `${list.length} ${list.length === 1 ? 'bill' : 'bills'} · next: ${list[0].name} on ${shortDate(list[0].next_due_date)}`;
+      }),
       settings: once([prefs.data], () => `${currencyCode} · Week starts ${prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}`),
       detected: once([detections.data], () => (!detections.data?.length ? 'Nothing pending' : `${detections.data.length} pending`)),
     };
-  }, [accounts.data, allTx.data, categories.data, budgets.data, prefs.data, detections.data, currencyCode]);
+  }, [accounts.data, allTx.data, categories.data, budgets.data, prefs.data, bills.data, detections.data, currencyCode]);
 
   const items: { label: string; href: Href; subtitle: string }[] = [
     { label: 'Accounts', href: '/(tabs)/more/accounts', subtitle: subtitles.accounts },
     { label: 'Categories', href: '/(tabs)/more/categories', subtitle: subtitles.categories },
+    { label: 'Bills', href: '/(tabs)/more/bills', subtitle: subtitles.bills },
     { label: 'Detected transactions', href: '/transaction/detected', subtitle: subtitles.detected },
     { label: 'Settings', href: '/(tabs)/more/settings', subtitle: subtitles.settings },
   ];
