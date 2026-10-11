@@ -52,3 +52,36 @@ export function last7DaysTotals<T extends { occurred_at: string; amount: number;
   }
   return days;
 }
+
+// Home's "Today" block. Expenses only — transfers between your own accounts
+// aren't spending, and income can't be the "biggest" thing you spent on.
+// `rows` is the current month's transactions; `monthlyLimit` is the overall
+// budget (null when none is set).
+export function todaySummary<T extends { occurred_at: string; amount: number; type: string }>(
+  rows: T[],
+  monthlyLimit: number | null,
+  today: Date = new Date()
+) {
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const tomorrowStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).getTime();
+  const { totalDays, dayOfMonth } = monthProgress(today);
+  const daysLeft = totalDays - dayOfMonth + 1; // including today
+
+  let spentToday = 0;
+  let spentBefore = 0;
+  let biggest: T | null = null;
+  for (const row of rows) {
+    if (row.type !== 'EXPENSE') continue;
+    const t = new Date(row.occurred_at).getTime();
+    if (t >= todayStart && t < tomorrowStart) {
+      spentToday += row.amount;
+      if (!biggest || row.amount > biggest.amount) biggest = row;
+    } else if (t < todayStart) {
+      spentBefore += row.amount;
+    }
+  }
+
+  // Today's equal share of what was left when the day started, minus today's spend.
+  const leftToday = monthlyLimit === null ? null : (monthlyLimit - spentBefore) / daysLeft - spentToday;
+  return { spentToday, leftToday, biggest, daysLeft };
+}

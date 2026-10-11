@@ -6,10 +6,10 @@ import { useTransactions, useBudgets, useCategories, useAccounts, usePreferences
 import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { formatCurrency, toNumber } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
-import { monthProgress, dailyAllowance, last7DaysTotals } from '../../src/domain/dashboard';
+import { monthProgress, dailyAllowance, last7DaysTotals, todaySummary } from '../../src/domain/dashboard';
 import { monthRange } from '../../src/domain/dateRange';
 import { buildTransactionRowVM, indexById } from '../../src/domain/transactionView';
-import { Body, K, Muted, Num } from '../../src/ui/primitives';
+import { Body, Card, K, Muted, Num } from '../../src/ui/primitives';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { colors, fonts, shadow, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
@@ -41,12 +41,12 @@ export default function Home() {
 
     const limit = overallBudget ? toNumber(overallBudget.amount) : 0;
     const progress = budgetProgress(spent, limit);
-    const { dayOfMonth, totalDays, daysLeft } = monthProgress(today);
+    const { dayOfMonth, totalDays } = monthProgress(today);
 
-    const bars = last7DaysTotals(
-      rows.map((t) => ({ occurred_at: t.occurred_at, amount: toNumber(t.amount), type: t.type })),
-      today
-    );
+    const numeric = rows.map((t) => ({ row: t, occurred_at: t.occurred_at, amount: toNumber(t.amount), type: t.type }));
+    const bars = last7DaysTotals(numeric, today);
+    const todayInfo = todaySummary(numeric, overallBudget ? limit : null, today);
+    const daysLeft = todayInfo.daysLeft;
     const maxBar = Math.max(1, ...bars);
 
     return {
@@ -57,7 +57,12 @@ export default function Home() {
       dayOfMonth,
       totalDays,
       daysLeft,
-      dailyAllowance: dailyAllowance(progress.remaining, daysLeft || 1),
+      dailyAllowance: dailyAllowance(progress.remaining, daysLeft),
+      spentToday: todayInfo.spentToday,
+      leftToday: todayInfo.leftToday,
+      biggestToday: todayInfo.biggest
+        ? buildTransactionRowVM(todayInfo.biggest.row, categoriesById, accountsById, currencyCode)
+        : null,
       bars: bars.map((v) => v / maxBar),
       last7Total: bars.reduce((a, b) => a + b, 0),
       recent: rows.slice(0, 6).map((t) => buildTransactionRowVM(t, categoriesById, accountsById, currencyCode)),
@@ -109,6 +114,33 @@ export default function Home() {
         ) : (
           <>
             <View style={styles.section}>
+              <View style={styles.tiles}>
+                <Card style={styles.tile}>
+                  <K>Spent today</K>
+                  <Num style={styles.tileAmount}>{formatCurrency(d.spentToday, d.currencyCode)}</Num>
+                </Card>
+                <Card style={styles.tile}>
+                  <K>Left today</K>
+                  {d.leftToday === null ? (
+                    <Pressable onPress={() => router.push('/(tabs)/budgets')}>
+                      <Text style={[styles.link, styles.tileLink]}>Set a budget</Text>
+                    </Pressable>
+                  ) : d.leftToday < 0 ? (
+                    <Num style={[styles.tileAmount, styles.over]}>{formatCurrency(-d.leftToday, d.currencyCode)} over</Num>
+                  ) : (
+                    <Num style={styles.tileAmount}>{formatCurrency(d.leftToday, d.currencyCode)}</Num>
+                  )}
+                </Card>
+              </View>
+              <K style={styles.biggestLabel}>Biggest today</K>
+              {d.biggestToday ? (
+                <TransactionRow tx={d.biggestToday} onPress={() => router.push(`/transaction/${d.biggestToday!.id}`)} />
+              ) : (
+                <Muted style={{ marginTop: spacing.s2 }}>Nothing spent yet today.</Muted>
+              )}
+            </View>
+
+            <View style={styles.section}>
               <K>Left to spend</K>
               <View style={styles.leftRow}>
                 <Num style={styles.leftAmount}>{formatCurrency(d.leftToSpend, d.currencyCode)}</Num>
@@ -116,7 +148,7 @@ export default function Home() {
               </View>
               <Body style={styles.coach}>
                 {d.hasBudget
-                  ? `${d.daysLeft} days left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
+                  ? `${d.daysLeft} ${d.daysLeft === 1 ? 'day' : 'days'} left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
                   : 'No budget set for this month yet — set one from the Budgets tab.'}
               </Body>
             </View>
@@ -175,6 +207,12 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   section: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4 },
+  tiles: { flexDirection: 'row', gap: spacing.s3 },
+  tile: { flex: 1 },
+  tileAmount: { fontFamily: fonts.heading, fontSize: 24, color: colors.text, marginTop: 4 },
+  tileLink: { fontSize: 15, marginTop: 8 },
+  over: { color: colors.accent2_700 },
+  biggestLabel: { marginTop: spacing.s4 },
   leftRow: { flexDirection: 'row', alignItems: 'baseline', gap: 9, marginTop: 4 },
   leftAmount: { fontFamily: fonts.heading, fontSize: 40, color: colors.text, letterSpacing: -0.5 },
   coach: { marginTop: 10, maxWidth: 300 },
