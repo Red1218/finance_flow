@@ -1,4 +1,5 @@
 import React from 'react';
+import { RefreshControl } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import Home from '../../app/(tabs)/index';
 
@@ -8,12 +9,14 @@ const pending: Query = { data: null, loading: true, error: null, refetch: jest.f
 
 let mockBudgets: Query = pending;
 let mockTransactions: Query = loaded([]);
+let mockBills2: Query = loaded([]);
 jest.mock('../hooks/queries', () => ({
   useTransactions: () => mockTransactions,
   useBudgets: () => mockBudgets,
   useCategories: () => loaded([]),
   useAccounts: () => loaded([]),
   usePreferences: () => loaded({ currency_code: 'INR' }),
+  useBills: () => mockBills2,
 }));
 jest.mock('../data/AuthContext', () => ({ useAuth: () => ({ session: { user: { id: 'u1' } } }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
@@ -34,10 +37,19 @@ const tx = (id: string, description: string, amount: number, type = 'EXPENSE') =
   transfer_group_id: null,
 });
 
+const pad = (n: number) => String(n).padStart(2, '0');
+const inDays = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const bill = (id: string, name: string, next_due_date: string) => ({ id, name, amount: 1000, due_day: 1, next_due_date });
+
 describe('Home', () => {
   beforeEach(() => {
     mockBudgets = pending;
     mockTransactions = loaded([]);
+    mockBills2 = loaded([]);
   });
 
   it('does not claim there is no budget while budgets are still loading', () => {
@@ -99,5 +111,49 @@ describe('Home', () => {
     mockBudgets = { data: null, loading: false, error: 'network down', refetch: jest.fn() };
     render(<Home />);
     expect(screen.getByText(/Couldn.t load/)).toBeTruthy();
+  });
+
+  it('lists bills due within a week, overdue first, and hides later ones', () => {
+    mockBudgets = loaded([overallBudget]);
+    mockBills2 = loaded([bill('b1', 'Rent', inDays(3)), bill('b2', 'Gym', inDays(-1)), bill('b3', 'Insurance', inDays(20))]);
+    render(<Home />);
+    expect(screen.getByText('Bills due')).toBeTruthy();
+    expect(screen.getByText('Gym')).toBeTruthy();
+    expect(screen.getByText(/1 day overdue/)).toBeTruthy();
+    expect(screen.getByText('Rent')).toBeTruthy();
+    expect(screen.getByText(/due in 3 days/)).toBeTruthy();
+    expect(screen.queryByText('Insurance')).toBeNull();
+    expect(screen.getAllByText(/^(Gym|Rent)$/).map((n) => n.props.children)).toEqual(['Gym', 'Rent']);
+  });
+
+  it('says nothing is due this week when bills exist but none are close', () => {
+    mockBudgets = loaded([overallBudget]);
+    mockBills2 = loaded([bill('b3', 'Insurance', inDays(20))]);
+    render(<Home />);
+    expect(screen.getByText('Nothing due this week.')).toBeTruthy();
+  });
+
+  it('offers to add a bill when there are none', () => {
+    mockBudgets = loaded([overallBudget]);
+    render(<Home />);
+    expect(screen.getByText('No bills yet.')).toBeTruthy();
+    expect(screen.getByText('Add a bill')).toBeTruthy();
+  });
+
+  it('does not show the bills section until bills have loaded', () => {
+    mockBudgets = loaded([overallBudget]);
+    mockBills2 = pending;
+    render(<Home />);
+    expect(screen.queryByText('No bills yet.')).toBeNull();
+    expect(screen.queryByText('Nothing due this week.')).toBeNull();
+  });
+
+  it('pull-to-refresh refetches bills too', () => {
+    const refetch = jest.fn();
+    mockBudgets = loaded([overallBudget]);
+    mockBills2 = { ...loaded([]), refetch };
+    render(<Home />);
+    screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+    expect(refetch).toHaveBeenCalled();
   });
 });

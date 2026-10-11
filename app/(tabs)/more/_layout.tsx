@@ -1,6 +1,9 @@
 import { Stack } from 'expo-router';
 import { colors, fonts } from '../../../src/theme/tokens';
 
+// Home links push straight to Bills; keep the More hub underneath as the stack root.
+export const unstable_settings = { initialRouteName: 'index' };
+
 export default function MoreLayout() {
   return (
     <Stack
@@ -15,6 +18,7 @@ export default function MoreLayout() {
       <Stack.Screen name="index" options={{ title: 'More' }} />
       <Stack.Screen name="accounts" options={{ title: 'Accounts' }} />
       <Stack.Screen name="categories" options={{ title: 'Categories' }} />
+      <Stack.Screen name="bills" options={{ title: 'Bills' }} />
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
     </Stack>
   );

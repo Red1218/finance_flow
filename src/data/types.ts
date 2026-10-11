@@ -69,3 +69,22 @@ export interface Preferences {
   reminder_time: string | null;
   sms_detection_enabled: boolean;
 }
+
+// A row of recurring_items used as a monthly bill (see src/domain/bills.ts).
+// category_id / account_id / is_paused are unused by the app for now.
+export interface Bill {
+  id: string;
+  user_id: string;
+  name: string;
+  amount: number | string;
+  currency_code: string;
+  cadence: BudgetPeriod;
+  due_day: number;
+  next_due_date: string; // "YYYY-MM-DD"
+  category_id: string | null;
+  account_id: string | null;
+  is_paused: boolean;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+}

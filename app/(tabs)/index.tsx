@@ -2,9 +2,10 @@ import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMemo } from 'react';
-import { useTransactions, useBudgets, useCategories, useAccounts, usePreferences } from '../../src/hooks/queries';
+import { useTransactions, useBudgets, useCategories, useAccounts, usePreferences, useBills } from '../../src/hooks/queries';
 import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { formatCurrency, toNumber } from '../../src/domain/money';
+import { daysUntil, dueLabel, dueSoon } from '../../src/domain/bills';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthProgress, dailyAllowance, last7DaysTotals, todaySummary } from '../../src/domain/dashboard';
 import { monthRange } from '../../src/domain/dateRange';
@@ -26,6 +27,7 @@ export default function Home() {
   const categories = useCategories();
   const accounts = useAccounts();
   const prefs = usePreferences();
+  const bills = useBills();
   const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const derived = useMemo(() => {
@@ -72,15 +74,18 @@ export default function Home() {
 
   const d = {
     ...derived,
-    loading: tx.loading || budgets.loading || categories.loading || accounts.loading,
+    loading: tx.loading || budgets.loading || categories.loading || accounts.loading || bills.loading,
     refetch: () => {
       tx.refetch();
       budgets.refetch();
       categories.refetch();
       accounts.refetch();
+      bills.refetch();
     },
   };
-  const { ready, error } = firstLoad(tx, budgets, categories, accounts);
+  const { ready, error } = firstLoad(tx, budgets, categories, accounts, bills);
+  const billList = bills.data ?? [];
+  const billsDue = dueSoon(billList, today);
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
   if (!session) {
@@ -137,6 +142,34 @@ export default function Home() {
                 <TransactionRow tx={d.biggestToday} onPress={() => router.push(`/transaction/${d.biggestToday!.id}`)} />
               ) : (
                 <Muted style={{ marginTop: spacing.s2 }}>Nothing spent yet today.</Muted>
+              )}
+              <View style={styles.billsHead}>
+                <K>Bills due</K>
+                <Pressable onPress={() => router.push('/(tabs)/more/bills')}>
+                  <Text style={styles.link}>All bills →</Text>
+                </Pressable>
+              </View>
+              {billList.length === 0 ? (
+                <View style={styles.billsEmpty}>
+                  <Muted>No bills yet.</Muted>
+                  <Pressable onPress={() => router.push('/(tabs)/more/bills')}>
+                    <Text style={styles.link}>Add a bill</Text>
+                  </Pressable>
+                </View>
+              ) : billsDue.length === 0 ? (
+                <Muted style={{ marginTop: spacing.s2 }}>Nothing due this week.</Muted>
+              ) : (
+                billsDue.map((b) => {
+                  const days = daysUntil(b.next_due_date, today);
+                  return (
+                    <Pressable key={b.id} style={styles.billRow} onPress={() => router.push('/(tabs)/more/bills')}>
+                      <Text style={styles.billName}>{b.name}</Text>
+                      <Text style={[styles.billMeta, days < 0 && styles.over]}>
+                        {formatCurrency(toNumber(b.amount), d.currencyCode)} · {dueLabel(days)}
+                      </Text>
+                    </Pressable>
+                  );
+                })
               )}
             </View>
 
@@ -222,6 +255,11 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 },
   num: { fontFamily: fonts.body, fontVariant: ['tabular-nums'], fontSize: 9.5, color: colors.neutral600 },
   link: { fontFamily: fonts.body, fontSize: 12, color: colors.accent700 },
+  billsHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: spacing.s4 },
+  billsEmpty: { flexDirection: 'row', gap: spacing.s2, alignItems: 'baseline', marginTop: spacing.s2 },
+  billRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.dividerFaint },
+  billName: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
+  billMeta: { fontFamily: fonts.body, fontSize: 12.5, color: colors.neutral700 },
   fab: {
     position: 'absolute',
     right: 18,
