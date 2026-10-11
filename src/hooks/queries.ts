@@ -1,5 +1,6 @@
 import { useLiveQuery } from './useLiveQuery';
 import { listAccounts } from '../data/repositories/accounts';
+import { listBills } from '../data/repositories/bills';
 import { listActiveBudgets } from '../data/repositories/budgets';
 import { listCategories } from '../data/repositories/categories';
 import { getPreferences } from '../data/repositories/preferences';
@@ -24,4 +25,8 @@ export function usePreferences() {
 
 export function useTransactions(params: TransactionFilter = {}) {
   return useLiveQuery(() => getTransactions(params), [params.from, params.to, params.search]);
+}
+
+export function useBills() {
+  return useLiveQuery(() => listBills(), []);
 }
