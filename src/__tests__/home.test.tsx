@@ -1,4 +1,5 @@
 import React from 'react';
+import { RefreshControl } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import Home from '../../app/(tabs)/index';
 
@@ -144,5 +145,14 @@ describe('Home', () => {
     render(<Home />);
     expect(screen.queryByText('No bills yet.')).toBeNull();
     expect(screen.queryByText('Nothing due this week.')).toBeNull();
+  });
+
+  it('pull-to-refresh refetches bills too', () => {
+    const refetch = jest.fn();
+    mockBudgets = loaded([overallBudget]);
+    mockBills2 = { ...loaded([]), refetch };
+    render(<Home />);
+    screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+    expect(refetch).toHaveBeenCalled();
   });
 });

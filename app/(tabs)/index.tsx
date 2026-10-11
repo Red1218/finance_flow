@@ -74,12 +74,13 @@ export default function Home() {
 
   const d = {
     ...derived,
-    loading: tx.loading || budgets.loading || categories.loading || accounts.loading,
+    loading: tx.loading || budgets.loading || categories.loading || accounts.loading || bills.loading,
     refetch: () => {
       tx.refetch();
       budgets.refetch();
       categories.refetch();
       accounts.refetch();
+      bills.refetch();
     },
   };
   const { ready, error } = firstLoad(tx, budgets, categories, accounts, bills);
