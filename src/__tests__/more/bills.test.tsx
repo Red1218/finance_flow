@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import Bills from '../../../app/(tabs)/more/bills';
-import { archiveBill, createBill, markBillPaid } from '../../data/repositories/bills';
+import { archiveBill, createBill, markBillPaid, restoreBillDueDate } from '../../data/repositories/bills';
 
 type Query = { data: unknown; loading: boolean; error: string | null; refetch: () => void };
 const loaded = (data: unknown): Query => ({ data, loading: false, error: null, refetch: jest.fn() });
@@ -17,6 +17,7 @@ jest.mock('../../data/repositories/bills', () => ({
   createBill: jest.fn(),
   updateBill: jest.fn(),
   markBillPaid: jest.fn(),
+  restoreBillDueDate: jest.fn(),
   archiveBill: jest.fn(),
 }));
 jest.mock('../../data/AuthContext', () => ({ useAuth: () => ({ session: { user: { id: 'u1' } } }) }));
@@ -73,6 +74,17 @@ describe('Bills screen', () => {
     render(<Bills />);
     await userEvent.press(screen.getByText('Paid'));
     expect(markBillPaid).toHaveBeenCalledWith(rent);
+  });
+
+  it('offers Undo after paying and restores the original bill', async () => {
+    const rent = bill('b1', 'Rent', 15000, inDays(3));
+    mockBills = loaded([rent]);
+    render(<Bills />);
+    await userEvent.press(screen.getByText('Paid'));
+    expect(await screen.findByText(/Marked Rent paid\./)).toBeTruthy();
+    await userEvent.press(screen.getByText('Undo'));
+    expect(restoreBillDueDate).toHaveBeenCalledWith(rent);
+    await waitFor(() => expect(screen.queryByText('Undo')).toBeNull());
   });
 
   it('adds a bill from the form', async () => {

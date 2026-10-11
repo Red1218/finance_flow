@@ -1,6 +1,9 @@
 import { Stack } from 'expo-router';
 import { colors, fonts } from '../../../src/theme/tokens';
 
+// Home links push straight to Bills; keep the More hub underneath as the stack root.
+export const unstable_settings = { initialRouteName: 'index' };
+
 export default function MoreLayout() {
   return (
     <Stack

@@ -123,6 +123,7 @@ describe('Home', () => {
     expect(screen.getByText('Rent')).toBeTruthy();
     expect(screen.getByText(/due in 3 days/)).toBeTruthy();
     expect(screen.queryByText('Insurance')).toBeNull();
+    expect(screen.getAllByText(/^(Gym|Rent)$/).map((n) => n.props.children)).toEqual(['Gym', 'Rent']);
   });
 
   it('says nothing is due this week when bills exist but none are close', () => {

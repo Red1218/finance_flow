@@ -54,6 +54,17 @@ export async function markBillPaid(bill: Bill): Promise<Bill> {
   return data as Bill;
 }
 
+export async function restoreBillDueDate(bill: Bill): Promise<Bill> {
+  const { data, error } = await supabase
+    .from('recurring_items')
+    .update({ next_due_date: bill.next_due_date })
+    .eq('id', bill.id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as Bill;
+}
+
 export async function archiveBill(id: string): Promise<void> {
   const { error } = await supabase
     .from('recurring_items')

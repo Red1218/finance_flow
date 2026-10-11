@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useBills, usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
-import { archiveBill, createBill, markBillPaid, updateBill, type BillInput } from '../../../src/data/repositories/bills';
+import { archiveBill, createBill, markBillPaid, restoreBillDueDate, updateBill, type BillInput } from '../../../src/data/repositories/bills';
 import type { Bill } from '../../../src/data/types';
 import { daysUntil, dueLabel, shortDate } from '../../../src/domain/bills';
 import { formatCurrency, toNumber } from '../../../src/domain/money';
@@ -34,7 +34,10 @@ export default function Bills() {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const [justPaid, setJustPaid] = useState<Bill | null>(null);
+
   const openForm = (bill: Bill | null) => {
+    setJustPaid(null);
     setEditing(bill);
     setName(bill?.name ?? '');
     setAmount(bill ? String(toNumber(bill.amount)) : '');
@@ -91,11 +94,24 @@ export default function Bills() {
     setActionError(null);
     try {
       await markBillPaid(bill);
+      setJustPaid(bill);
       bills.refetch();
     } catch (e) {
       setActionError(errorText(e, 'Could not mark this bill paid.'));
     } finally {
       setPayingId(null);
+    }
+  };
+
+  const undo = async () => {
+    if (!justPaid) return;
+    setActionError(null);
+    try {
+      await restoreBillDueDate(justPaid);
+      setJustPaid(null);
+      bills.refetch();
+    } catch (e) {
+      setActionError(errorText(e, 'Could not undo this.'));
     }
   };
 
@@ -114,6 +130,14 @@ export default function Bills() {
         refreshControl={<RefreshControl refreshing={bills.loading} onRefresh={bills.refetch} tintColor={colors.accent} />}
       >
         <Button title="Add bill" variant="secondary" onPress={() => openForm(null)} block />
+        {justPaid && (
+          <Text style={styles.undoLine}>
+            Marked {justPaid.name} paid.{' '}
+            <Text style={styles.undoLink} onPress={undo}>
+              Undo
+            </Text>
+          </Text>
+        )}
         {actionError && <Text style={styles.error}>{actionError}</Text>}
 
         {!ready ? (
@@ -183,6 +207,8 @@ const styles = StyleSheet.create({
   rowName: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
   rowMeta: { fontFamily: fonts.body, fontSize: 12, color: colors.neutral700, marginTop: 3 },
   overdue: { color: colors.accent2_700 },
+  undoLine: { fontFamily: fonts.body, fontSize: 13, color: colors.neutral700, marginTop: spacing.s2 },
+  undoLink: { fontFamily: fonts.body, color: colors.accent700 },
   field: { marginTop: 6, marginBottom: spacing.s2 },
   error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent2_700, marginTop: spacing.s2 },
   formActions: { marginTop: spacing.s3, gap: spacing.s2 },
