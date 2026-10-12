@@ -53,13 +53,9 @@ jest.mock('../../hooks/queries', () => ({
     loading: false,
   })),
   usePreferences: () => ({ data: { decimal_precision: 2 }, loading: false }),
-  useTransactions: () => ({
-    data: [
-      { id: 'tx-meal', type: 'EXPENSE', amount: 330, category_id: 'cat-4', description: 'Vridhhavan KITCHENS', occurred_at: '2026-10-12T13:08:52.000Z' },
-      { id: 'tx-pay', type: 'INCOME', amount: 5000, category_id: null, description: 'Salary', occurred_at: '2026-10-01T10:00:00.000Z' },
-    ],
-    loading: false,
-  }),
+  useRecentExpenses: () => [
+    { id: 'tx-meal', type: 'EXPENSE', amount: 330, category_id: 'cat-4', description: 'Vridhhavan KITCHENS', occurred_at: '2026-10-12T13:08:52.000Z' },
+  ],
 }));
 
 // mockSession is read inside the jest.mock factory below — Jest allows
@@ -270,7 +266,6 @@ describe('Add Transaction screen', () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ kind: 'Income', amount: '150', note: 'MUNAGALA SRI HARSHA' });
     render(<NewTransaction />);
     await userEvent.press(screen.getByText('Paid back for: Nothing'));
-    expect(screen.queryByText(/Salary ·/)).toBeNull();
     await userEvent.press(screen.getByText(/Vridhhavan KITCHENS · ₹330/));
     expect(screen.getByText('Paid back for: Vridhhavan KITCHENS')).toBeTruthy();
     await userEvent.press(screen.getByText('Save income'));
