@@ -51,4 +51,22 @@ describe('Accounts', () => {
     await userEvent.press(screen.getAllByText('Add account')[1]);
     expect(createAccount).toHaveBeenCalledWith(expect.objectContaining({ name: 'Axis', type: 'BANK', mask: '1994', card_mask: '1968' }));
   });
+
+  it('groups accounts into banks, credit cards and cash, with each bank showing its account and debit card numbers', () => {
+    const acct = (id: string, name: string, type: string, mask: string | null, card_mask: string | null = null) => ({
+      id, name, type, mask, card_mask, opening_balance: 0, is_default: false, archived_at: null,
+    });
+    mockAccounts = loaded([
+      acct('c', 'Cash Wallet', 'CASH', null),
+      acct('k', 'Kotak', 'BANK', '8721', '6853'),
+      acct('cc', 'Kotak CC', 'CREDIT_CARD', '4030'),
+      acct('a', 'Axis', 'BANK', '1994'),
+    ]);
+    render(<Accounts />);
+    const headings = screen.getAllByText(/^(Bank accounts|Credit cards|Cash & wallets)$/).map((n) => n.props.children);
+    expect(headings).toEqual(['Bank accounts', 'Credit cards', 'Cash & wallets']);
+    expect(screen.getByText('A/c ••8721 · Debit card ••6853')).toBeTruthy();
+    expect(screen.getByText('A/c ••1994')).toBeTruthy();
+    expect(screen.getByText('Card ••4030')).toBeTruthy();
+  });
 });
