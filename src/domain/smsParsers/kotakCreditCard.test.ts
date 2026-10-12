@@ -52,4 +52,26 @@ describe('kotakCreditCardParser', () => {
   it('returns null for a non-transactional message', () => {
     expect(kotakCreditCardParser.parse('Your Kotak Credit Card statement is generated.')).toBeNull();
   });
+
+  // Kotak also sends the spend with a month name and a 4-digit year.
+  it('parses a spend dated like 07-Aug-2026', () => {
+    const body =
+      'INR 258 spent on Kotak Credit Card x4030 on 10-Aug-2026 at BLINKIT. Avl limit INR 4.28 Fraud? https://kotak.bank.in/KBANKT/CCTXN';
+    expect(kotakCreditCardParser.parse(body)).toEqual({
+      amount: 258,
+      direction: 'debit',
+      accountType: 'credit_card',
+      accountLast4: '4030',
+      bankLabel: 'Kotak',
+      merchant: 'BLINKIT',
+      date: '2026-08-10',
+      dedupKey: 'KOTAKB-CC:258:2026-08-10:BLINKIT',
+    });
+  });
+
+  it('parses a UPI spend on the credit card', () => {
+    const body =
+      'INR 19.14 spent on Kotak Credit Card x4030 on 07-Aug-2026 at UPI-K-303333368706-JIO. Avl limit INR 1470.92 Fraud? https://kotak.bank.in/KBANKT/CCTXN';
+    expect(kotakCreditCardParser.parse(body)).toMatchObject({ amount: 19.14, merchant: 'UPI-K-303333368706-JIO', date: '2026-08-07' });
+  });
 });
