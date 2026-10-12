@@ -567,6 +567,35 @@ behind a real Supabase sign-in wall and this environment has no test
 credentials — the same limitation noted in the Unified categories and
 Detected transactions bulk assign entries above.
 
+## Codebase simplification (2026-09-29)
+
+A cleanup pass with no new features:
+
+- Layers and indirection removed: the ports/deps layers in
+  `application/transactions`, single-caller domain files folded into
+  their callers, the single-caller `useDashboard` hook inlined into
+  Home, the foreground notification handler inlined into `_layout.tsx`,
+  and the five one-line query hooks merged into `hooks/queries.ts`.
+- Files merged: `authCredentials` into `auth.ts`; the auth and
+  transaction error-message mappers into one file;
+  `TransactionType`/`CategoryKind` defined in `data/types.ts`;
+  `transactionSign` moved into domain rules.
+- Dead code removed: `archiveBudget`, `validateTransferHasNoCategory`,
+  the `Divider` component, `CurrencyMeta.label`, unused dependencies
+  (including `expo-status-bar`), and the web target. Argument-less
+  error classes shrunk to one line; `formatCurrency` delegates to
+  `formatMoney`.
+- Completed superpowers specs and plans deleted.
+- Fixes: Home no longer shows "no budget" before budgets load; Budgets,
+  Trends, Ledger, Accounts, Categories, Settings and More wait for their
+  first load the same way; viewing the other leg of a transfer replaces
+  the screen instead of stacking it; the Ledger bulk-delete confirmation
+  escapes its apostrophe; `new.test.tsx` keypad tests no longer depend
+  on the current date.
+
+**Validation:** No results were recorded at the time. The current
+`main` passes the checks listed under October cleanup below.
+
 ## Home Today block (2026-10-12)
 
 Home shows a Today block: spent today, left today, and the biggest
