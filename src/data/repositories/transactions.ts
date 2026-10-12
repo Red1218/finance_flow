@@ -15,6 +15,7 @@ export interface NewTransaction {
   amount: number;
   description?: string | null;
   occurredAt?: string;
+  paidBackFor?: string | null;
 }
 
 export interface NewTransferPair {
@@ -85,6 +86,7 @@ export async function createTransaction(input: NewTransaction): Promise<Transact
       currency_code: 'INR',
       description: input.description ?? null,
       occurred_at: input.occurredAt ?? new Date().toISOString(),
+      paid_back_for: input.paidBackFor ?? null,
     })
     .select('*')
     .single();
