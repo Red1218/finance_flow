@@ -10,7 +10,7 @@ import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime, parseDateInput, toDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
-import { expenseOptionLabel } from '../../src/domain/transactionView';
+import { accountLabel, expenseOptionLabel } from '../../src/domain/transactionView';
 import { DatePickerField } from '../../src/ui/DatePickerField';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
@@ -237,7 +237,7 @@ export default function NewTransaction() {
           <Pressable onPress={() => setAccountPickerOpen(true)}>
             <Text style={styles.accountLabel}>
               {kind === 'Transfer' ? 'From: ' : ''}
-              {account ? account.name + (account.mask ? ' ••' + account.mask : '') : 'Choose account'}
+              {accountLabel(account) || 'Choose account'}
             </Text>
           </Pressable>
           {kind === 'Transfer' && (
@@ -269,7 +269,7 @@ export default function NewTransaction() {
       <SelectModal
         visible={accountPickerOpen}
         title="Choose account"
-        options={(accounts.data ?? []).map((a) => ({ id: a.id, label: a.name + (a.mask ? ' ••' + a.mask : '') }))}
+        options={(accounts.data ?? []).map((a) => ({ id: a.id, label: accountLabel(a) }))}
         onSelect={(opt) => setAccountId(opt.id)}
         onClose={() => setAccountPickerOpen(false)}
       />

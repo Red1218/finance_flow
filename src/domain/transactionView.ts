@@ -28,14 +28,13 @@ export function buildTransactionRowVM(
   const fallbackTitle = tx.type === 'INCOME' ? 'Income' : tx.type === 'EXPENSE' ? 'Expense' : 'Transfer';
   const title = tx.description?.trim() || category?.name || fallbackTitle;
 
-  const accountLabel = account ? account.name + (account.mask ? ' ••' + account.mask : '') : '';
   const categoryLabel =
     tx.type === 'TRANSFER_OUT'
       ? 'Transfer out'
       : tx.type === 'TRANSFER_IN'
         ? 'Transfer in'
         : (tx.paid_back_for ? 'Paid back · ' : '') + (category?.name ?? 'Uncategorised');
-  const subtitle = [categoryLabel, accountLabel].filter(Boolean).join(' · ');
+  const subtitle = [categoryLabel, accountLabel(account)].filter(Boolean).join(' · ');
 
   return {
     id: tx.id,
@@ -51,6 +50,11 @@ export function buildTransactionRowVM(
 export function expenseOptionLabel(e: Transaction, currencyCode: string): string {
   const date = new Date(e.occurred_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   return `${e.description?.trim() || 'Expense'} · ${formatCurrency(toNumber(e.amount), currencyCode)} · ${date}`;
+}
+
+// "Kotak ••8721" — empty when there's no account.
+export function accountLabel(a: Pick<Account, 'name' | 'mask'> | undefined): string {
+  return a ? a.name + (a.mask ? ' ••' + a.mask : '') : '';
 }
 
 export function indexById<T extends { id: string }>(rows: T[]): Map<string, T> {
@@ -109,7 +113,7 @@ export function buildTransactionDetailVM(
     transfer = {
       transferGroupId: tx.transfer_group_id,
       otherLegId: pairOtherLeg.id,
-      otherAccountLabel: otherAccount ? otherAccount.name + (otherAccount.mask ? ' ••' + otherAccount.mask : '') : '',
+      otherAccountLabel: accountLabel(otherAccount),
       direction: tx.type === 'TRANSFER_OUT' ? 'out' : 'in',
     };
   }
@@ -122,7 +126,7 @@ export function buildTransactionDetailVM(
     dateLabel,
     title,
     categoryName: category?.name ?? null,
-    accountLabel: account ? account.name + (account.mask ? ' ••' + account.mask : '') : '',
+    accountLabel: accountLabel(account),
     budgetImpactPct,
     note: tx.description?.trim() || null,
     transfer,
