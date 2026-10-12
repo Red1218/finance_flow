@@ -5,10 +5,13 @@ function toIsoDate(ddMmYy: string): string {
   return `20${yy}-${mm}-${dd}`;
 }
 
+// Kotak writes the account both as "A/c X8721" and "AC X8721" (sent) and as
+// "AC 8721" and "AC X8721" (received), and a sent message may carry a UTR
+// instead of a UPI Ref — all of these are live formats.
 const SENT_RE =
-  /^Sent Rs\.?\s?([\d,]+\.\d{2}) from Kotak Bank A\/c X(\d{4}) to (.+?) on (\d{2}-\d{2}-\d{2})\.\s*UPI Ref (\d+)/;
+  /^Sent Rs\.?\s?([\d,]+\.\d{2}) from Kotak Bank (?:A\/c|AC) X(\d{4}) to (.+?) on (\d{2}-\d{2}-\d{2})\.\s*(?:UPI Ref |UTR:)(\d+)/;
 const RECEIVED_UPI_RE =
-  /^Received Rs\.?\s?([\d,]+\.\d{2}) in your Kotak Bank AC (\d{4}) from (.+?) on (\d{2}-\d{2}-\d{2})\.UPI Ref:(\d+)/;
+  /^Received Rs\.?\s?([\d,]+\.\d{2}) in your Kotak Bank AC X?(\d{4}) from (.+?) on (\d{2}-\d{2}-\d{2})\.UPI Ref:(\d+)/;
 const RECEIVED_IMPS_RE =
   /^Received Rs\.\s?([\d,]+\.\d{2}) on (\d{2}-\d{2}-\d{2}) in your Kotak Bank A\/C x(\d{4}) by an A\/C linked to mobile x\d+\.\s*IMPS Ref no (\d+)/;
 
