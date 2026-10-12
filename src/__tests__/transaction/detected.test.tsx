@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, waitFor, userEvent, fireEvent } from '@testing-library/react-native';
 import DetectedScreen from '../../../app/transaction/detected';
-import { listDetections, removeDetection } from '../../data/repositories/pendingDetections';
+import { listDetections, markNotTransfer, removeDetection } from '../../data/repositories/pendingDetections';
 import { createTransaction } from '../../application/transactions';
 import { checkBudgetAlerts } from '../../notifications/checkBudgetAlerts';
 
@@ -25,7 +25,12 @@ jest.mock('react-native-safe-area-context', () => {
 });
 jest.mock('../../data/repositories/pendingDetections');
 jest.mock('../../hooks/queries', () => ({
-  useAccounts: () => ({ data: [{ id: 'acc-1', type: 'BANK', mask: '8721', archived_at: null }] }),
+  useAccounts: () => ({
+    data: [
+      { id: 'acc-1', type: 'BANK', mask: '8721', archived_at: null },
+      { id: 'acc-2', type: 'BANK', mask: '1994', archived_at: null },
+    ],
+  }),
   usePreferences: () => ({ data: { currency_code: 'INR' } }),
   useCategories: () => ({ data: [{ id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' }] }),
 }));
@@ -62,6 +67,58 @@ beforeEach(() => {
   (removeDetection as jest.Mock).mockReset();
   (createTransaction as jest.Mock).mockReset();
   (checkBudgetAlerts as jest.Mock).mockReset();
+});
+
+// A Kotak → Axis transfer: the debit and credit SMS for the same move.
+const transferOut = { ...sampleDetection, id: 'KOTAKB:628210326621', dedupKey: 'KOTAKB:628210326621', amount: 12000, merchant: 'X1994', date: '2026-10-09' };
+const transferIn = {
+  ...sampleDetection,
+  id: 'AXISBK:628210326621',
+  dedupKey: 'AXISBK:628210326621',
+  amount: 12000,
+  direction: 'credit' as const,
+  accountLast4: '1994',
+  bankLabel: 'Axis',
+  merchant: 'RAVI',
+  date: '2026-10-09',
+};
+
+describe('DetectedScreen — transfer pairs', () => {
+  it('shows a matching debit and credit as one transfer row', async () => {
+    (listDetections as jest.Mock).mockResolvedValue([transferOut, transferIn]);
+    const { findByText, queryByText } = render(<DetectedScreen />);
+    expect(await findByText('Transfer')).toBeTruthy();
+    expect(await findByText(/Kotak → Axis/)).toBeTruthy();
+    expect(queryByText('X1994')).toBeNull();
+    expect(queryByText('RAVI')).toBeNull();
+  });
+
+  it('opens the transfer form prefilled with both accounts and both detections', async () => {
+    (listDetections as jest.Mock).mockResolvedValue([transferOut, transferIn]);
+    const { findByText } = render(<DetectedScreen />);
+    await userEvent.press(await findByText('Transfer'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/transaction/new',
+      params: {
+        amount: '12000',
+        kind: 'Transfer',
+        accountId: 'acc-1',
+        toAccountId: 'acc-2',
+        note: 'Transfer',
+        dateText: '2026-10-09',
+        detectionId: 'KOTAKB:628210326621',
+        pairedDetectionId: 'AXISBK:628210326621',
+      },
+    });
+  });
+
+  it('splits the pair back into two rows with "Not a transfer"', async () => {
+    (listDetections as jest.Mock).mockResolvedValue([transferOut, transferIn]);
+    const { findByText } = render(<DetectedScreen />);
+    await userEvent.press(await findByText('Not a transfer'));
+    await waitFor(() => expect(markNotTransfer).toHaveBeenCalledWith(['KOTAKB:628210326621', 'AXISBK:628210326621']));
+    expect(mockPush).not.toHaveBeenCalled();
+  });
 });
 
 describe('DetectedScreen', () => {

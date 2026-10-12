@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { listDetections, removeDetection, type PendingDetection } from '../../src/data/repositories/pendingDetections';
+import { listDetections, markNotTransfer, removeDetection, type PendingDetection } from '../../src/data/repositories/pendingDetections';
+import { pairTransfers } from '../../src/domain/transferPairs';
 import { matchDetectionToAccount } from '../../src/domain/smsDetection';
 import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
@@ -40,7 +41,8 @@ export default function DetectedScreen() {
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
 
-  const items = detections.data ?? [];
+  const items = useMemo(() => detections.data ?? [], [detections.data]);
+  const entries = useMemo(() => pairTransfers(items), [items]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -80,6 +82,29 @@ export default function DetectedScreen() {
         detectionId: detection.id,
       },
     });
+  };
+
+  // A suggested transfer opens the transfer form with both accounts matched
+  // where possible; saving it clears both SMS from the queue.
+  const handleOpenTransfer = (out: PendingDetection, into: PendingDetection) => {
+    router.push({
+      pathname: '/transaction/new',
+      params: {
+        amount: String(out.amount),
+        kind: 'Transfer',
+        accountId: matchDetectionToAccount(out, accounts.data ?? []) ?? '',
+        toAccountId: matchDetectionToAccount(into, accounts.data ?? []) ?? '',
+        note: 'Transfer',
+        dateText: out.date,
+        detectionId: out.id,
+        pairedDetectionId: into.id,
+      },
+    });
+  };
+
+  const handleNotTransfer = async (out: PendingDetection, into: PendingDetection) => {
+    await markNotTransfer([out.id, into.id]);
+    detections.refetch();
   };
 
   const handleAssignCategory = async (categoryId: string) => {
@@ -165,32 +190,55 @@ export default function DetectedScreen() {
         {items.length === 0 ? (
           <Text style={styles.empty}>No detected transactions.</Text>
         ) : (
-          items.map((d) => (
-            <View key={d.id} style={styles.row}>
-              <Pressable
-                style={styles.rowMain}
-                onPress={() => (selectMode ? toggleSelect(d.id) : handleOpen(d))}
-                onLongPress={() => handleRowLongPress(d.id)}
-              >
-                {selectMode && (
-                  <View style={[styles.checkbox, selectedIds.has(d.id) && styles.checkboxChecked]}>
-                    {selectedIds.has(d.id) && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.merchant}>{d.merchant || d.bankLabel}</Text>
-                  <Text style={styles.meta}>
-                    {d.bankLabel} · {formatCurrency(d.amount, currencyCode)} · {d.date}
-                  </Text>
+          entries.map((entry) => {
+            if (entry.kind === 'pair') {
+              const { out, in: into } = entry;
+              return (
+                <View key={`${out.id}+${into.id}`} style={styles.row}>
+                  <Pressable style={styles.rowMain} onPress={() => (selectMode ? undefined : handleOpenTransfer(out, into))}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.merchant}>Transfer</Text>
+                      <Text style={styles.meta}>
+                        {out.bankLabel} → {into.bankLabel} · {formatCurrency(out.amount, currencyCode)} · {out.date}
+                      </Text>
+                    </View>
+                  </Pressable>
+                  {!selectMode && (
+                    <Pressable onPress={() => handleNotTransfer(out, into)}>
+                      <Text style={styles.dismiss}>Not a transfer</Text>
+                    </Pressable>
+                  )}
                 </View>
-              </Pressable>
-              {!selectMode && (
-                <Pressable onPress={() => handleDismiss(d.id)}>
-                  <Text style={styles.dismiss}>Not a transaction</Text>
+              );
+            }
+            const d = entry.item;
+            return (
+              <View key={d.id} style={styles.row}>
+                <Pressable
+                  style={styles.rowMain}
+                  onPress={() => (selectMode ? toggleSelect(d.id) : handleOpen(d))}
+                  onLongPress={() => handleRowLongPress(d.id)}
+                >
+                  {selectMode && (
+                    <View style={[styles.checkbox, selectedIds.has(d.id) && styles.checkboxChecked]}>
+                      {selectedIds.has(d.id) && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.merchant}>{d.merchant || d.bankLabel}</Text>
+                    <Text style={styles.meta}>
+                      {d.bankLabel} · {formatCurrency(d.amount, currencyCode)} · {d.date}
+                    </Text>
+                  </View>
                 </Pressable>
-              )}
-            </View>
-          ))
+                {!selectMode && (
+                  <Pressable onPress={() => handleDismiss(d.id)}>
+                    <Text style={styles.dismiss}>Not a transaction</Text>
+                  </Pressable>
+                )}
+              </View>
+            );
+          })
         )}
       </ScrollView>
 

@@ -13,6 +13,9 @@ export interface Account {
   opening_balance: number | string;
   is_default: boolean;
   mask: string | null;
+  // Bank accounts only: the debit card's last 4 — card swipe and ATM SMS quote
+  // the card, not the account number.
+  card_mask: string | null;
   created_at: string;
   updated_at: string;
   archived_at: string | null;
