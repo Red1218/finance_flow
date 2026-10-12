@@ -47,6 +47,12 @@ export function buildTransactionRowVM(
   };
 }
 
+// One line per expense in the "Paid back for" pickers.
+export function expenseOptionLabel(e: Transaction, currencyCode: string): string {
+  const date = new Date(e.occurred_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return `${e.description?.trim() || 'Expense'} · ${formatCurrency(toNumber(e.amount), currencyCode)} · ${date}`;
+}
+
 export function indexById<T extends { id: string }>(rows: T[]): Map<string, T> {
   return new Map(rows.map((r) => [r.id, r]));
 }
