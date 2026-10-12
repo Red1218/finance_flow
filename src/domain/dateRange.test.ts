@@ -83,6 +83,7 @@ describe('toDateInput / parseDateInput', () => {
   it('round-trips a local date', () => {
     const d = new Date(2026, 9, 12, 0, 30);
     expect(toDateInput(d)).toBe('2026-10-12');
+    expect(toDateInput(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
     expect(parseDateInput('2026-10-12')).toEqual(new Date(2026, 9, 12));
   });
 

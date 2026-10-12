@@ -1,5 +1,4 @@
 import {
-  toDateKey,
   dueDateIn,
   firstDueDate,
   nextDueAfterPaid,
@@ -12,13 +11,6 @@ import {
 
 // Local dates (month is 0-based in the Date constructor).
 const oct12 = new Date(2026, 9, 12, 23, 30); // late evening: must still be 12 Oct, not 13 in UTC terms
-
-describe('toDateKey', () => {
-  it('formats the local calendar date, zero-padded', () => {
-    expect(toDateKey(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
-    expect(toDateKey(oct12)).toBe('2026-10-12');
-  });
-});
 
 describe('dueDateIn', () => {
   it('uses the due day when the month has it', () => {
