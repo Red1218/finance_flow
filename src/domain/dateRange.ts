@@ -47,3 +47,19 @@ export function monthGridDays(year: number, month: number): MonthGridDay[] {
   });
   return days.slice(35).every((d) => !d.inMonth) ? days.slice(0, 35) : days;
 }
+
+// A local calendar date as 'YYYY-MM-DD' — never via toISOString(), which
+// would give the UTC date (yesterday, early morning in IST).
+export function toDateInput(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// 'YYYY-MM-DD' to a local Date; null for anything malformed or impossible (2026-02-30).
+export function parseDateInput(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const d = new Date(year, month - 1, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+  return d;
+}

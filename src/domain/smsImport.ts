@@ -1,12 +1,9 @@
 import type { ParsedTransaction } from './smsParsers/types';
 import { toNumber } from './money';
+import { toDateInput } from './dateRange';
 
 type LedgerRow = { amount: number | string; type: string; occurred_at: string };
 
-const dayOf = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
 const directionOf = (type: string) => (type === 'INCOME' || type === 'TRANSFER_IN' ? 'credit' : 'debit');
 
 // Which parsed past messages are worth queueing for review: not repeated
@@ -17,7 +14,7 @@ const directionOf = (type: string) => (type === 'INCOME' || type === 'TRANSFER_I
 export function selectNewDetections(parsed: ParsedTransaction[], ledger: LedgerRow[]): ParsedTransaction[] {
   const unmatched = new Map<string, number>();
   for (const row of ledger) {
-    const key = `${dayOf(row.occurred_at)}|${toNumber(row.amount)}|${directionOf(row.type)}`;
+    const key = `${toDateInput(new Date(row.occurred_at))}|${toNumber(row.amount)}|${directionOf(row.type)}`;
     unmatched.set(key, (unmatched.get(key) ?? 0) + 1);
   }
 
