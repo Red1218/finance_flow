@@ -3,6 +3,8 @@
 // calendar arithmetic — never toISOString(), which shifts the day across the
 // UTC+5:30 boundary.
 
+import { toDateInput } from './dateRange';
+
 const pad = (n: number) => String(n).padStart(2, '0');
 
 function parseKey(key: string): { y: number; m: number; d: number } {
@@ -11,10 +13,6 @@ function parseKey(key: string): { y: number; m: number; d: number } {
 }
 
 const nextMonth = (y: number, m: number) => (m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 });
-
-export function toDateKey(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
 
 // The bill's due day in that month, or the month's last day if it's shorter.
 export function dueDateIn(dueDay: number, year: number, month: number): string {
@@ -27,7 +25,7 @@ export function firstDueDate(dueDay: number, today: Date): string {
   const y = today.getFullYear();
   const m = today.getMonth() + 1;
   const thisMonth = dueDateIn(dueDay, y, m);
-  if (thisMonth >= toDateKey(today)) return thisMonth; // zero-padded keys compare correctly as strings
+  if (thisMonth >= toDateInput(today)) return thisMonth; // zero-padded keys compare correctly as strings
   const n = nextMonth(y, m);
   return dueDateIn(dueDay, n.y, n.m);
 }
