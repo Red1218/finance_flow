@@ -16,11 +16,12 @@ import { TransactionRow } from '../../src/ui/TransactionRow';
 import { colors, fonts, shadow, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
+import { useToday } from '../../src/hooks/useToday';
 
 export default function Home() {
   const router = useRouter();
   const { session } = useAuth();
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
   const tx = useTransactions({ from, to });

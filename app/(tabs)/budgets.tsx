@@ -16,11 +16,12 @@ import { FormModal } from '../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
+import { useToday } from '../../src/hooks/useToday';
 
 export default function Budgets() {
   const router = useRouter();
   const { session } = useAuth();
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
   const tx = useTransactions({ from, to });

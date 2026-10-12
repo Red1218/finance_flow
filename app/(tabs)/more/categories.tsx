@@ -9,6 +9,7 @@ import { Button, IconButton, Input, K, Muted } from '../../../src/ui/primitives'
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
+import { useToday } from '../../../src/hooks/useToday';
 
 function monthRange(today: Date) {
   return {
@@ -18,7 +19,7 @@ function monthRange(today: Date) {
 }
 
 export default function Categories() {
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
   const categories = useCategories();

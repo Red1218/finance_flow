@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { isSameDay, monthGridDays } from '../domain/dateRange';
 import { K } from './primitives';
 import { colors, fonts, spacing } from '../theme/tokens';
+import { useToday } from '../hooks/useToday';
 
 const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -14,7 +15,7 @@ const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 // time-of-day always comes from combineLocalDateWithCurrentTime's `now`,
 // and nothing in the domain layer supports a user-chosen time yet.
 export function DatePickerField({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const [expanded, setExpanded] = useState(false);
   const [jumpOpen, setJumpOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(value.getFullYear(), value.getMonth(), 1));

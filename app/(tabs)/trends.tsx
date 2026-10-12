@@ -11,13 +11,14 @@ import { Body, K, Muted, ScreenHeader, Tag } from '../../src/ui/primitives';
 import { colors, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
+import { useToday } from '../../src/hooks/useToday';
 
 const MONTHS_BACK = 6;
 const CHART_W = 320;
 const CHART_H = 120;
 
 export default function Trends() {
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const { session } = useAuth();
   const rangeStart = useMemo(() => new Date(today.getFullYear(), today.getMonth() - (MONTHS_BACK - 1), 1), [today]);
 
