@@ -1,4 +1,4 @@
-import { monthRange, combineLocalDateWithCurrentTime, monthGridDays, isSameDay } from './dateRange';
+import { toDateInput, parseDateInput, monthRange, combineLocalDateWithCurrentTime, monthGridDays, isSameDay } from './dateRange';
 
 describe('monthRange', () => {
   it('produces a from/to pair spanning exactly the given local month', () => {
@@ -76,5 +76,18 @@ describe('isSameDay', () => {
 
   it('is false for a different day', () => {
     expect(isSameDay(new Date(2026, 8, 5), new Date(2026, 8, 6))).toBe(false);
+  });
+});
+
+describe('toDateInput / parseDateInput', () => {
+  it('round-trips a local date', () => {
+    const d = new Date(2026, 9, 12, 0, 30);
+    expect(toDateInput(d)).toBe('2026-10-12');
+    expect(parseDateInput('2026-10-12')).toEqual(new Date(2026, 9, 12));
+  });
+
+  it('rejects malformed and impossible dates', () => {
+    expect(parseDateInput('12-10-2026')).toBeNull();
+    expect(parseDateInput('2026-02-30')).toBeNull();
   });
 });

@@ -7,7 +7,7 @@ import { getCurrencyMeta } from '../../src/domain/money';
 import { createTransaction, createTransfer } from '../../src/application/transactions';
 import { removeDetection } from '../../src/data/repositories/pendingDetections';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
-import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
+import { combineLocalDateWithCurrentTime, parseDateInput, toDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
 import { expenseOptionLabel } from '../../src/domain/transactionView';
@@ -19,23 +19,6 @@ import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
 type Kind = 'Expense' | 'Income' | 'Transfer';
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'];
-
-function todayInputValue(d = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-// Plain YYYY-MM-DD text entry rather than introducing a new native
-// date-picker dependency.
-function parseDateInput(value: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-  if (!m) return null;
-  const year = Number(m[1]);
-  const month = Number(m[2]);
-  const day = Number(m[3]);
-  const d = new Date(year, month - 1, day);
-  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
-  return d;
-}
 
 export default function NewTransaction() {
   const router = useRouter();
@@ -63,7 +46,7 @@ export default function NewTransaction() {
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(params.accountId || null);
   const [toAccountId, setToAccountId] = useState<string | null>(params.toAccountId || null);
-  const [dateText, setDateText] = useState(() => params.dateText || todayInputValue());
+  const [dateText, setDateText] = useState(() => params.dateText || toDateInput(new Date()));
   const [note, setNote] = useState(params.note || '');
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
   const [toAccountPickerOpen, setToAccountPickerOpen] = useState(false);
@@ -246,7 +229,7 @@ export default function NewTransaction() {
           </Pressable>
         )}
 
-        <DatePickerField value={pickedDate ?? new Date()} onChange={(d) => setDateText(todayInputValue(d))} />
+        <DatePickerField value={pickedDate ?? new Date()} onChange={(d) => setDateText(toDateInput(d))} />
 
         <View style={styles.field}>
           <Input placeholder="Add a note (optional)" value={note} onChangeText={setNote} />

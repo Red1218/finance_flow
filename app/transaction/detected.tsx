@@ -7,7 +7,7 @@ import { pairTransfers } from '../../src/domain/transferPairs';
 import { matchDetectionToAccount } from '../../src/domain/smsDetection';
 import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
-import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
+import { combineLocalDateWithCurrentTime, parseDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { useAccounts, useCategories, usePreferences, useTransactions } from '../../src/hooks/queries';
 import { useLiveQuery } from '../../src/hooks/useLiveQuery';
@@ -16,14 +16,6 @@ import { expenseOptionLabel } from '../../src/domain/transactionView';
 import { K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
-
-// detection.date is always 'YYYY-MM-DD' (see ParsedTransaction) — parsed via
-// local year/month/day components, not `new Date(string)`, to avoid the
-// UTC-midnight interpretation JS gives a bare ISO date string.
-function parseIsoDateLocal(value: string): Date {
-  const [y, m, d] = value.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
 
 export default function DetectedScreen() {
   const router = useRouter();
@@ -127,7 +119,7 @@ export default function DetectedScreen() {
         type: 'INCOME',
         amount: detection.amount,
         description: detection.merchant,
-        occurredAt: combineLocalDateWithCurrentTime(parseIsoDateLocal(detection.date)),
+        occurredAt: combineLocalDateWithCurrentTime(parseDateInput(detection.date) ?? new Date()),
         paidBackFor: expense.id,
       });
     } catch (e) {
@@ -165,7 +157,7 @@ export default function DetectedScreen() {
           type,
           amount: detection.amount,
           description: detection.merchant,
-          occurredAt: combineLocalDateWithCurrentTime(parseIsoDateLocal(detection.date)),
+          occurredAt: combineLocalDateWithCurrentTime(parseDateInput(detection.date) ?? new Date()),
         });
         if (type === 'EXPENSE') createdExpense = true;
         // Deliberately isolated: the transaction is already saved by this

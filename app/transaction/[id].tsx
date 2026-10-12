@@ -9,7 +9,7 @@ import { listActiveBudgets } from '../../src/data/repositories/budgets';
 import { getPreferences } from '../../src/data/repositories/preferences';
 import { toNumber } from '../../src/domain/money';
 import { indexById, buildTransactionDetailVM, expenseOptionLabel } from '../../src/domain/transactionView';
-import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
+import { combineLocalDateWithCurrentTime, parseDateInput, toDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import type { Account, Category, Transaction } from '../../src/data/types';
@@ -18,21 +18,6 @@ import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
-
-function dateInputValue(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function parseDateInput(value: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-  if (!m) return null;
-  const year = Number(m[1]);
-  const month = Number(m[2]);
-  const day = Number(m[3]);
-  const d = new Date(year, month - 1, day);
-  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
-  return d;
-}
 
 export default function TransactionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -114,7 +99,7 @@ export default function TransactionDetail() {
       if (t) {
         setEditAmount(String(toNumber(t.amount)));
         setEditNote(t.description ?? '');
-        setEditDateText(dateInputValue(new Date(t.occurred_at)));
+        setEditDateText(toDateInput(new Date(t.occurred_at)));
         if (t.type === 'TRANSFER_OUT') {
           setEditFromAccountId(t.account_id);
           setEditToAccountId(other?.account_id ?? null);
