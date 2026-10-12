@@ -11,11 +11,6 @@ export class CategoryNotFoundError extends Error { name = 'CategoryNotFoundError
 
 export class TransferMustBeEditedAsPairError extends Error { name = 'TransferMustBeEditedAsPairError'; message = 'A transfer must be edited as a pair, not as a single transaction'; }
 
-// Not enumerated in the frozen Error Model (which only documented getById's
-// "trivial read, no dedicated error path" case) — a minimal, same-pattern
-// addition (matching AccountNotFoundError/CategoryNotFoundError) needed for
-// UpdateTransaction/ArchiveTransaction to report a missing/foreign id. Not a
-// redesign of the frozen taxonomy, just completing an omission in it.
 export class TransactionNotFoundError extends Error { name = 'TransactionNotFoundError'; message = "That transaction couldn't be found"; }
 
 export class UnauthorizedError extends Error { name = 'UnauthorizedError'; message = "You don't have access to this"; }

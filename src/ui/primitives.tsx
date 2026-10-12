@@ -98,7 +98,7 @@ export function IconButton({ onPress, children, label }: { onPress?: () => void;
 
 // ---- Tag -----------------------------------------------------------
 
-type TagVariant = 'accent' | 'accent2' | 'neutral' | 'outline';
+type TagVariant = 'accent' | 'accent2' | 'neutral';
 
 export function Tag({ label, variant = 'neutral' }: { label: string; variant?: TagVariant }) {
   return (
@@ -108,7 +108,6 @@ export function Tag({ label, variant = 'neutral' }: { label: string; variant?: T
         variant === 'accent' && tagStyles.accent,
         variant === 'accent2' && tagStyles.accent2,
         variant === 'neutral' && tagStyles.neutral,
-        variant === 'outline' && tagStyles.outline,
       ]}
     >
       <Text
@@ -117,7 +116,6 @@ export function Tag({ label, variant = 'neutral' }: { label: string; variant?: T
           variant === 'accent' && { color: colors.accent800 },
           variant === 'accent2' && { color: colors.accent2_800 },
           variant === 'neutral' && { color: colors.neutral800 },
-          variant === 'outline' && { color: colors.accent },
         ]}
       >
         {label}
@@ -128,11 +126,11 @@ export function Tag({ label, variant = 'neutral' }: { label: string; variant?: T
 
 // ---- Bar (progress) -----------------------------------------------------------
 
-export function Bar({ pct, color, height = 5 }: { pct: number; color?: string; height?: number }) {
+export function Bar({ pct, color }: { pct: number; color?: string }) {
   const clamped = Math.max(0, Math.min(100, pct));
   return (
-    <View style={[barStyles.track, { height, borderRadius: height / 2 }]}>
-      <View style={[barStyles.fill, { width: `${clamped}%`, backgroundColor: color ?? colors.accent, borderRadius: height / 2 }]} />
+    <View style={barStyles.track}>
+      <View style={[barStyles.fill, { width: `${clamped}%`, backgroundColor: color ?? colors.accent }]} />
     </View>
   );
 }
@@ -254,13 +252,12 @@ const tagStyles = StyleSheet.create({
   accent: { backgroundColor: colors.accent100 },
   accent2: { backgroundColor: colors.accent2_100 },
   neutral: { backgroundColor: colors.neutral100 },
-  outline: { borderWidth: 1, borderColor: colors.accent, backgroundColor: 'transparent' },
   text: { fontFamily: fonts.body, fontSize: 11 },
 });
 
 const barStyles = StyleSheet.create({
-  track: { backgroundColor: colors.neutral300, overflow: 'hidden', width: '100%' },
-  fill: { height: '100%' },
+  track: { height: 5, borderRadius: 2.5, backgroundColor: colors.neutral300, overflow: 'hidden', width: '100%' },
+  fill: { height: '100%', borderRadius: 2.5 },
 });
 
 const chipStyles = StyleSheet.create({
