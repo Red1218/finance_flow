@@ -30,7 +30,11 @@ export function buildTransactionRowVM(
 
   const accountLabel = account ? account.name + (account.mask ? ' ••' + account.mask : '') : '';
   const categoryLabel =
-    tx.type === 'TRANSFER_OUT' ? 'Transfer out' : tx.type === 'TRANSFER_IN' ? 'Transfer in' : category?.name ?? 'Uncategorised';
+    tx.type === 'TRANSFER_OUT'
+      ? 'Transfer out'
+      : tx.type === 'TRANSFER_IN'
+        ? 'Transfer in'
+        : (tx.paid_back_for ? 'Paid back · ' : '') + (category?.name ?? 'Uncategorised');
   const subtitle = [categoryLabel, accountLabel].filter(Boolean).join(' · ');
 
   return {

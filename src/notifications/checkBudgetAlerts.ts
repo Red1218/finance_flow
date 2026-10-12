@@ -7,6 +7,7 @@ import { getTransactions } from '../application/transactions';
 import { budgetProgress } from '../domain/budget';
 import { monthRange } from '../domain/dateRange';
 import { toNumber } from '../domain/money';
+import { spendAmount } from '../domain/transactionRules';
 import { getLastAlertedThreshold, setLastAlertedThreshold } from './lastAlertedThreshold';
 
 // Compares current spend against the highest threshold already alerted for
@@ -40,10 +41,9 @@ export async function checkBudgetAlerts(tx: Pick<Transaction, 'type' | 'category
     const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const { from, to } = monthRange(now);
     const txs = await getTransactions({ from, to });
-    const expenseTxs = txs.filter((t) => t.type === 'EXPENSE');
-    const totalSpend = expenseTxs.reduce((sum, t) => sum + toNumber(t.amount), 0);
+    const totalSpend = txs.reduce((sum, t) => sum + spendAmount(t), 0);
     const categorySpend = tx.category_id
-      ? expenseTxs.filter((t) => t.category_id === tx.category_id).reduce((sum, t) => sum + toNumber(t.amount), 0)
+      ? txs.filter((t) => t.category_id === tx.category_id).reduce((sum, t) => sum + spendAmount(t), 0)
       : 0;
 
     for (const budget of relevant) {

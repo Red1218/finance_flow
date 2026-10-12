@@ -6,6 +6,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useTransactions, useBudgets, useCategories, usePreferences } from '../../src/hooks/queries';
 import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { setBudget } from '../../src/data/repositories/budgets';
+import { spendAmount } from '../../src/domain/transactionRules';
 import { toNumber, formatCurrency } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthRange } from '../../src/domain/dateRange';
@@ -50,8 +51,8 @@ export default function Budgets() {
     const spendByCategory = new Map<string, number>();
     let totalSpend = 0;
     for (const t of rows) {
-      if (t.type !== 'EXPENSE') continue;
-      const amt = toNumber(t.amount);
+      const amt = spendAmount(t);
+      if (!amt) continue;
       totalSpend += amt;
       if (t.category_id) spendByCategory.set(t.category_id, (spendByCategory.get(t.category_id) ?? 0) + amt);
     }

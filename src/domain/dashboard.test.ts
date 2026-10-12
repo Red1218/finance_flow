@@ -1,4 +1,4 @@
-import { todaySummary } from './dashboard';
+import { last7DaysTotals, todaySummary } from "./dashboard";
 
 // Local-time timestamps, so "today" doesn't depend on the test machine's zone.
 const at = (y: number, m: number, d: number, h = 12) => new Date(y, m - 1, d, h).toISOString();
@@ -50,5 +50,18 @@ describe('todaySummary', () => {
   it('counts days left including today', () => {
     expect(todaySummary([], null, today).daysLeft).toBe(2);
     expect(todaySummary([], null, new Date(2026, 8, 30, 9)).daysLeft).toBe(1);
+  });
+});
+
+describe('paid back', () => {
+  it('takes money paid back for an expense off today’s spend and the last 7 days', () => {
+    const rows = [
+      { ...row('meal', at(2026, 9, 29, 9), 330), paid_back_for: null },
+      { ...row('back', at(2026, 9, 29, 10), 150, 'INCOME'), paid_back_for: 'meal' },
+    ];
+    const summary = todaySummary(rows, null, today);
+    expect(summary.spentToday).toBe(180);
+    expect(summary.biggest?.id).toBe('meal');
+    expect(last7DaysTotals(rows, today)[6]).toBe(180);
   });
 });

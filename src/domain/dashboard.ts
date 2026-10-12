@@ -1,3 +1,5 @@
+import { spendAmount } from './transactionRules';
+
 export function monthProgress(today: Date = new Date()) {
   const totalDays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const dayOfMonth = today.getDate();
@@ -36,7 +38,9 @@ export function groupByDay<T extends { occurred_at: string }>(
   return groups;
 }
 
-export function last7DaysTotals<T extends { occurred_at: string; amount: number; type: string }>(
+type SpendRow = { occurred_at: string; amount: number; type: string; paid_back_for?: string | null };
+
+export function last7DaysTotals<T extends SpendRow>(
   rows: T[],
   today: Date = new Date()
 ): number[] {
@@ -44,20 +48,21 @@ export function last7DaysTotals<T extends { occurred_at: string; amount: number;
   const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const todayStart = startOfDay(today);
   for (const row of rows) {
-    if (row.type !== 'EXPENSE') continue;
+    const spend = spendAmount(row);
+    if (!spend) continue;
     const diff = Math.round((todayStart - startOfDay(new Date(row.occurred_at))) / 86400000);
     if (diff >= 0 && diff < 7) {
-      days[6 - diff] += row.amount;
+      days[6 - diff] += spend;
     }
   }
   return days;
 }
 
-// Home's "Today" block. Expenses only — transfers between your own accounts
+// Home's "Today" block. Expenses less money paid back for them — transfers between your own accounts
 // aren't spending, and income can't be the "biggest" thing you spent on.
 // `rows` is the current month's transactions; `monthlyLimit` is the overall
 // budget (null when none is set).
-export function todaySummary<T extends { occurred_at: string; amount: number; type: string }>(
+export function todaySummary<T extends SpendRow>(
   rows: T[],
   monthlyLimit: number | null,
   today: Date = new Date()
@@ -71,13 +76,14 @@ export function todaySummary<T extends { occurred_at: string; amount: number; ty
   let spentBefore = 0;
   let biggest: T | null = null;
   for (const row of rows) {
-    if (row.type !== 'EXPENSE') continue;
+    const spend = spendAmount(row);
+    if (!spend) continue;
     const t = new Date(row.occurred_at).getTime();
     if (t >= todayStart && t < tomorrowStart) {
-      spentToday += row.amount;
-      if (!biggest || row.amount > biggest.amount) biggest = row;
+      spentToday += spend;
+      if (row.type === 'EXPENSE' && (!biggest || row.amount > biggest.amount)) biggest = row;
     } else if (t < todayStart) {
-      spentBefore += row.amount;
+      spentBefore += spend;
     }
   }
 

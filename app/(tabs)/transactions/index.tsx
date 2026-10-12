@@ -6,6 +6,7 @@ import { useTransactions, useCategories, useAccounts, usePreferences } from '../
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { groupByDay } from '../../../src/domain/dashboard';
 import { monthRange } from '../../../src/domain/dateRange';
+import { spendAmount } from '../../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
 import { formatCurrency, toNumber } from '../../../src/domain/money';
 import { Button, Chip, Input, K, Muted, ScreenHeader } from '../../../src/ui/primitives';
@@ -114,7 +115,7 @@ export default function TransactionsList() {
       return true;
     });
 
-    const out = rows.filter((t) => t.type === 'EXPENSE' || t.type === 'TRANSFER_OUT').reduce((a, t) => a + toNumber(t.amount), 0);
+    const out = rows.reduce((a, t) => a + (t.type === 'TRANSFER_OUT' ? toNumber(t.amount) : spendAmount(t)), 0);
 
     const grouped = groupByDay(filtered, today).map((g) => ({
       day: g.day,

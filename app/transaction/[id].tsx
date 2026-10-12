@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getTransactionById, getTransferPair, updateTransaction, archiveTransaction } from '../../src/application/transactions';
+import { getTransactionById, getTransactions, getTransferPair, updateTransaction, archiveTransaction } from '../../src/application/transactions';
 import { listCategories } from '../../src/data/repositories/categories';
 import { listAccounts } from '../../src/data/repositories/accounts';
 import { listActiveBudgets } from '../../src/data/repositories/budgets';
 import { getPreferences } from '../../src/data/repositories/preferences';
-import { toNumber } from '../../src/domain/money';
+import { formatCurrency, toNumber } from '../../src/domain/money';
 import { indexById, buildTransactionDetailVM } from '../../src/domain/transactionView';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
@@ -59,6 +59,10 @@ export default function TransactionDetail() {
   const [fromPickerOpen, setFromPickerOpen] = useState(false);
   const [toPickerOpen, setToPickerOpen] = useState(false);
   const [recatOpen, setRecatOpen] = useState(false);
+  // Income only: recent expenses it could be a friend's share of, and the one it's linked to.
+  const [recentExpenses, setRecentExpenses] = useState<Transaction[]>([]);
+  const [linkedExpense, setLinkedExpense] = useState<Transaction | null>(null);
+  const [paidBackOpen, setPaidBackOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -94,6 +98,18 @@ export default function TransactionDetail() {
       }
       setOtherLeg(other);
       setTransferPairError(pairError);
+
+      if (t?.type === 'INCOME') {
+        const when = new Date(t.occurred_at);
+        const from = new Date(when.getTime() - 30 * 86400000).toISOString();
+        const to = new Date(when.getTime() + 86400000).toISOString();
+        const [recent, linked] = await Promise.all([
+          getTransactions({ from, to }),
+          t.paid_back_for ? getTransactionById(t.paid_back_for) : Promise.resolve(null),
+        ]);
+        setRecentExpenses(recent.filter((r) => r.type === 'EXPENSE'));
+        setLinkedExpense(linked);
+      }
 
       if (t) {
         setEditAmount(String(toNumber(t.amount)));
@@ -204,6 +220,19 @@ export default function TransactionDetail() {
     }
   };
 
+  // Linking moves the income into the expense's category, so the category's
+  // spend (and budget) shows only your share.
+  const setPaidBackFor = async (expense: Transaction | null) => {
+    setError(null);
+    try {
+      const patch = expense ? { paidBackFor: expense.id, categoryId: expense.category_id } : { paidBackFor: null };
+      await updateTransaction({ kind: 'regular', id: tx.id, patch });
+      await load();
+    } catch (e) {
+      setError(transactionErrorMessage(e));
+    }
+  };
+
   const remove = async () => {
     setError(null);
     try {
@@ -235,6 +264,14 @@ export default function TransactionDetail() {
             <Pressable style={styles.tableRow} onPress={() => setRecatOpen(true)}>
               <Text style={styles.tableLabel}>Category</Text>
               <Text style={styles.tableValueLink}>{vm.categoryName ?? 'Uncategorised'} ›</Text>
+            </Pressable>
+          )}
+          {tx.type === 'INCOME' && (
+            <Pressable style={styles.tableRow} onPress={() => setPaidBackOpen(true)}>
+              <Text style={styles.tableLabel}>Paid back for</Text>
+              <Text style={styles.tableValueLink}>
+                {tx.paid_back_for ? `${linkedExpense?.description?.trim() || 'An expense'} ›` : 'Nothing ›'}
+              </Text>
             </Pressable>
           )}
           <View style={styles.tableRow}>
@@ -353,6 +390,19 @@ export default function TransactionDetail() {
         options={categories.map((c) => ({ id: c.id, label: c.name }))}
         onSelect={(opt) => recategorise(opt.id)}
         onClose={() => setRecatOpen(false)}
+      />
+      <SelectModal
+        visible={paidBackOpen}
+        title="Paid back for"
+        options={[
+          ...(tx.paid_back_for ? [{ id: '', label: 'Not paid back' }] : []),
+          ...recentExpenses.map((e) => ({
+            id: e.id,
+            label: `${e.description?.trim() || categoriesById.get(e.category_id ?? '')?.name || 'Expense'} · ${formatCurrency(toNumber(e.amount), currencyCode)} · ${new Date(e.occurred_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
+          })),
+        ]}
+        onSelect={(opt) => setPaidBackFor(recentExpenses.find((e) => e.id === opt.id) ?? null)}
+        onClose={() => setPaidBackOpen(false)}
       />
       <SelectModal
         visible={fromPickerOpen}

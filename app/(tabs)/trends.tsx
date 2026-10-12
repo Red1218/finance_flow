@@ -41,6 +41,7 @@ export default function Trends() {
       amount: toNumber(t.amount),
       type: t.type,
       category_id: t.category_id,
+      paid_back_for: t.paid_back_for,
     }));
     const months = monthlyExpenseTotals(rows, MONTHS_BACK, today);
     const nameById = new Map((categories.data ?? []).map((c) => [c.id, c.name]));
