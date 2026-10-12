@@ -33,6 +33,12 @@ jest.mock('../../hooks/queries', () => ({
   }),
   usePreferences: () => ({ data: { currency_code: 'INR' } }),
   useCategories: () => ({ data: [{ id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' }] }),
+  useTransactions: () => ({
+    data: [
+      { id: 'tx-meal', type: 'EXPENSE', amount: 330, category_id: 'cat-food', description: 'Vridhhavan KITCHENS', occurred_at: '2026-10-12T13:08:52.000Z' },
+      { id: 'tx-pay', type: 'INCOME', amount: 5000, category_id: null, description: 'Salary', occurred_at: '2026-10-01T10:00:00.000Z' },
+    ],
+  }),
 }));
 jest.mock('../../application/transactions', () => ({ createTransaction: jest.fn() }));
 jest.mock('../../notifications/checkBudgetAlerts', () => ({ checkBudgetAlerts: jest.fn() }));
@@ -227,5 +233,26 @@ describe('DetectedScreen', () => {
     expect(queryByText(/could not save/i)).toBeNull();
     expect(await findByText('Detected')).toBeTruthy();
     warn.mockRestore();
+  });
+
+  it('saves a credit as paid back for a picked expense, in that expense’s category, and clears it from the queue', async () => {
+    const refund = { ...sampleDetection, id: 'KOTAKB:628506807134', dedupKey: 'KOTAKB:628506807134', direction: 'credit' as const, merchant: 'MUNAGALA SRI HARSHA', date: '2026-10-12' };
+    (listDetections as jest.Mock).mockResolvedValue([refund]);
+    const { findByText, getByText, queryByText } = render(<DetectedScreen />);
+    await userEvent.press(await findByText('Paid back'));
+    expect(queryByText(/Salary/)).toBeNull();
+    await userEvent.press(getByText(/Vridhhavan KITCHENS · ₹330/));
+    await waitFor(() =>
+      expect(createTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: 'acc-1', type: 'INCOME', amount: 150, categoryId: 'cat-food', paidBackFor: 'tx-meal', description: 'MUNAGALA SRI HARSHA' })
+      )
+    );
+    expect(removeDetection).toHaveBeenCalledWith(refund.id);
+  });
+
+  it('offers "Paid back" only on money coming in', async () => {
+    const { findByText, queryByText } = render(<DetectedScreen />);
+    await findByText('GUNREDDY RAMANUJA RE');
+    expect(queryByText('Paid back')).toBeNull();
   });
 });

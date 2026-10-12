@@ -9,9 +9,9 @@ import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
-import { useAccounts, useCategories, usePreferences } from '../../src/hooks/queries';
+import { useAccounts, useCategories, usePreferences, useTransactions } from '../../src/hooks/queries';
 import { useLiveQuery } from '../../src/hooks/useLiveQuery';
-import { formatCurrency } from '../../src/domain/money';
+import { formatCurrency, toNumber } from '../../src/domain/money';
 import { K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
@@ -34,6 +34,11 @@ export default function DetectedScreen() {
   // returning here from saving/dismissing) — same pattern every other screen
   // in this app already uses, no bespoke reload logic needed.
   const detections = useLiveQuery(() => listDetections(), []);
+  // Expenses a credit could be a friend's share of — the last 30 days.
+  const since = useMemo(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), []);
+  const recent = useTransactions({ from: since });
+  const recentExpenses = useMemo(() => (recent.data ?? []).filter((t) => t.type === 'EXPENSE'), [recent.data]);
+  const [paidBackFor, setPaidBackFor] = useState<PendingDetection | null>(null);
 
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -104,6 +109,36 @@ export default function DetectedScreen() {
 
   const handleNotTransfer = async (out: PendingDetection, into: PendingDetection) => {
     await markNotTransfer([out.id, into.id]);
+    detections.refetch();
+  };
+
+  // Saves the credit as money paid back for an expense, in that expense's
+  // category, so spending shows only your share.
+  const handlePaidBack = async (detection: PendingDetection, expenseId: string) => {
+    const expense = recentExpenses.find((e) => e.id === expenseId);
+    const accountId = matchDetectionToAccount(detection, accounts.data ?? []) ?? expense?.account_id;
+    if (!expense || !accountId) return;
+    setAssignError(null);
+    try {
+      await createTransaction({
+        accountId,
+        categoryId: expense.category_id,
+        type: 'INCOME',
+        amount: detection.amount,
+        description: detection.merchant,
+        occurredAt: combineLocalDateWithCurrentTime(parseIsoDateLocal(detection.date)),
+        paidBackFor: expense.id,
+      });
+    } catch (e) {
+      setAssignError(transactionErrorMessage(e));
+      return;
+    }
+    // Isolated for the same reason as in handleAssignCategory below.
+    try {
+      await removeDetection(detection.id);
+    } catch (e) {
+      console.warn('Could not clear a saved detection from the pending queue', e);
+    }
     detections.refetch();
   };
 
@@ -231,6 +266,11 @@ export default function DetectedScreen() {
                     </Text>
                   </View>
                 </Pressable>
+                {!selectMode && d.direction === 'credit' && (
+                  <Pressable onPress={() => setPaidBackFor(d)}>
+                    <Text style={styles.dismiss}>Paid back</Text>
+                  </Pressable>
+                )}
                 {!selectMode && (
                   <Pressable onPress={() => handleDismiss(d.id)}>
                     <Text style={styles.dismiss}>Not a transaction</Text>
@@ -248,6 +288,16 @@ export default function DetectedScreen() {
         options={(categories.data ?? []).map((c) => ({ id: c.id, label: c.name }))}
         onSelect={(opt) => handleAssignCategory(opt.id)}
         onClose={() => setCategoryPickerOpen(false)}
+      />
+      <SelectModal
+        visible={paidBackFor !== null}
+        title="Paid back for"
+        options={recentExpenses.map((e) => ({
+          id: e.id,
+          label: `${e.description?.trim() || 'Expense'} · ${formatCurrency(toNumber(e.amount), currencyCode)} · ${new Date(e.occurred_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
+        }))}
+        onSelect={(opt) => paidBackFor && handlePaidBack(paidBackFor, opt.id)}
+        onClose={() => setPaidBackFor(null)}
       />
     </SafeAreaView>
   );
