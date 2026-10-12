@@ -11,5 +11,6 @@ export interface ParsedTransaction {
 
 export interface BankParser {
   bankCode: string; // substring match against the SMS sender header, e.g. 'KOTAKB'
-  parse(body: string): ParsedTransaction | null;
+  // receivedAt: when the SMS arrived — the date for messages that carry none.
+  parse(body: string, receivedAt?: Date): ParsedTransaction | null;
 }

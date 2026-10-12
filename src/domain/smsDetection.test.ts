@@ -3,6 +3,12 @@ import type { ParsedTransaction } from './smsParsers/types';
 import type { Account } from '../data/types';
 
 describe('parseSmsTransaction', () => {
+  it('routes IDFC FIRST Bank messages to the IDFC parser', () => {
+    const body =
+      'Your A/c XX8102 debited by Rs. 60.00 on 06/10/26; Brown bear baker credited. RRN 508273351122. Available balance Rs. 247.36. Team IDFC FIRST Bank';
+    expect(parseSmsTransaction('AD-IDFCFB-S', body)?.bankLabel).toBe('IDFC');
+  });
+
   it('dispatches a Kotak credit-card message to kotakCreditCardParser, not kotakUpiParser', () => {
     const body =
       'INR 351 spent on Kotak Credit Card x4030 on 06-09-26 at BLINK COMMERCE PVT LTD.' +
