@@ -24,9 +24,19 @@ async function writeAll(items: PendingDetection[]): Promise<void> {
 }
 
 export async function addDetection(detection: ParsedTransaction): Promise<void> {
+  await addDetections([detection]);
+}
+
+// One read and one write for any number of detections (the SMS import can
+// queue hundreds); duplicates of queued items are skipped.
+export async function addDetections(detections: ParsedTransaction[]): Promise<void> {
   const existing = await readAll();
-  if (existing.some((d) => d.id === detection.dedupKey)) return;
-  existing.push({ ...detection, id: detection.dedupKey });
+  const ids = new Set(existing.map((d) => d.id));
+  for (const detection of detections) {
+    if (ids.has(detection.dedupKey)) continue;
+    ids.add(detection.dedupKey);
+    existing.push({ ...detection, id: detection.dedupKey });
+  }
   await writeAll(existing);
 }
 

@@ -9,7 +9,8 @@ import { Platform } from 'react-native';
 import { render, screen, userEvent, fireEvent, waitFor } from '@testing-library/react-native';
 import Settings from '../../../app/(tabs)/more/settings';
 import { updatePreferences } from '../../data/repositories/preferences';
-import { requestSmsPermission } from '../../data/native/smsListener';
+import { requestSmsPermission, requestReadSmsPermission } from '../../data/native/smsListener';
+import { importPastSms } from '../../data/importPastSms';
 import { setSmsDetectionEnabled } from '../../data/smsDetectionEnabled';
 import { requestNotificationPermission, checkNotificationPermission } from '../../data/native/notificationPermission';
 import { scheduleDailyReminder, cancelDailyReminder } from '../../notifications/dailyReminder';
@@ -33,7 +34,8 @@ jest.mock('../../hooks/queries', () => ({
   usePreferences: () => ({ data: mockPrefsData, refetch: jest.fn() }),
 }));
 jest.mock('../../data/repositories/preferences', () => ({ updatePreferences: jest.fn() }));
-jest.mock('../../data/native/smsListener', () => ({ requestSmsPermission: jest.fn() }));
+jest.mock('../../data/native/smsListener', () => ({ requestSmsPermission: jest.fn(), requestReadSmsPermission: jest.fn() }));
+jest.mock('../../data/importPastSms', () => ({ importPastSms: jest.fn() }));
 jest.mock('../../data/smsDetectionEnabled', () => ({ setSmsDetectionEnabled: jest.fn() }));
 jest.mock('../../data/native/notificationPermission', () => ({
   requestNotificationPermission: jest.fn(),
@@ -56,6 +58,7 @@ describe('Settings screen — Account section', () => {
     mockSignOut.mockReset();
     (updatePreferences as jest.Mock).mockClear();
     (requestSmsPermission as jest.Mock).mockClear();
+    (importPastSms as jest.Mock).mockClear();
     (setSmsDetectionEnabled as jest.Mock).mockClear();
     (requestNotificationPermission as jest.Mock).mockClear();
     // Default to already-granted so the mount-time permission effect stays a
@@ -105,6 +108,34 @@ describe('Settings screen — Account section', () => {
 
     await userEvent.press(screen.getByText('Sign out'));
     expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('imports past bank SMS into Detected after asking to read messages', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestReadSmsPermission as jest.Mock).mockResolvedValue(true);
+    (importPastSms as jest.Mock).mockResolvedValue({ added: 42, since: new Date(2026, 8, 10) });
+    render(<Settings />);
+    await userEvent.press(screen.getByText('Import past bank SMS'));
+    expect(requestReadSmsPermission).toHaveBeenCalled();
+    expect(await screen.findByText('Added 42 to Detected transactions (since 10 Sept).')).toBeTruthy();
+  });
+
+  it('says so when there is nothing new to import', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestReadSmsPermission as jest.Mock).mockResolvedValue(true);
+    (importPastSms as jest.Mock).mockResolvedValue({ added: 0, since: new Date(2026, 8, 10) });
+    render(<Settings />);
+    await userEvent.press(screen.getByText('Import past bank SMS'));
+    expect(await screen.findByText('Nothing new to import.')).toBeTruthy();
+  });
+
+  it('does not import when reading messages is not allowed', async () => {
+    mockSession = { user: { email: 'a@b.com' } };
+    (requestReadSmsPermission as jest.Mock).mockResolvedValue(false);
+    render(<Settings />);
+    await userEvent.press(screen.getByText('Import past bank SMS'));
+    expect(importPastSms).not.toHaveBeenCalled();
+    expect(await screen.findByText('Allow reading SMS to import past messages.')).toBeTruthy();
   });
 
   it('requests SMS permission and enables the preference when the toggle is turned on', async () => {

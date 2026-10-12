@@ -4,7 +4,8 @@ import { usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
-import { requestSmsPermission } from '../../../src/data/native/smsListener';
+import { requestSmsPermission, requestReadSmsPermission } from '../../../src/data/native/smsListener';
+import { importPastSms } from '../../../src/data/importPastSms';
 import { setSmsDetectionEnabled } from '../../../src/data/smsDetectionEnabled';
 import { requestNotificationPermission, checkNotificationPermission } from '../../../src/data/native/notificationPermission';
 import { scheduleDailyReminder, cancelDailyReminder } from '../../../src/notifications/dailyReminder';
@@ -20,6 +21,26 @@ export default function Settings() {
   const { session, signOut } = useAuth();
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const [reminderTimeText, setReminderTimeText] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+
+  const runImport = async () => {
+    setImporting(true);
+    setImportMessage(null);
+    try {
+      if (!(await requestReadSmsPermission())) {
+        setImportMessage('Allow reading SMS to import past messages.');
+        return;
+      }
+      const { added, since } = await importPastSms();
+      const from = since.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      setImportMessage(added === 0 ? 'Nothing new to import.' : `Added ${added} to Detected transactions (since ${from}).`);
+    } catch (e) {
+      setImportMessage(e instanceof Error ? e.message : 'Could not import past messages.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const setPref = async (patch: Parameters<typeof updatePreferences>[0]) => {
     await updatePreferences(patch);
@@ -157,7 +178,7 @@ export default function Settings() {
             {Platform.OS === 'android' && (
               <View style={styles.section}>
                 <K style={styles.sectionLabel}>SMS Detection</K>
-                <View style={[styles.row, { borderBottomWidth: 0 }]}>
+                <View style={styles.row}>
                   <Text style={styles.rowLabel}>Detect transactions from SMS</Text>
                   <Switch
                     testID="sms-detection-switch"
@@ -176,6 +197,11 @@ export default function Settings() {
                     trackColor={{ true: colors.accent, false: colors.neutral300 }}
                   />
                 </View>
+                <Pressable style={[styles.row, { borderBottomWidth: 0 }]} onPress={runImport} disabled={importing}>
+                  <Text style={styles.rowLabel}>Import past bank SMS</Text>
+                  <Text style={styles.rowValue}>{importing ? 'Importing…' : '›'}</Text>
+                </Pressable>
+                {importMessage && <Muted style={{ fontSize: 12.5 }}>{importMessage}</Muted>}
               </View>
             )}
           </>

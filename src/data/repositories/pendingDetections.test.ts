@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { addDetection, listDetections, removeDetection } from './pendingDetections';
+import { addDetection, addDetections, listDetections, removeDetection } from './pendingDetections';
 import type { ParsedTransaction } from '../../domain/smsParsers/types';
 
 const sample: ParsedTransaction = {
@@ -18,6 +18,13 @@ beforeEach(async () => {
 });
 
 describe('pendingDetections', () => {
+  it('adds many detections at once, skipping ones already queued or repeated', async () => {
+    await addDetection(sample);
+    const other = { ...sample, dedupKey: 'KOTAKB:2' };
+    await addDetections([sample, other, other]);
+    expect((await listDetections()).map((d) => d.id)).toEqual(['KOTAKB:804121858190', 'KOTAKB:2']);
+  });
+
   it('starts empty', async () => {
     await expect(listDetections()).resolves.toEqual([]);
   });
