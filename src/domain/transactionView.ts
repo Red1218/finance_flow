@@ -62,7 +62,6 @@ export function indexById<T extends { id: string }>(rows: T[]): Map<string, T> {
 }
 
 export interface TransferDetailVM {
-  transferGroupId: string;
   otherLegId: string;
   otherAccountLabel: string;
   direction: 'out' | 'in';
@@ -111,7 +110,6 @@ export function buildTransactionDetailVM(
   if ((tx.type === 'TRANSFER_OUT' || tx.type === 'TRANSFER_IN') && tx.transfer_group_id && pairOtherLeg) {
     const otherAccount = accountsById.get(pairOtherLeg.account_id);
     transfer = {
-      transferGroupId: tx.transfer_group_id,
       otherLegId: pairOtherLeg.id,
       otherAccountLabel: accountLabel(otherAccount),
       direction: tx.type === 'TRANSFER_OUT' ? 'out' : 'in',
