@@ -566,3 +566,63 @@ transactions/Settings still navigate correctly), because the app sits
 behind a real Supabase sign-in wall and this environment has no test
 credentials — the same limitation noted in the Unified categories and
 Detected transactions bulk assign entries above.
+
+## Home Today block (2026-10-12)
+
+Home shows a Today block: spent today, left today, and the biggest
+spend today. Left to spend and Last 7 days sit above it
+(`0e53940`, `9ba46e7`).
+
+## Bill dues (2026-10-12)
+
+Monthly bills on a More-hub Bills screen: add, edit, delete, mark paid
+(with undo). Bills due within a week show on Home and refresh with
+Home's pull-to-refresh. Stored on the existing `recurring_items` table
+plus a new `due_day` column, which is present in the live database.
+Date rules live in `src/domain/bills.ts`. Spec and plan are in
+`docs/superpowers/specs/2026-10-12-bill-dues-design.md` and
+`docs/superpowers/plans/2026-10-12-bill-dues.md`; traceability row
+added. Merged as `5317630`.
+
+Deferred: bills have no currency of their own.
+
+## SMS parsing and import (2026-10-12)
+
+- New and fixed bank formats: Kotak debit card swipes, ATM withdrawals,
+  UPI messages written `AC X…` or with a UTR, credit card spends dated
+  like `07-Aug-2026`, reversals, refunds, NACH and UPI AutoPay; Axis
+  AutoPay and one-line debit/credit SMS; IDFC FIRST Bank debit and
+  credit SMS.
+- Settings can import past bank SMS into Detected transactions.
+- SMS are matched to accounts by debit card number and 3-digit account
+  suffix.
+- A matching debit and credit pair is suggested in Detected as one
+  transfer.
+- Accounts are grouped into banks, credit cards and cash, with card
+  numbers shown.
+
+Deferred: detected rows don't show debit/credit direction.
+
+## Paid back (2026-10-12)
+
+Income can be marked as paid back for an expense (a friend's share), so
+spending totals on Home, Budgets, Trends, the Ledger and budget alerts
+count only your share. It can be set on a transaction's detail screen,
+in the new-transaction form, or when saving a detected credit. Stored as
+`transactions.paid_back_for`, which is present in the live database.
+
+## October cleanup (2026-10-12)
+
+One shared `toDateInput`/`parseDateInput`, one `useRecentExpenses` hook,
+one `accountLabel` helper, bills on the shared date helper, unused
+options removed. The selected category chip stays visible when
+categories are collapsed.
+
+**Validation (2026-10-13, on `main` at `98a8a08`):** TypeScript compiler
+clean (`npx tsc --noEmit -p .`). Full Jest suite green (53 suites, 443
+tests, `npx jest --ci`). **Not recorded:** an on-device run of bill dues
+(plan task 5) and of the new SMS formats and import.
+
+Still open from these sessions: Home's "today" stays on the old date if
+the app is left open past midnight; no screen to edit an account;
+opening balances are all ₹0.
