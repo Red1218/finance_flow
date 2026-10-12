@@ -38,6 +38,7 @@ export default function Accounts() {
   const [type, setType] = useState<AccountType>('BANK');
   const [opening, setOpening] = useState('0');
   const [mask, setMask] = useState('');
+  const [cardMask, setCardMask] = useState('');
   const [saving, setSaving] = useState(false);
 
   const loading = accounts.loading || allTx.loading || monthTx.loading;
@@ -75,11 +76,13 @@ export default function Accounts() {
         currency_code: 'INR',
         opening_balance: parseFloat(opening) || 0,
         mask: mask.trim() || null,
+        card_mask: type === 'BANK' ? cardMask.trim() || null : null,
       });
       setAddOpen(false);
       setName('');
       setOpening('0');
       setMask('');
+      setCardMask('');
       refetch();
     } finally {
       setSaving(false);
@@ -150,7 +153,7 @@ export default function Accounts() {
 
       <FormModal visible={addOpen} onClose={() => setAddOpen(false)}>
         <K>Account name</K>
-        <Input value={name} onChangeText={setName} style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <Input value={name} onChangeText={setName} placeholder="e.g. Axis" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
         <K>Type</K>
         <View style={{ marginTop: 6, marginBottom: spacing.s2 }}>
           <Seg
@@ -166,8 +169,21 @@ export default function Accounts() {
         </View>
         <K>Opening balance</K>
         <Input value={opening} onChangeText={setOpening} keyboardType="decimal-pad" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-        <K>Last 4 digits (optional)</K>
-        <Input value={mask} onChangeText={setMask} maxLength={4} keyboardType="number-pad" style={{ marginTop: 6 }} />
+        <K>{type === 'CREDIT_CARD' ? 'Card last 4 (optional)' : 'Account no. last 4 (optional)'}</K>
+        <Input
+          value={mask}
+          onChangeText={setMask}
+          placeholder={type === 'CREDIT_CARD' ? 'Card last 4' : 'Account no. last 4'}
+          maxLength={4}
+          keyboardType="number-pad"
+          style={{ marginTop: 6 }}
+        />
+        {type === 'BANK' && (
+          <>
+            <K style={{ marginTop: spacing.s2 }}>Debit card last 4 (optional)</K>
+            <Input value={cardMask} onChangeText={setCardMask} placeholder="Debit card last 4" maxLength={4} keyboardType="number-pad" style={{ marginTop: 6 }} />
+          </>
+        )}
         <View style={{ marginTop: spacing.s3 }}>
           <Button title="Add account" onPress={save} loading={saving} block />
         </View>

@@ -24,6 +24,7 @@ export async function createAccount(input: {
   currency_code: string;
   opening_balance?: number;
   mask?: string | null;
+  card_mask?: string | null;
   is_default?: boolean;
 }): Promise<Account> {
   const { data: userRes } = await supabase.auth.getUser();

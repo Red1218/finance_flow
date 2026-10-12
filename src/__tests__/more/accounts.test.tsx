@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
+import { createAccount } from '../../data/repositories/accounts';
 import Accounts from '../../../app/(tabs)/more/accounts';
 
 type Query = { data: unknown; loading: boolean; error: string | null; refetch: () => void };
@@ -38,5 +39,16 @@ describe('Accounts', () => {
     mockAccounts = { data: null, loading: false, error: 'network down', refetch: jest.fn() };
     render(<Accounts />);
     expect(screen.getByText(/Couldn.t load/)).toBeTruthy();
+  });
+
+  it('saves a bank account with its debit card last 4', async () => {
+    mockAccounts = loaded([]);
+    render(<Accounts />);
+    await userEvent.press(screen.getByText('Add account'));
+    fireEvent.changeText(screen.getByPlaceholderText('e.g. Axis'), 'Axis');
+    fireEvent.changeText(screen.getByPlaceholderText('Account no. last 4'), '1994');
+    fireEvent.changeText(screen.getByPlaceholderText('Debit card last 4'), '1968');
+    await userEvent.press(screen.getAllByText('Add account')[1]);
+    expect(createAccount).toHaveBeenCalledWith(expect.objectContaining({ name: 'Axis', type: 'BANK', mask: '1994', card_mask: '1968' }));
   });
 });

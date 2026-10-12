@@ -64,6 +64,7 @@ function account(overrides: Partial<Account>): Account {
     opening_balance: 0,
     is_default: false,
     mask: null,
+    card_mask: null,
     created_at: '',
     updated_at: '',
     archived_at: null,
@@ -86,6 +87,22 @@ function detection(overrides: Partial<ParsedTransaction>): ParsedTransaction {
 }
 
 describe('matchDetectionToAccount', () => {
+  it('matches a bank account by its debit card number too (card swipes and ATM SMS quote the card)', () => {
+    const kotak = account({ id: 'acc-kotak', type: 'BANK', mask: '8721', card_mask: '6853' });
+    expect(matchDetectionToAccount(detection({ accountLast4: '6853' }), [kotak])).toBe('acc-kotak');
+  });
+
+  it('matches a 3-digit account suffix (IDFC IMPS SMS show only "…102")', () => {
+    const idfc = account({ id: 'acc-idfc', type: 'BANK', mask: '8102' });
+    const kotak = account({ id: 'acc-kotak', type: 'BANK', mask: '8721' });
+    expect(matchDetectionToAccount(detection({ accountLast4: '102' }), [kotak, idfc])).toBe('acc-idfc');
+  });
+
+  it('does not match a credit card spend to a bank account’s debit card number', () => {
+    const kotak = account({ id: 'acc-kotak', type: 'BANK', mask: '8721', card_mask: '4030' });
+    expect(matchDetectionToAccount(detection({ accountType: 'credit_card', accountLast4: '4030' }), [kotak])).toBeNull();
+  });
+
   it('matches a bank account by type and exact mask', () => {
     const kotakSavings = account({ id: 'acc-savings', type: 'BANK', mask: '8721' });
     const kotakCard = account({ id: 'acc-card', type: 'CREDIT_CARD', mask: '4030' });

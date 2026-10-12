@@ -21,10 +21,16 @@ export function parseSmsTransaction(sender: string, body: string, receivedAt: Da
   return null;
 }
 
+// A bank SMS names either the account number or the debit card; credit card
+// SMS name the card. Some (IDFC IMPS) show only the last 3 digits.
 export function matchDetectionToAccount(detection: ParsedTransaction, accounts: Account[]): string | null {
-  const wantType = detection.accountType === 'credit_card' ? 'CREDIT_CARD' : 'BANK';
-  const match = accounts.find(
-    (a) => a.type === wantType && !a.archived_at && a.mask === detection.accountLast4
-  );
+  const digits = detection.accountLast4;
+  const isCard = detection.accountType === 'credit_card';
+  const match = accounts.find((a) => {
+    if (a.archived_at || a.type !== (isCard ? 'CREDIT_CARD' : 'BANK')) return false;
+    if (a.mask === digits) return true;
+    if (!isCard && a.card_mask === digits) return true;
+    return digits.length === 3 && !!a.mask?.endsWith(digits);
+  });
   return match ? match.id : null;
 }
