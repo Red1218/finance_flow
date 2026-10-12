@@ -1,6 +1,7 @@
 package com.anonymous.finance_flow
 
 import android.content.Context
+import android.provider.Telephony
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -33,5 +34,36 @@ class SmsListenerModule(reactContext: ReactApplicationContext) : ReactContextBas
     }
     prefs.edit().putString(SmsReceiver.QUEUE_KEY, "[]").apply()
     promise.resolve(result)
+  }
+
+  // One-time import of past bank messages (Settings → Import past bank SMS).
+  // Same bank-sender filter as SmsReceiver, so OTPs and personal messages are
+  // never handed to JS. Requires READ_SMS, requested only when the user taps
+  // the import.
+  @ReactMethod
+  fun readInbox(sinceMs: Double, promise: Promise) {
+    try {
+      val result = Arguments.createArray()
+      reactApplicationContext.contentResolver.query(
+        Telephony.Sms.Inbox.CONTENT_URI,
+        arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
+        "${Telephony.Sms.DATE} > ?",
+        arrayOf(sinceMs.toLong().toString()),
+        "${Telephony.Sms.DATE} ASC"
+      )?.use { cursor ->
+        while (cursor.moveToNext()) {
+          val sender = cursor.getString(0) ?: continue
+          if (SmsReceiver.KNOWN_BANK_CODES.none { sender.contains(it) }) continue
+          val map = Arguments.createMap()
+          map.putString("sender", sender)
+          map.putString("body", cursor.getString(1) ?: "")
+          map.putDouble("timestamp", cursor.getLong(2).toDouble())
+          result.pushMap(map)
+        }
+      }
+      promise.resolve(result)
+    } catch (e: Exception) {
+      promise.reject("READ_INBOX_FAILED", e.message, e)
+    }
   }
 }

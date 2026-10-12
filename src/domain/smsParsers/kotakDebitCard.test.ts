@@ -55,4 +55,31 @@ describe('kotakDebitCardParser', () => {
     ).toBeNull();
     expect(kotakDebitCardParser.parse('Your Kotak Debit Card has been blocked.')).toBeNull();
   });
+
+  it('parses a spend whose date is followed by "IST"', () => {
+    const body =
+      'Rs.589.70 spent via Kotak Debit Card XX6853 at OPENAI on 17/09/2026 IST. Avl bal Rs.3185.26 Not you?Tap https://kotak.bank.in/KBANKT/Fraud';
+    expect(kotakDebitCardParser.parse(body)).toMatchObject({ amount: 589.7, merchant: 'OPENAI', date: '2026-09-17' });
+  });
+
+  it('parses an ATM cash withdrawal', () => {
+    const body =
+      'Rs.18500.00 withdrawn via Kotak Debit Card XX6853 on 03/09/2026 at Narsingi  Branch ATM. Avl Bal Rs.26193.35 Not you?Tap https://kotak.bank.in/KBANKT/Fraud';
+    expect(kotakDebitCardParser.parse(body)).toEqual({
+      amount: 18500,
+      direction: 'debit',
+      accountType: 'bank_account',
+      accountLast4: '6853',
+      bankLabel: 'Kotak',
+      merchant: 'ATM · Narsingi Branch ATM',
+      date: '2026-09-03',
+      dedupKey: 'KOTAKB-ATM:18500:2026-09-03:26193.35',
+    });
+  });
+
+  it('labels an ATM withdrawal whose location is only a terminal number as plain "ATM"', () => {
+    const body =
+      'Rs.900.00 withdrawn via Kotak Debit Card XX6853 on 08/07/2026 at 800025. Avl Bal Rs.25.47 Not you?Tap https://kotak.com/KBANKT/Fraud';
+    expect(kotakDebitCardParser.parse(body)).toMatchObject({ amount: 900, merchant: 'ATM', date: '2026-07-08' });
+  });
 });

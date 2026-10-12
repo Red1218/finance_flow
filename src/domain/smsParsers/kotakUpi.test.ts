@@ -67,4 +67,44 @@ describe('kotakUpiParser', () => {
       ' Avl limit INR 3625.51 Not you? SMS CCLOST 4030 to 5676788';
     expect(kotakUpiParser.parse(body)).toBeNull();
   });
+
+  // Kotak sends the same UPI messages with "AC X8721" as well as "A/c X8721"
+  // (sent) and "AC X8721" as well as "AC 8721" (received) — both are live.
+  it('parses a UPI-sent message written "AC X…"', () => {
+    const body =
+      'Sent Rs.125.00 from Kotak Bank AC X8721 to q066045071@ybl on 13-08-26.UPI Ref 622522552942. Not you, https://kotak.com/KBANKT/Fraud';
+    expect(kotakUpiParser.parse(body)).toMatchObject({
+      amount: 125,
+      direction: 'debit',
+      accountLast4: '8721',
+      merchant: 'q066045071@ybl',
+      date: '2026-08-13',
+      dedupKey: 'KOTAKB:622522552942',
+    });
+  });
+
+  it('parses a sent message that carries a UTR instead of a UPI Ref', () => {
+    const body =
+      'Sent Rs.12000.00 from Kotak Bank AC X8721 to X1994 on 09-10-26.UTR:628210326621.Click https://kotak.bank.in/KBANKT/Fraud for dispute';
+    expect(kotakUpiParser.parse(body)).toMatchObject({
+      amount: 12000,
+      direction: 'debit',
+      accountLast4: '8721',
+      merchant: 'X1994',
+      date: '2026-10-09',
+      dedupKey: 'KOTAKB:628210326621',
+    });
+  });
+
+  it('parses a UPI-received message written "AC X…"', () => {
+    const body = 'Received Rs.3.00 in your Kotak Bank AC X8721 from asha.k@ybl on 13-08-26.UPI Ref:004461513799.';
+    expect(kotakUpiParser.parse(body)).toMatchObject({
+      amount: 3,
+      direction: 'credit',
+      accountLast4: '8721',
+      merchant: 'asha.k@ybl',
+      date: '2026-08-13',
+      dedupKey: 'KOTAKB:004461513799',
+    });
+  });
 });

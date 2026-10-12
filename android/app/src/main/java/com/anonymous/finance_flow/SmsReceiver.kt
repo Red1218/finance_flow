@@ -67,7 +67,8 @@ class SmsReceiver : BroadcastReceiver() {
     // (src/domain/smsParsers/*.ts), which are the source of truth — there is no
     // shared-code mechanism between Kotlin and TypeScript here, so adding a bank
     // there means adding it here too.
-    private val KNOWN_BANK_CODES = listOf("KOTAKB", "AXISBK")
+    // Shared with SmsListenerModule.readInbox, which applies the same filter.
+    val KNOWN_BANK_CODES = listOf("KOTAKB", "AXISBK", "IDFCFB")
     const val QUEUE_PREFS = "sms_listener_queue"
     const val QUEUE_KEY = "pending"
     const val EVENT_NAME = "SmsListener:onSms"

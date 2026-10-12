@@ -93,4 +93,69 @@ describe('axisParser', () => {
     const body = 'Your security questions have been reset. Pls log in again to set the new security questions & answers - Axis Bank';
     expect(axisParser.parse(body)).toBeNull();
   });
+
+  it('parses a UPI AutoPay debit, which names no account number', () => {
+    const body =
+      'Your A/c has been debited towards NETFLIX for INR 199.00 on 08-10-26. 5277b18e9a6340b1af0d1bf4c008e5d1@ybl - Axis Bank';
+    expect(axisParser.parse(body)).toEqual({
+      amount: 199,
+      direction: 'debit',
+      accountType: 'bank_account',
+      accountLast4: '',
+      bankLabel: 'Axis',
+      merchant: 'NETFLIX',
+      date: '2026-10-08',
+      dedupKey: 'AXISBK-AP:5277b18e9a6340b1af0d1bf4c008e5d1@ybl:2026-10-08',
+    });
+  });
+
+  it('parses a one-line card/UPI debit that puts the merchant before the date', () => {
+    const body =
+      'INR 995.00 debited from A/c no. XX771994 on SRI MAHADEV 10-10-2026 14:57:30 IST. Avl bal: INR 8831.09. Not you? SMS BLOCKCARD XX1968 to +919951860002 - Axis Bank';
+    expect(axisParser.parse(body)).toEqual({
+      amount: 995,
+      direction: 'debit',
+      accountType: 'bank_account',
+      accountLast4: '1994',
+      bankLabel: 'Axis',
+      merchant: 'SRI MAHADEV',
+      date: '2026-10-10',
+      dedupKey: 'AXISBK-DR:995:2026-10-10:8831.09',
+    });
+  });
+
+  it('parses a one-line IMPS credit', () => {
+    const body =
+      'INR 12000.00 credited to A/c no. XX1994 at 09-10-26 10:18:25 IST\r\nRef: IMPS/P2A/628210326621/RAVI\r\nFor any details, call 18001035577 - Axis Bank';
+    expect(axisParser.parse(body)).toEqual({
+      amount: 12000,
+      direction: 'credit',
+      accountType: 'bank_account',
+      accountLast4: '1994',
+      bankLabel: 'Axis',
+      merchant: 'RAVI',
+      date: '2026-10-09',
+      dedupKey: 'AXISBK:628210326621',
+    });
+  });
+
+  it('parses a multi-line "Debit INR …" message', () => {
+    const body =
+      'Debit INR 500.00\r\nAxis Bank A/c XX1994\r\n01-10-26 22:48:13\r\nEBDP-RD/926050085107410/GU\r\nWhatsApp BAL to 917036165000\r\nNot You? SMS BLOCKALL CustID to 919951860002';
+    expect(axisParser.parse(body)).toEqual({
+      amount: 500,
+      direction: 'debit',
+      accountType: 'bank_account',
+      accountLast4: '1994',
+      bankLabel: 'Axis',
+      merchant: 'EBDP-RD',
+      date: '2026-10-01',
+      dedupKey: 'AXISBK:926050085107410',
+    });
+  });
+
+  it('ignores mandate set-up and upcoming-debit notices', () => {
+    expect(axisParser.parse('Your UPI-Mandate mandate has been successfully created towards Google from 12-10-26 to 12-10-31 for INR 59.00 - Axis Bank')).toBeNull();
+    expect(axisParser.parse('For the upcoming mandate set for 13-10-26, INR 59.00 will be debited from your A/c towards Google for NETFLIX, 1. To stop execution, pause mandate - Axis Bank')).toBeNull();
+  });
 });

@@ -6,7 +6,7 @@ import { addDetection } from './repositories/pendingDetections';
 import { isSmsDetectionEnabled } from './smsDetectionEnabled';
 
 async function handleRawSms(event: RawSmsEvent): Promise<void> {
-  const parsed = parseSmsTransaction(event.sender, event.body);
+  const parsed = parseSmsTransaction(event.sender, event.body, new Date(event.timestamp));
   if (parsed) await addDetection(parsed);
 }
 
