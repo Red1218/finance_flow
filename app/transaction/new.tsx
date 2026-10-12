@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAccounts, useCategories, usePreferences, useTransactions } from '../../src/hooks/queries';
+import { useAccounts, useCategories, usePreferences, useRecentExpenses } from '../../src/hooks/queries';
 import { getCurrencyMeta } from '../../src/domain/money';
 import { createTransaction, createTransfer } from '../../src/application/transactions';
 import { removeDetection } from '../../src/data/repositories/pendingDetections';
@@ -54,9 +54,7 @@ export default function NewTransaction() {
   // Income only: the expense this is a friend's share of.
   const [paidBackForId, setPaidBackForId] = useState<string | null>(null);
   const [paidBackPickerOpen, setPaidBackPickerOpen] = useState(false);
-  const since = useMemo(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), []);
-  const recent = useTransactions({ from: since });
-  const recentExpenses = useMemo(() => (recent.data ?? []).filter((t) => t.type === 'EXPENSE'), [recent.data]);
+  const recentExpenses = useRecentExpenses();
   const paidBackExpense = recentExpenses.find((e) => e.id === paidBackForId);
   const [error, setError] = useState<string | null>(null);
 

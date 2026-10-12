@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useLiveQuery } from './useLiveQuery';
 import { listAccounts } from '../data/repositories/accounts';
 import { listBills } from '../data/repositories/bills';
@@ -25,6 +26,13 @@ export function usePreferences() {
 
 export function useTransactions(params: TransactionFilter = {}) {
   return useLiveQuery(() => getTransactions(params), [params.from, params.to, params.search]);
+}
+
+// Expenses from the last 30 days — what a "Paid back for" picker offers.
+export function useRecentExpenses() {
+  const from = useMemo(() => new Date(Date.now() - 30 * 86400000).toISOString(), []);
+  const recent = useTransactions({ from });
+  return useMemo(() => (recent.data ?? []).filter((t) => t.type === 'EXPENSE'), [recent.data]);
 }
 
 export function useBills() {

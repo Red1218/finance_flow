@@ -9,7 +9,7 @@ import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime, parseDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
-import { useAccounts, useCategories, usePreferences, useTransactions } from '../../src/hooks/queries';
+import { useAccounts, useCategories, usePreferences, useRecentExpenses } from '../../src/hooks/queries';
 import { useLiveQuery } from '../../src/hooks/useLiveQuery';
 import { formatCurrency } from '../../src/domain/money';
 import { expenseOptionLabel } from '../../src/domain/transactionView';
@@ -27,10 +27,7 @@ export default function DetectedScreen() {
   // returning here from saving/dismissing) — same pattern every other screen
   // in this app already uses, no bespoke reload logic needed.
   const detections = useLiveQuery(() => listDetections(), []);
-  // Expenses a credit could be a friend's share of — the last 30 days.
-  const since = useMemo(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), []);
-  const recent = useTransactions({ from: since });
-  const recentExpenses = useMemo(() => (recent.data ?? []).filter((t) => t.type === 'EXPENSE'), [recent.data]);
+  const recentExpenses = useRecentExpenses();
   const [paidBackFor, setPaidBackFor] = useState<PendingDetection | null>(null);
 
   const [selectMode, setSelectMode] = useState(false);
