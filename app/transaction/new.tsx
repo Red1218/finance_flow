@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAccounts, useCategories, usePreferences } from '../../src/hooks/queries';
+import { useAccounts, useCategories, usePreferences, useTransactions } from '../../src/hooks/queries';
 import { getCurrencyMeta } from '../../src/domain/money';
 import { createTransaction, createTransfer } from '../../src/application/transactions';
 import { removeDetection } from '../../src/data/repositories/pendingDetections';
@@ -10,6 +10,7 @@ import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
+import { expenseOptionLabel } from '../../src/domain/transactionView';
 import { DatePickerField } from '../../src/ui/DatePickerField';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
@@ -67,6 +68,13 @@ export default function NewTransaction() {
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
   const [toAccountPickerOpen, setToAccountPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Income only: the expense this is a friend's share of.
+  const [paidBackForId, setPaidBackForId] = useState<string | null>(null);
+  const [paidBackPickerOpen, setPaidBackPickerOpen] = useState(false);
+  const since = useMemo(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), []);
+  const recent = useTransactions({ from: since });
+  const recentExpenses = useMemo(() => (recent.data ?? []).filter((t) => t.type === 'EXPENSE'), [recent.data]);
+  const paidBackExpense = recentExpenses.find((e) => e.id === paidBackForId);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,6 +89,7 @@ export default function NewTransaction() {
   useEffect(() => {
     setCategoryId(null);
     setCategoriesExpanded(false);
+    setPaidBackForId(null);
   }, [kind]);
 
   const INITIAL_CATEGORY_COUNT = 3;
@@ -142,6 +151,7 @@ export default function NewTransaction() {
           amount: numeric,
           description: note || null,
           occurredAt,
+          paidBackFor: kind === 'Income' ? paidBackForId : null,
         });
         // Fire-and-forget: checkBudgetAlerts never rejects, and per the design
         // spec the check must not block the save it's piggybacking on.
@@ -226,6 +236,12 @@ export default function NewTransaction() {
           </View>
         ) : null}
 
+        {kind === 'Income' && (
+          <Pressable onPress={() => setPaidBackPickerOpen(true)}>
+            <Text style={styles.accountLabel}>Paid back for: {paidBackExpense?.description?.trim() || (paidBackExpense ? 'Expense' : 'Nothing')}</Text>
+          </Pressable>
+        )}
+
         <DatePickerField value={pickedDate ?? new Date()} onChange={(d) => setDateText(todayInputValue(d))} />
 
         <View style={styles.field}>
@@ -271,6 +287,21 @@ export default function NewTransaction() {
         options={(accounts.data ?? []).map((a) => ({ id: a.id, label: a.name + (a.mask ? ' ••' + a.mask : '') }))}
         onSelect={(opt) => setAccountId(opt.id)}
         onClose={() => setAccountPickerOpen(false)}
+      />
+      <SelectModal
+        visible={paidBackPickerOpen}
+        title="Paid back for"
+        options={[
+          ...(paidBackForId ? [{ id: '', label: 'Not paid back' }] : []),
+          ...recentExpenses.map((e) => ({ id: e.id, label: expenseOptionLabel(e, prefs.data?.currency_code ?? 'INR') })),
+        ]}
+        onSelect={(opt) => {
+          // Moves the income into the expense's category, so that category's spend shows only your share.
+          const expense = recentExpenses.find((e) => e.id === opt.id);
+          setPaidBackForId(expense?.id ?? null);
+          if (expense) setCategoryId(expense.category_id);
+        }}
+        onClose={() => setPaidBackPickerOpen(false)}
       />
       <SelectModal
         visible={toAccountPickerOpen}

@@ -7,8 +7,8 @@ import { listCategories } from '../../src/data/repositories/categories';
 import { listAccounts } from '../../src/data/repositories/accounts';
 import { listActiveBudgets } from '../../src/data/repositories/budgets';
 import { getPreferences } from '../../src/data/repositories/preferences';
-import { formatCurrency, toNumber } from '../../src/domain/money';
-import { indexById, buildTransactionDetailVM } from '../../src/domain/transactionView';
+import { toNumber } from '../../src/domain/money';
+import { indexById, buildTransactionDetailVM, expenseOptionLabel } from '../../src/domain/transactionView';
 import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
@@ -396,10 +396,7 @@ export default function TransactionDetail() {
         title="Paid back for"
         options={[
           ...(tx.paid_back_for ? [{ id: '', label: 'Not paid back' }] : []),
-          ...recentExpenses.map((e) => ({
-            id: e.id,
-            label: `${e.description?.trim() || categoriesById.get(e.category_id ?? '')?.name || 'Expense'} · ${formatCurrency(toNumber(e.amount), currencyCode)} · ${new Date(e.occurred_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
-          })),
+          ...recentExpenses.map((e) => ({ id: e.id, label: expenseOptionLabel(e, currencyCode) })),
         ]}
         onSelect={(opt) => setPaidBackFor(recentExpenses.find((e) => e.id === opt.id) ?? null)}
         onClose={() => setPaidBackOpen(false)}

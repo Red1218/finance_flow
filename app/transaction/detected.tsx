@@ -11,7 +11,8 @@ import { combineLocalDateWithCurrentTime } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { useAccounts, useCategories, usePreferences, useTransactions } from '../../src/hooks/queries';
 import { useLiveQuery } from '../../src/hooks/useLiveQuery';
-import { formatCurrency, toNumber } from '../../src/domain/money';
+import { formatCurrency } from '../../src/domain/money';
+import { expenseOptionLabel } from '../../src/domain/transactionView';
 import { K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../src/theme/tokens';
@@ -292,10 +293,7 @@ export default function DetectedScreen() {
       <SelectModal
         visible={paidBackFor !== null}
         title="Paid back for"
-        options={recentExpenses.map((e) => ({
-          id: e.id,
-          label: `${e.description?.trim() || 'Expense'} · ${formatCurrency(toNumber(e.amount), currencyCode)} · ${new Date(e.occurred_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
-        }))}
+        options={recentExpenses.map((e) => ({ id: e.id, label: expenseOptionLabel(e, currencyCode) }))}
         onSelect={(opt) => paidBackFor && handlePaidBack(paidBackFor, opt.id)}
         onClose={() => setPaidBackFor(null)}
       />

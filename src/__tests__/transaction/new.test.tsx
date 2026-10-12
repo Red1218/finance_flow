@@ -53,6 +53,13 @@ jest.mock('../../hooks/queries', () => ({
     loading: false,
   })),
   usePreferences: () => ({ data: { decimal_precision: 2 }, loading: false }),
+  useTransactions: () => ({
+    data: [
+      { id: 'tx-meal', type: 'EXPENSE', amount: 330, category_id: 'cat-4', description: 'Vridhhavan KITCHENS', occurred_at: '2026-10-12T13:08:52.000Z' },
+      { id: 'tx-pay', type: 'INCOME', amount: 5000, category_id: null, description: 'Salary', occurred_at: '2026-10-01T10:00:00.000Z' },
+    ],
+    loading: false,
+  }),
 }));
 
 // mockSession is read inside the jest.mock factory below — Jest allows
@@ -248,5 +255,25 @@ describe('Add Transaction screen', () => {
     expect(mockCreateTransfer.mock.calls[0][0]).toMatchObject({ fromAccountId: 'acc-1', toAccountId: 'acc-2', amount: 12000 });
     await waitFor(() => expect(removeDetection).toHaveBeenCalledWith('AXISBK:9'));
     expect(removeDetection).toHaveBeenCalledWith('KOTAKB:9');
+  });
+
+  it('saves income as paid back for a picked expense, in that expense’s category', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ kind: 'Income', amount: '150', note: 'MUNAGALA SRI HARSHA' });
+    render(<NewTransaction />);
+    await userEvent.press(screen.getByText('Paid back for: Nothing'));
+    expect(screen.queryByText(/Salary ·/)).toBeNull();
+    await userEvent.press(screen.getByText(/Vridhhavan KITCHENS · ₹330/));
+    expect(screen.getByText('Paid back for: Vridhhavan KITCHENS')).toBeTruthy();
+    await userEvent.press(screen.getByText('Save income'));
+    await waitFor(() =>
+      expect(mockCreateTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'INCOME', amount: 150, categoryId: 'cat-4', paidBackFor: 'tx-meal' })
+      )
+    );
+  });
+
+  it('offers "Paid back for" only on income', () => {
+    render(<NewTransaction />);
+    expect(screen.queryByText(/Paid back for/)).toBeNull();
   });
 });
