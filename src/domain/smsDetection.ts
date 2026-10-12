@@ -3,13 +3,14 @@ import type { BankParser, ParsedTransaction } from './smsParsers/types';
 import { kotakCreditCardParser } from './smsParsers/kotakCreditCard';
 import { kotakUpiParser } from './smsParsers/kotakUpi';
 import { kotakDebitCardParser } from './smsParsers/kotakDebitCard';
+import { kotakAccountParser } from './smsParsers/kotakAccount';
 import { axisParser } from './smsParsers/axis';
 import { idfcParser } from './smsParsers/idfc';
 
 // kotakCreditCardParser is listed before kotakUpiParser: both share the
 // 'KOTAKB' bank code, and the credit-card message shape ("spent on Kotak
 // Credit Card") is the more specific/unambiguous one to try first.
-const PARSERS: BankParser[] = [kotakCreditCardParser, kotakDebitCardParser, kotakUpiParser, axisParser, idfcParser];
+const PARSERS: BankParser[] = [kotakCreditCardParser, kotakDebitCardParser, kotakUpiParser, kotakAccountParser, axisParser, idfcParser];
 
 export function parseSmsTransaction(sender: string, body: string, receivedAt: Date = new Date()): ParsedTransaction | null {
   for (const parser of PARSERS) {
