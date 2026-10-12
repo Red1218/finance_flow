@@ -16,6 +16,7 @@ import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { archiveTransaction } from '../../../src/application/transactions';
 import { TransactionNotFoundError } from '../../../src/application/transactions/errors';
+import { useToday } from '../../../src/hooks/useToday';
 
 type Filter = 'All' | 'Expenses' | 'Income' | 'Transfers';
 const FILTERS: Filter[] = ['All', 'Expenses', 'Income', 'Transfers'];
@@ -85,7 +86,7 @@ export default function TransactionsList() {
     }
   };
 
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
   const tx = useTransactions({ from, to, search: search || undefined });

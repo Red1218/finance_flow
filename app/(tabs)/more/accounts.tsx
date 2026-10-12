@@ -13,6 +13,7 @@ import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
+import { useToday } from '../../../src/hooks/useToday';
 
 // Grouped so banks, cards and cash are easy to tell apart. A debit card is part
 // of its bank account (its spends come out of that balance), so it's shown on
@@ -34,7 +35,7 @@ function numbersLine(a: Account): string {
 export default function Accounts() {
   const router = useRouter();
   const { session } = useAuth();
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
   const accounts = useAccounts();
