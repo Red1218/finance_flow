@@ -1,12 +1,14 @@
+import { spendAmount } from './transactionRules';
+
 export interface MonthTotal {
   label: string;
   total: number;
 }
 
-// Buckets EXPENSE rows into `monthsBack` calendar months ending at `today`,
+// Buckets spending (expenses less money paid back) into `monthsBack` calendar months ending at `today`,
 // oldest first — used for the trends area chart.
 export function monthlyExpenseTotals(
-  rows: { occurred_at: string; amount: number; type: string }[],
+  rows: { occurred_at: string; amount: number; type: string; paid_back_for?: string | null }[],
   monthsBack: number,
   today: Date
 ): MonthTotal[] {
@@ -17,11 +19,12 @@ export function monthlyExpenseTotals(
   }
   const startDate = new Date(today.getFullYear(), today.getMonth() - (monthsBack - 1), 1);
   for (const r of rows) {
-    if (r.type !== 'EXPENSE') continue;
+    const spend = spendAmount(r);
+    if (!spend) continue;
     const d = new Date(r.occurred_at);
     if (d < startDate) continue;
     const idx = (d.getFullYear() - startDate.getFullYear()) * 12 + (d.getMonth() - startDate.getMonth());
-    if (idx >= 0 && idx < months.length) months[idx].total += r.amount;
+    if (idx >= 0 && idx < months.length) months[idx].total += spend;
   }
   return months;
 }
@@ -36,7 +39,7 @@ export interface CategoryWatch {
 // Flags the expense category running furthest above its own recent average —
 // only when there's enough history to call it a trend, not a guess.
 export function findCategoryWatch(
-  rows: { occurred_at: string; amount: number; type: string; category_id: string | null }[],
+  rows: { occurred_at: string; amount: number; type: string; category_id: string | null; paid_back_for?: string | null }[],
   categoryNameById: Map<string, string>,
   today: Date,
   priorMonths = 3
@@ -48,12 +51,13 @@ export function findCategoryWatch(
   const priorByCategory = new Map<string, number>();
 
   for (const r of rows) {
-    if (r.type !== 'EXPENSE' || !r.category_id) continue;
+    const spend = spendAmount(r);
+    if (!spend || !r.category_id) continue;
     const d = new Date(r.occurred_at);
     if (d >= currentStart) {
-      currentByCategory.set(r.category_id, (currentByCategory.get(r.category_id) ?? 0) + r.amount);
+      currentByCategory.set(r.category_id, (currentByCategory.get(r.category_id) ?? 0) + spend);
     } else if (d >= priorStart) {
-      priorByCategory.set(r.category_id, (priorByCategory.get(r.category_id) ?? 0) + r.amount);
+      priorByCategory.set(r.category_id, (priorByCategory.get(r.category_id) ?? 0) + spend);
     }
   }
 

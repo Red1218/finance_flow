@@ -42,6 +42,7 @@ export interface TransactionPatch {
   categoryId?: string | null;
   description?: string | null;
   occurredAt?: string;
+  paidBackFor?: string | null;
 }
 
 export interface UpdateTransferPairInput {
@@ -97,11 +98,12 @@ export async function createTransaction(input: NewTransaction): Promise<Transact
 // Only fields present on the patch are sent, so an omitted field stays
 // omitted rather than being sent as `undefined`.
 export async function updateTransaction(id: string, patch: TransactionPatch): Promise<Transaction> {
-  const payload: Partial<Pick<Transaction, 'category_id' | 'amount' | 'description' | 'occurred_at'>> = {};
+  const payload: Partial<Pick<Transaction, 'category_id' | 'amount' | 'description' | 'occurred_at' | 'paid_back_for'>> = {};
   if (patch.amount !== undefined) payload.amount = patch.amount;
   if (patch.categoryId !== undefined) payload.category_id = patch.categoryId;
   if (patch.description !== undefined) payload.description = patch.description;
   if (patch.occurredAt !== undefined) payload.occurred_at = patch.occurredAt;
+  if (patch.paidBackFor !== undefined) payload.paid_back_for = patch.paidBackFor;
   const { data, error } = await supabase.from('transactions').update(payload).eq('id', id).select('*').single();
   if (error) throw error;
   return data as Transaction;

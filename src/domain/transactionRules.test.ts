@@ -1,4 +1,5 @@
 import {
+  spendAmount,
   validateAmount,
   validateDifferentAccounts,
   isValidTransferPair,
@@ -122,5 +123,14 @@ describe('isValidTransferPair', () => {
 
   it('rejects mismatched user ids', () => {
     expect(isValidTransferPair(out, { ...inLeg, userId: 'u2' })).toBe(false);
+  });
+});
+
+describe('spendAmount', () => {
+  it('counts expenses, subtracts money paid back for an expense, and ignores other income and transfers', () => {
+    expect(spendAmount({ type: 'EXPENSE', amount: 330 })).toBe(330);
+    expect(spendAmount({ type: 'INCOME', amount: '150', paid_back_for: 'tx-1' })).toBe(-150);
+    expect(spendAmount({ type: 'INCOME', amount: 150, paid_back_for: null })).toBe(0);
+    expect(spendAmount({ type: 'TRANSFER_OUT', amount: 700 })).toBe(0);
   });
 });

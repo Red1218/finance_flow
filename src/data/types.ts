@@ -43,6 +43,8 @@ export interface Transaction {
   description: string | null;
   occurred_at: string;
   transfer_group_id: string | null;
+  // Income only: the expense this money was paid back for (a friend's share).
+  paid_back_for: string | null;
   archived_at: string | null;
 }
 

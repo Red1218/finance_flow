@@ -17,6 +17,16 @@ export function transactionSign(type: TransactionType): 1 | -1 | 0 {
   return 0;
 }
 
+// What a transaction adds to "spent": expenses count, and money a friend paid
+// back for an expense comes off it (in that expense's category). Other income
+// and transfers aren't spending.
+export function spendAmount(t: { type: string; amount: number | string; paid_back_for?: string | null }): number {
+  const amount = typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount;
+  if (t.type === 'EXPENSE') return amount;
+  if (t.type === 'INCOME' && t.paid_back_for) return -amount;
+  return 0;
+}
+
 export function validateAmount(amount: number, precision: number): void {
   if (!(amount > 0)) throw new InvalidAmountError();
   const factor = 10 ** precision;

@@ -39,11 +39,16 @@ const expenseTx = {
 const transferOutTx = { ...expenseTx, id: 'tx-out', type: 'TRANSFER_OUT', category_id: null, transfer_group_id: 'grp-1' };
 const transferInTx = { ...expenseTx, id: 'tx-in', account_id: 'acc-2', type: 'TRANSFER_IN', category_id: null, transfer_group_id: 'grp-1' };
 
+const mealTx = { ...expenseTx, id: 'tx-meal', amount: 330, description: 'Vridhhavan KITCHENS', occurred_at: '2026-10-12T13:08:52.000Z' };
+const paidBackTx = { ...expenseTx, id: 'tx-1', type: 'INCOME', amount: 150, category_id: null, description: 'MUNAGALA SRI HARSHA', occurred_at: '2026-10-12T13:09:03.000Z', paid_back_for: null };
+const mockGetTransactions = jest.fn(async (_filter?: unknown): Promise<unknown[]> => [mealTx]);
+
 const mockGetTransactionById = jest.fn(async (_id?: string): Promise<unknown> => null);
 const mockGetTransferPair = jest.fn(async (_id?: string): Promise<{ out: unknown; in: unknown } | null> => null);
 jest.mock('../../application/transactions', () => ({
   getTransactionById: (id: string) => mockGetTransactionById(id),
   getTransferPair: (id: string) => mockGetTransferPair(id),
+  getTransactions: (filter: unknown) => mockGetTransactions(filter),
   updateTransaction: jest.fn(),
   archiveTransaction: jest.fn(),
 }));
@@ -181,5 +186,26 @@ describe('Transaction Detail screen', () => {
     await waitFor(() => expect(screen.getByLabelText('Delete')).toBeTruthy());
     await userEvent.press(screen.getByLabelText('Delete'));
     await waitFor(() => expect(checkBudgetAlerts).toHaveBeenCalledWith(expenseTx));
+  });
+
+  it('links income to the expense it was paid back for, moving it into that expense’s category', async () => {
+    mockGetTransactionById.mockImplementation(async (id) => (id === 'tx-meal' ? mealTx : paidBackTx));
+    (updateTransaction as jest.Mock).mockResolvedValue({ kind: 'regular', transaction: paidBackTx });
+    render(<TransactionDetail />);
+    await waitFor(() => expect(screen.getByText('Paid back for')).toBeTruthy());
+    await userEvent.press(screen.getByText('Paid back for'));
+    await userEvent.press(await screen.findByText(/Vridhhavan KITCHENS · ₹330/));
+    expect(updateTransaction).toHaveBeenCalledWith({ kind: 'regular', id: 'tx-1', patch: { paidBackFor: 'tx-meal', categoryId: 'cat-1' } });
+  });
+
+  it('shows the linked expense, and can unlink it', async () => {
+    const linked = { ...paidBackTx, paid_back_for: 'tx-meal', category_id: 'cat-1' };
+    mockGetTransactionById.mockImplementation(async (id) => (id === 'tx-meal' ? mealTx : linked));
+    (updateTransaction as jest.Mock).mockResolvedValue({ kind: 'regular', transaction: paidBackTx });
+    render(<TransactionDetail />);
+    await waitFor(() => expect(screen.getByText('Vridhhavan KITCHENS ›')).toBeTruthy());
+    await userEvent.press(screen.getByText('Paid back for'));
+    await userEvent.press(await screen.findByText('Not paid back'));
+    expect(updateTransaction).toHaveBeenCalledWith({ kind: 'regular', id: 'tx-1', patch: { paidBackFor: null } });
   });
 });
