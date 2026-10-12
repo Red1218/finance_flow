@@ -187,6 +187,15 @@ describe('Add Transaction screen', () => {
     expect(screen.getByText('Show less ↑')).toBeTruthy();
   });
 
+  it('keeps the selected category visible after collapsing, even when it is past the first 3', async () => {
+    render(<NewTransaction />);
+    await userEvent.press(screen.getByText('Show all ↓'));
+    await userEvent.press(screen.getByText('Utilities'));
+    await userEvent.press(screen.getByText('Show less ↑'));
+    expect(screen.getByText('Utilities')).toBeTruthy();
+    expect(screen.queryByText('Salary')).toBeNull();
+  });
+
   it('shows the same shared category list on the Income tab, not just income-kind ones', async () => {
     render(<NewTransaction />);
     await userEvent.press(screen.getByText('Income'));

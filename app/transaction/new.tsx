@@ -93,7 +93,11 @@ export default function NewTransaction() {
   }, [kind]);
 
   const INITIAL_CATEGORY_COUNT = 3;
-  const visibleCategories = categoriesExpanded ? relevantCategories : relevantCategories.slice(0, INITIAL_CATEGORY_COUNT);
+  // Collapsed, the selected category stays visible even when it's past the
+  // first few (picked from "Show all", or set by "Paid back for").
+  const visibleCategories = categoriesExpanded
+    ? relevantCategories
+    : relevantCategories.filter((c, i) => i < INITIAL_CATEGORY_COUNT || c.id === categoryId);
   const canExpandCategories = relevantCategories.length > INITIAL_CATEGORY_COUNT;
 
   const numeric = parseFloat(amount) || 0;
