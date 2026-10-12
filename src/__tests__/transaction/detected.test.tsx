@@ -246,6 +246,14 @@ describe('DetectedScreen', () => {
     expect(removeDetection).toHaveBeenCalledWith(refund.id);
   });
 
+  it('signs each amount by direction: minus for money out, plus for money in', async () => {
+    const refund = { ...sampleDetection2, id: 'KOTAKB:1', dedupKey: 'KOTAKB:1', direction: 'credit' as const, amount: 330 };
+    (listDetections as jest.Mock).mockResolvedValue([sampleDetection, refund]);
+    const { findByText } = render(<DetectedScreen />);
+    expect(await findByText(/^[−-]₹150$/)).toBeTruthy();
+    expect(await findByText(/^\+₹330$/)).toBeTruthy();
+  });
+
   it('offers "Paid back" only on money coming in', async () => {
     const { findByText, queryByText } = render(<DetectedScreen />);
     await findByText('GUNREDDY RAMANUJA RE');

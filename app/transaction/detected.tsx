@@ -252,7 +252,11 @@ export default function DetectedScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.merchant}>{d.merchant || d.bankLabel}</Text>
                     <Text style={styles.meta}>
-                      {d.bankLabel} · {formatCurrency(d.amount, currencyCode)} · {d.date}
+                      {d.bankLabel} ·{' '}
+                      <Text style={d.direction === 'credit' && styles.credit}>
+                        {formatCurrency(d.direction === 'credit' ? d.amount : -d.amount, currencyCode, { sign: true })}
+                      </Text>{' '}
+                      · {d.date}
                     </Text>
                   </View>
                 </Pressable>
@@ -323,6 +327,7 @@ const styles = StyleSheet.create({
   rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   merchant: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
   meta: { fontFamily: fonts.body, fontSize: 12.5, color: colors.neutral700, marginTop: 3 },
+  credit: { color: colors.accent700 },
   dismiss: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent700, marginLeft: spacing.s2 },
   checkbox: {
     width: 20,
