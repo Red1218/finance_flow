@@ -21,6 +21,14 @@ describe('parseSmsTransaction', () => {
     expect(result?.dedupKey).toBe('KOTAKB:804121858190');
   });
 
+  it('dispatches a Kotak debit-card swipe from the AX-KOTAKB-T sender (regression: was silently undetected)', () => {
+    const body =
+      'Rs.292.00 spent via Kotak Debit Card XX6853 at SAMOSAPARTY FOO KVRangared on 12/10/2026.' +
+      ' Avl bal Rs.6177.97 Not you?Tap https://kotak.bank.in/KBANKT/Fraud';
+    const result = parseSmsTransaction('AX-KOTAKB-T', body);
+    expect(result).toMatchObject({ amount: 292, direction: 'debit', accountLast4: '6853', date: '2026-10-12' });
+  });
+
   it('dispatches an Axis message correctly from a second observed sender prefix', () => {
     const body =
       'INR 100.00 debited\nA/c no. XX1994\n07-02-26, 22:07:33\n' +

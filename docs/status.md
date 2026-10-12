@@ -346,6 +346,14 @@ samples captured during planning, excluded from v1 by explicit user decision).
 Account matching is automatic by bank name and product type, editable on
 the review screen.
 
+**Kotak debit card swipes (2026-10-12):** `Rs.292.00 spent via Kotak Debit Card
+XX6853 at <merchant> on 12/10/2026. Avl bal Rs.6177.97` (sender `AX-KOTAKB-T`)
+was not detected — no parser covered it. Added `kotakDebitCard.ts` (4-digit
+year, slash dates; dedup key includes the post-spend balance since there is no
+reference number). The `XX6853` is the card's digits, not the savings A/c
+number, so auto-match only hits if the account's mask is set to the card digits;
+otherwise the Detected screen asks for the account.
+
 **Parser design — positive-match only:** Every parser returns `null` unless
 the SMS body clearly matches a known transactional shape (amount + debit/credit
 keyword + account number). The parser never attempts to enumerate or exclude
