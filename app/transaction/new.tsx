@@ -42,9 +42,12 @@ export default function NewTransaction() {
     amount?: string;
     kind?: string;
     accountId?: string;
+    toAccountId?: string;
     note?: string;
     dateText?: string;
     detectionId?: string;
+    // The other SMS of a suggested transfer pair (see Detected), cleared on save too.
+    pairedDetectionId?: string;
   }>();
   const { session } = useAuth();
   const accounts = useAccounts();
@@ -58,7 +61,7 @@ export default function NewTransaction() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(params.accountId || null);
-  const [toAccountId, setToAccountId] = useState<string | null>(null);
+  const [toAccountId, setToAccountId] = useState<string | null>(params.toAccountId || null);
   const [dateText, setDateText] = useState(() => params.dateText || todayInputValue());
   const [note, setNote] = useState(params.note || '');
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
@@ -147,9 +150,10 @@ export default function NewTransaction() {
       // Deliberately in its own try: the transaction is already saved by this
       // point, so a failure clearing the pending draft must not surface as a
       // save error — the user would tap Save again and create a duplicate.
-      if (params.detectionId) {
+      for (const id of [params.detectionId, params.pairedDetectionId]) {
+        if (!id) continue;
         try {
-          await removeDetection(params.detectionId);
+          await removeDetection(id);
         } catch (e) {
           console.warn('Could not clear the pending SMS detection', e);
         }

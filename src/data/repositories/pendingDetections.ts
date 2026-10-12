@@ -5,6 +5,9 @@ const STORAGE_KEY = 'financeflow.pendingSmsDetections';
 
 export interface PendingDetection extends ParsedTransaction {
   id: string;
+  // Set when the user splits a suggested transfer pair back into two rows,
+  // so the same pair isn't suggested again.
+  notTransfer?: boolean;
 }
 
 async function readAll(): Promise<PendingDetection[]> {
@@ -47,4 +50,10 @@ export async function listDetections(): Promise<PendingDetection[]> {
 export async function removeDetection(id: string): Promise<void> {
   const existing = await readAll();
   await writeAll(existing.filter((d) => d.id !== id));
+}
+
+export async function markNotTransfer(ids: string[]): Promise<void> {
+  const marked = new Set(ids);
+  const existing = await readAll();
+  await writeAll(existing.map((d) => (marked.has(d.id) ? { ...d, notTransfer: true } : d)));
 }

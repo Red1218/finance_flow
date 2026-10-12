@@ -236,4 +236,17 @@ describe('Add Transaction screen', () => {
     await userEvent.press(getByText('Save'));
     await waitFor(() => expect(removeDetection).toHaveBeenCalledWith('KOTAKB:1'));
   });
+
+  it('saves a prefilled suggested transfer and clears both of its detections', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({
+      amount: '12000', kind: 'Transfer', accountId: 'acc-1', toAccountId: 'acc-2', note: 'Transfer', dateText: '2026-10-09',
+      detectionId: 'KOTAKB:9', pairedDetectionId: 'AXISBK:9',
+    });
+    const { getByText } = render(<NewTransaction />);
+    await userEvent.press(getByText('Save'));
+    await waitFor(() => expect(mockCreateTransfer).toHaveBeenCalledTimes(1));
+    expect(mockCreateTransfer.mock.calls[0][0]).toMatchObject({ fromAccountId: 'acc-1', toAccountId: 'acc-2', amount: 12000 });
+    await waitFor(() => expect(removeDetection).toHaveBeenCalledWith('AXISBK:9'));
+    expect(removeDetection).toHaveBeenCalledWith('KOTAKB:9');
+  });
 });
