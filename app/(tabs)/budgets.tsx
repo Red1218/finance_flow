@@ -195,7 +195,7 @@ export default function Budgets() {
               ) : (
                 <View />
               )}
-              <Pressable onPress={() => router.push('/(tabs)/more/categories')}>
+              <Pressable onPress={() => router.push('/(tabs)/more/categories', { withAnchor: true })}>
                 <Text style={styles.manageLink}>Manage categories →</Text>
               </Pressable>
             </View>

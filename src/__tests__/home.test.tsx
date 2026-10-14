@@ -1,6 +1,6 @@
 import React from 'react';
 import { RefreshControl } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import Home from '../../app/(tabs)/index';
 
 type Query = { data: unknown; loading: boolean; error: string | null; refetch: () => void };
@@ -19,7 +19,8 @@ jest.mock('../hooks/queries', () => ({
   useBills: () => mockBills2,
 }));
 jest.mock('../data/AuthContext', () => ({ useAuth: () => ({ session: { user: { id: 'u1' } } }) }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('react-native-safe-area-context', () => {
   const { View } = jest.requireActual('react-native');
   return { SafeAreaView: View };
@@ -131,6 +132,14 @@ describe('Home', () => {
     mockBills2 = loaded([bill('b3', 'Insurance', inDays(20))]);
     render(<Home />);
     expect(screen.getByText('Nothing due this week.')).toBeTruthy();
+  });
+
+  // withAnchor puts the More list under Bills, so the More tab and Back reach it.
+  it('opens Bills with the More list underneath it', async () => {
+    mockBudgets = loaded([overallBudget]);
+    render(<Home />);
+    await userEvent.press(screen.getByText('Add a bill'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/more/bills', { withAnchor: true });
   });
 
   it('offers to add a bill when there are none', () => {
