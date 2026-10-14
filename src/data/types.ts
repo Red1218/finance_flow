@@ -86,6 +86,7 @@ export interface Bill {
   cadence: BudgetPeriod;
   due_day: number;
   next_due_date: string; // "YYYY-MM-DD"
+  payments_left: number | null; // null = every month, no end
   category_id: string | null;
   account_id: string | null;
   is_paused: boolean;

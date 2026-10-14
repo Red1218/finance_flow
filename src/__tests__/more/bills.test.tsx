@@ -28,12 +28,13 @@ const inDays = (n: number) => {
   d.setDate(d.getDate() + n);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
-const bill = (id: string, name: string, amount: number, next_due_date: string) => ({
+const bill = (id: string, name: string, amount: number, next_due_date: string, payments_left: number | null = null) => ({
   id,
   name,
   amount,
   due_day: Number(next_due_date.slice(8)),
   next_due_date,
+  payments_left,
   archived_at: null,
 });
 
@@ -95,7 +96,41 @@ describe('Bills screen', () => {
     fireEvent.changeText(screen.getByPlaceholderText('Amount'), '15000');
     fireEvent.changeText(screen.getByPlaceholderText('Day (1–31)'), '5');
     await userEvent.press(screen.getByText('Save bill'));
-    expect(createBill).toHaveBeenCalledWith({ name: 'Rent', amount: 15000, due_day: 5 });
+    expect(createBill).toHaveBeenCalledWith({ name: 'Rent', amount: 15000, due_day: 5, payments_left: null });
+  });
+
+  it('adds a bill that stops after a set number of payments', async () => {
+    mockBills = loaded([]);
+    render(<Bills />);
+    await userEvent.press(screen.getByText('Add bill'));
+    fireEvent.changeText(screen.getByPlaceholderText('Rent'), 'Laptop EMI');
+    fireEvent.changeText(screen.getByPlaceholderText('Amount'), '5000');
+    fireEvent.changeText(screen.getByPlaceholderText('Day (1–31)'), '10');
+    await userEvent.press(screen.getByText('Set number of months'));
+    fireEvent.changeText(screen.getByPlaceholderText('Payments'), '2');
+    await userEvent.press(screen.getByText('Save bill'));
+    expect(createBill).toHaveBeenCalledWith({ name: 'Laptop EMI', amount: 5000, due_day: 10, payments_left: 2 });
+  });
+
+  it('will not save a set-length bill without a payment count', async () => {
+    mockBills = loaded([]);
+    render(<Bills />);
+    await userEvent.press(screen.getByText('Add bill'));
+    fireEvent.changeText(screen.getByPlaceholderText('Rent'), 'Laptop EMI');
+    fireEvent.changeText(screen.getByPlaceholderText('Amount'), '5000');
+    fireEvent.changeText(screen.getByPlaceholderText('Day (1–31)'), '10');
+    await userEvent.press(screen.getByText('Set number of months'));
+    fireEvent.changeText(screen.getByPlaceholderText('Payments'), '0');
+    await userEvent.press(screen.getByText('Save bill'));
+    expect(createBill).not.toHaveBeenCalled();
+  });
+
+  it('shows payments left and says when the last one is paid', async () => {
+    mockBills = loaded([bill('b1', 'Laptop EMI', 5000, inDays(3), 1)]);
+    render(<Bills />);
+    expect(screen.getByText(/1 left/)).toBeTruthy();
+    await userEvent.press(screen.getByText('Paid'));
+    expect(await screen.findByText(/That was the last payment\./)).toBeTruthy();
   });
 
   it('will not save a due day outside 1–31', async () => {

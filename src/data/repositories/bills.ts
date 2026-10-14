@@ -6,6 +6,7 @@ export interface BillInput {
   name: string;
   amount: number;
   due_day: number;
+  payments_left: number | null; // null = every month, no end
 }
 
 export async function listBills(): Promise<Bill[]> {
@@ -43,10 +44,18 @@ export async function updateBill(bill: Bill, input: BillInput): Promise<Bill> {
   return data as Bill;
 }
 
+// Paying the last payment of a fixed-length bill finishes it (archived, like Delete).
 export async function markBillPaid(bill: Bill): Promise<Bill> {
+  const patch =
+    bill.payments_left === 1
+      ? { archived_at: new Date().toISOString() }
+      : {
+          next_due_date: nextDueAfterPaid(bill.next_due_date, bill.due_day),
+          payments_left: bill.payments_left === null ? null : bill.payments_left - 1,
+        };
   const { data, error } = await supabase
     .from('recurring_items')
-    .update({ next_due_date: nextDueAfterPaid(bill.next_due_date, bill.due_day) })
+    .update(patch)
     .eq('id', bill.id)
     .select('*')
     .single();
@@ -57,7 +66,7 @@ export async function markBillPaid(bill: Bill): Promise<Bill> {
 export async function restoreBillDueDate(bill: Bill): Promise<Bill> {
   const { data, error } = await supabase
     .from('recurring_items')
-    .update({ next_due_date: bill.next_due_date })
+    .update({ next_due_date: bill.next_due_date, payments_left: bill.payments_left, archived_at: null })
     .eq('id', bill.id)
     .select('*')
     .single();
