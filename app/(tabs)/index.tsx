@@ -11,9 +11,9 @@ import { monthProgress, dailyAllowance, last7DaysTotals, todaySummary } from '..
 import { monthRange } from '../../src/domain/dateRange';
 import { spendAmount } from '../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../src/domain/transactionView';
-import { Body, Card, K, Muted, Num } from '../../src/ui/primitives';
+import { Grow, K, Muted, Num, Plunk, Rise, Tag, useCountUp } from '../../src/ui/primitives';
 import { TransactionRow } from '../../src/ui/TransactionRow';
-import { colors, fonts, shadow, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
 import { useToday } from '../../src/hooks/useToday';
@@ -56,6 +56,7 @@ export default function Home() {
     return {
       currencyCode,
       hasBudget: !!overallBudget,
+      spentPct: progress.pct,
       leftToSpend: progress.remaining,
       limit,
       dayOfMonth,
@@ -88,7 +89,13 @@ export default function Home() {
   const { ready, error } = firstLoad(tx, budgets, categories, accounts, bills);
   const billList = bills.data ?? [];
   const billsDue = dueSoon(billList, today);
-  const monthLabel = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const monthLabel = today.toLocaleDateString('en-IN', { month: 'long' });
+  const dateLabel = today.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+  // Weekday initial under each of the last 7 bars, oldest first, today last.
+  const barDays = d.bars.map((_, i) =>
+    new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - i)).toLocaleDateString('en-IN', { weekday: 'narrow' })
+  );
+  const leftShown = useCountUp(ready ? d.leftToSpend : 0);
 
   if (!session) {
     return (
@@ -104,75 +111,105 @@ export default function Home() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={d.loading} onRefresh={d.refetch} tintColor={colors.accent} />}
       >
-        <View style={styles.dateline}>
-          <View style={styles.rule3} />
-          <View style={styles.ruleRow}>
-            <K>{monthLabel}</K>
-            <K style={{ color: colors.accent700 }}>
-              Day {d.dayOfMonth} of {d.totalDays}
-            </K>
-          </View>
-        </View>
+        <Rise style={styles.header}>
+          <K>{dateLabel}</K>
+          <K style={{ color: colors.text }}>
+            Day {d.dayOfMonth} of {d.totalDays}
+          </K>
+        </Rise>
 
         {!ready ? (
           error ? (
-            <Muted style={styles.section}>Couldn&rsquo;t load your spending. Pull down to try again.</Muted>
+            <Muted>Couldn&rsquo;t load your spending. Pull down to try again.</Muted>
           ) : null
         ) : (
           <>
-            <View style={styles.section}>
-              <K>Left to spend</K>
-              <View style={styles.leftRow}>
-                <Num style={styles.leftAmount}>{formatCurrency(d.leftToSpend, d.currencyCode)}</Num>
-                <Muted>of {formatCurrency(d.limit, d.currencyCode)}</Muted>
-              </View>
-              <Body style={styles.coach}>
-                {d.hasBudget
-                  ? `${d.daysLeft} ${d.daysLeft === 1 ? 'day' : 'days'} left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
-                  : 'No budget set for this month yet — set one from the Budgets tab.'}
-              </Body>
-            </View>
+            <Rise delay={80}>
+              <Plunk tone="accent" depth={6} style={styles.hero}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.heroCaps}>Left to spend</Text>
+                  <Text style={styles.heroCaps}>{monthLabel}</Text>
+                </View>
+                <View style={styles.leftRow}>
+                  <Text style={styles.leftAmount}>{formatCurrency(leftShown, d.currencyCode)}</Text>
+                  {d.hasBudget && <Text style={styles.heroOf}>of {formatCurrency(d.limit, d.currencyCode)}</Text>}
+                </View>
+                {d.hasBudget && (
+                  <View style={styles.segments}>
+                    {Array.from({ length: 20 }, (_, i) => (
+                      <View key={i} style={styles.segTrack}>
+                        {i < Math.round(Math.min(100, d.spentPct) / 5) && (
+                          <Grow axis="x" delay={300 + i * 40} style={styles.segFill} />
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+                <Text style={styles.coach}>
+                  {d.hasBudget
+                    ? `${d.daysLeft} ${d.daysLeft === 1 ? 'day' : 'days'} left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
+                    : 'No budget set for this month yet — set one from the Budgets tab.'}
+                </Text>
+              </Plunk>
+            </Rise>
 
-            <View style={styles.section}>
+            <Rise delay={160}>
+              <View style={styles.rowBetween}>
+                <K>Last 7 days</K>
+                <K style={{ color: colors.text }}>{formatCurrency(d.last7Total, d.currencyCode)}</K>
+              </View>
               <View style={styles.bars}>
                 {d.bars.map((v, i) => (
                   <View key={i} style={styles.barTrack}>
-                    <View style={[styles.barFill, { height: `${Math.max(4, v * 100)}%` }]} />
+                    <View style={{ height: `${Math.max(4, v * 100)}%` }}>
+                      <Grow
+                        axis="y"
+                        delay={300 + i * 70}
+                        style={[styles.barFill, i === 6 && { backgroundColor: colors.accent }]}
+                      />
+                    </View>
                   </View>
                 ))}
               </View>
-              <View style={styles.rowBetween}>
-                <K>Last 7 days</K>
-                <K style={styles.num}>{formatCurrency(d.last7Total, d.currencyCode)}</K>
+              <View style={styles.barLabels}>
+                {barDays.map((day, i) => (
+                  <Text key={i} style={[styles.barLabel, i === 6 && { color: colors.text }]}>
+                    {day}
+                  </Text>
+                ))}
               </View>
-            </View>
+            </Rise>
 
-            <View style={styles.section}>
-              <View style={styles.tiles}>
-                <Card style={styles.tile}>
-                  <K>Spent today</K>
-                  <Num style={styles.tileAmount}>{formatCurrency(d.spentToday, d.currencyCode)}</Num>
-                </Card>
-                <Card style={styles.tile}>
-                  <K>Left today</K>
-                  {d.leftToday === null ? (
-                    <Pressable onPress={() => router.push('/(tabs)/budgets')}>
-                      <Text style={[styles.link, styles.tileLink]}>Set a budget</Text>
-                    </Pressable>
-                  ) : d.leftToday < 0 ? (
-                    <Num style={[styles.tileAmount, styles.over]}>{formatCurrency(-d.leftToday, d.currencyCode)} over</Num>
-                  ) : (
-                    <Num style={styles.tileAmount}>{formatCurrency(d.leftToday, d.currencyCode)}</Num>
-                  )}
-                </Card>
-              </View>
-              <K style={styles.biggestLabel}>Biggest today</K>
+            <Rise delay={240} style={styles.tiles}>
+              <Plunk depth={4} style={styles.tile}>
+                <K>Spent today</K>
+                <Num style={styles.tileAmount}>{formatCurrency(d.spentToday, d.currencyCode)}</Num>
+              </Plunk>
+              <Plunk depth={4} style={styles.tile}>
+                <K>Left today</K>
+                {d.leftToday === null ? (
+                  <Pressable onPress={() => router.push('/(tabs)/budgets')}>
+                    <Text style={[styles.link, styles.tileLink]}>Set a budget</Text>
+                  </Pressable>
+                ) : d.leftToday < 0 ? (
+                  <Num style={[styles.tileAmount, styles.over]}>{formatCurrency(-d.leftToday, d.currencyCode)} over</Num>
+                ) : (
+                  <Num style={[styles.tileAmount, styles.over]}>{formatCurrency(d.leftToday, d.currencyCode)}</Num>
+                )}
+              </Plunk>
+            </Rise>
+
+            <Rise delay={320}>
+              <K style={styles.sectionLabel}>Biggest today</K>
               {d.biggestToday ? (
                 <TransactionRow tx={d.biggestToday} onPress={() => router.push(`/transaction/${d.biggestToday!.id}`)} />
               ) : (
-                <Muted style={{ marginTop: spacing.s2 }}>Nothing spent yet today.</Muted>
+                <Muted>Nothing spent yet today.</Muted>
               )}
-              <View style={styles.billsHead}>
+            </Rise>
+
+            <Rise delay={400}>
+              <View style={[styles.rowBetween, styles.sectionLabel]}>
                 <K>Bills due</K>
                 <Pressable onPress={() => router.push('/(tabs)/more/bills', { withAnchor: true })}>
                   <Text style={styles.link}>All bills →</Text>
@@ -186,93 +223,80 @@ export default function Home() {
                   </Pressable>
                 </View>
               ) : billsDue.length === 0 ? (
-                <Muted style={{ marginTop: spacing.s2 }}>Nothing due this week.</Muted>
+                <Muted>Nothing due this week.</Muted>
               ) : (
                 billsDue.map((b) => {
                   const days = daysUntil(b.next_due_date, today);
                   return (
                     <Pressable key={b.id} style={styles.billRow} onPress={() => router.push('/(tabs)/more/bills', { withAnchor: true })}>
-                      <Text style={styles.billName}>{b.name}</Text>
-                      <Text style={[styles.billMeta, days < 0 && styles.over]}>
-                        {formatCurrency(toNumber(b.amount), d.currencyCode)} · {dueLabel(days)}
-                      </Text>
+                      <View style={{ flex: 1, gap: 3 }}>
+                        <Text style={styles.billName}>{b.name}</Text>
+                        <Text style={styles.billMeta}>{formatCurrency(toNumber(b.amount), d.currencyCode)}</Text>
+                      </View>
+                      <Tag label={dueLabel(days)} variant={days <= 2 ? 'accent' : 'neutral'} />
                     </Pressable>
                   );
                 })
               )}
-            </View>
+            </Rise>
 
-            <View style={styles.section}>
-              <View style={styles.rowBetween}>
-                <K>The ledger</K>
+            <Rise delay={480}>
+              <View style={[styles.rowBetween, styles.sectionLabel]}>
+                <Text style={styles.ledgerTitle}>The ledger</Text>
                 <Pressable onPress={() => router.push('/(tabs)/transactions')}>
                   <Text style={styles.link}>All {d.totalCount} →</Text>
                 </Pressable>
               </View>
               {d.recent.length === 0 ? (
-                <Muted style={{ marginTop: spacing.s2 }}>No transactions yet this month.</Muted>
+                <Muted>No transactions yet this month.</Muted>
               ) : (
                 d.recent.map((tx) => (
                   <TransactionRow key={tx.id} tx={tx} onPress={() => router.push(`/transaction/${tx.id}`)} />
                 ))
               )}
-            </View>
+            </Rise>
           </>
         )}
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => router.push('/transaction/new')}>
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
+      <Plunk tone="accent" onPress={() => router.push('/transaction/new')} accessibilityLabel="Add a transaction" style={styles.fab}>
+        <Text style={styles.fabText}>+ Add</Text>
+      </Plunk>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingBottom: 100 },
-  dateline: { paddingHorizontal: spacing.s4, paddingTop: spacing.s2 },
-  rule3: { borderTopWidth: 3, borderTopColor: colors.text, marginBottom: 3 },
-  ruleRow: {
-    borderTopWidth: 1,
-    borderTopColor: colors.text,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    paddingTop: 6,
-  },
-  section: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4 },
-  tiles: { flexDirection: 'row', gap: spacing.s3 },
-  tile: { flex: 1 },
-  tileAmount: { fontFamily: fonts.heading, fontSize: 24, color: colors.text, marginTop: 4 },
-  tileLink: { fontSize: 15, marginTop: 8 },
-  over: { color: colors.accent2_700 },
-  biggestLabel: { marginTop: spacing.s4 },
-  leftRow: { flexDirection: 'row', alignItems: 'baseline', gap: 9, marginTop: 4 },
-  leftAmount: { fontFamily: fonts.heading, fontSize: 40, color: colors.text, letterSpacing: -0.5 },
-  coach: { marginTop: 10, maxWidth: 300 },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 5, height: 64, marginTop: 4 },
+  content: { padding: spacing.s4, paddingBottom: 120, gap: 32 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: spacing.s2 },
+  hero: { padding: spacing.s4, gap: 14 },
+  heroCaps: { ...caps, color: colors.bg },
+  leftRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
+  leftAmount: { fontFamily: fonts.display, fontSize: 52, lineHeight: 58, color: colors.bg, fontVariant: ['tabular-nums'] },
+  heroOf: { fontFamily: fonts.bold, fontSize: 14, color: colors.bg },
+  segments: { flexDirection: 'row', gap: 3 },
+  segTrack: { flex: 1, height: 10, backgroundColor: 'rgba(13,13,13,0.15)' },
+  segFill: { height: 10, backgroundColor: colors.bg },
+  coach: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.bg },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 110, marginTop: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
   barTrack: { flex: 1, height: '100%', justifyContent: 'flex-end' },
-  barFill: { backgroundColor: colors.neutral300, borderRadius: 1 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 },
-  num: { fontFamily: fonts.body, fontVariant: ['tabular-nums'], fontSize: 9.5, color: colors.neutral600 },
-  link: { fontFamily: fonts.body, fontSize: 12, color: colors.accent700 },
-  billsHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: spacing.s4 },
-  billsEmpty: { flexDirection: 'row', gap: spacing.s2, alignItems: 'baseline', marginTop: spacing.s2 },
-  billRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.dividerFaint },
-  billName: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
-  billMeta: { fontFamily: fonts.body, fontSize: 12.5, color: colors.neutral700 },
-  fab: {
-    position: 'absolute',
-    right: 18,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 2,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow.md,
-  },
-  fabText: { color: colors.bg, fontSize: 30, lineHeight: 32 },
+  barFill: { height: '100%', backgroundColor: colors.divider },
+  barLabels: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  barLabel: { ...caps, flex: 1, textAlign: 'center', color: colors.muted },
+  tiles: { flexDirection: 'row', gap: spacing.s3 },
+  tile: { flex: 1, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.divider },
+  tileAmount: { fontFamily: fonts.display, fontSize: 28, color: colors.text },
+  tileLink: { fontSize: 15 },
+  over: { color: colors.accent },
+  sectionLabel: { marginBottom: 12 },
+  ledgerTitle: { fontFamily: fonts.display, fontSize: 26, color: colors.text },
+  link: { ...caps, fontSize: 12, color: colors.text },
+  billsEmpty: { flexDirection: 'row', gap: spacing.s2, alignItems: 'baseline' },
+  billRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.divider },
+  billName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+  billMeta: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted },
+  fab: { position: 'absolute', right: 20, bottom: 24, height: 52, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
+  fabText: { ...caps, fontSize: 14, color: colors.bg },
 });

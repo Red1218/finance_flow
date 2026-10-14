@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useFonts, SourceSerif4_400Regular, SourceSerif4_600SemiBold, SourceSerif4_400Regular_Italic } from '@expo-google-fonts/source-serif-4';
+import { useFonts } from 'expo-font';
+import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
+import { Urbanist_500Medium, Urbanist_700Bold, Urbanist_800ExtraBold } from '@expo-google-fonts/urbanist';
 import { Stack } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -60,9 +62,10 @@ function RootNavigator() {
 // whole app.
 function FontGate({ onRetry }: { onRetry: () => void }) {
   const [fontsLoaded, fontError] = useFonts({
-    SourceSerif4_400Regular,
-    SourceSerif4_600SemiBold,
-    SourceSerif4_400Regular_Italic,
+    DMSerifDisplay_400Regular,
+    Urbanist_500Medium,
+    Urbanist_700Bold,
+    Urbanist_800ExtraBold,
   });
 
   if (fontError) {

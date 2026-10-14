@@ -7,7 +7,9 @@ import { transactionSign } from '../../../src/domain/transactionRules';
 import { listDetections } from '../../../src/data/repositories/pendingDetections';
 import { shortDate } from '../../../src/domain/bills';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
-import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
+import { Rise, ScreenHeader, Tag } from '../../../src/ui/primitives';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
@@ -53,6 +55,7 @@ export default function MoreHub() {
     };
   }, [accounts.data, allTx.data, categories.data, budgets.data, prefs.data, bills.data, detections.data, currencyCode]);
 
+  const pending = detections.data?.length ?? 0;
   const items: { label: string; href: Href; subtitle: string }[] = [
     { label: 'Accounts', href: '/(tabs)/more/accounts', subtitle: subtitles.accounts },
     { label: 'Categories', href: '/(tabs)/more/categories', subtitle: subtitles.categories },
@@ -70,32 +73,44 @@ export default function MoreHub() {
   }
 
   return (
-    <View style={styles.screen}>
-      {items.map((item) => (
-        <Pressable key={item.href} style={styles.row} onPress={() => router.push(item.href)}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>{item.label}</Text>
-            <Text style={styles.subtitle}>{item.subtitle}</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <Rise style={styles.title}>
+        <ScreenHeader title="More" />
+      </Rise>
+      {items.map((item, i) => (
+        <Rise key={item.href} delay={80 + i * 60}>
+          <Pressable
+            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            onPress={() => router.push(item.href)}
+            accessibilityRole="button"
+          >
+            <View style={{ flex: 1, gap: 5 }}>
+              <Text style={styles.label}>{item.label}</Text>
+              <Text style={styles.subtitle}>{item.subtitle}</Text>
+            </View>
+            {item.href === '/transaction/detected' && pending > 0 && <Tag label={`${pending} to review`} variant="accent" />}
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+        </Rise>
       ))}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, padding: spacing.s4 },
+  title: { marginBottom: 24 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.s2,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.dividerFaint,
+    gap: 12,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
   },
+  rowPressed: { backgroundColor: colors.surface },
   label: { fontFamily: fonts.heading, fontSize: 18, color: colors.text },
-  subtitle: { fontFamily: fonts.body, fontSize: 12, color: colors.neutral700, marginTop: 3 },
-  chevron: { color: colors.accent700, fontSize: 17 },
+  subtitle: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
+  chevron: { fontFamily: fonts.heading, color: colors.muted, fontSize: 22 },
 });

@@ -65,11 +65,12 @@ describe('Home', () => {
     expect(screen.getByText(/No budget set/)).toBeTruthy();
   });
 
-  it('shows the left-to-spend amount once an overall budget has loaded', () => {
+  it('shows the left-to-spend amount once an overall budget has loaded', async () => {
     mockBudgets = loaded([overallBudget]);
     render(<Home />);
-    // On a month's last day the Left today tile also reads ₹25,000, so allow both.
-    expect(screen.getAllByText('₹25,000').length).toBeGreaterThan(0);
+    // The hero amount counts up from ₹0, so wait for it to land. On a month's
+    // last day the Left today tile also reads ₹25,000, so allow both.
+    expect((await screen.findAllByText('₹25,000', {}, { timeout: 3000 })).length).toBeGreaterThan(0);
     expect(screen.queryByText(/No budget set/)).toBeNull();
   });
 

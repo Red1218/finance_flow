@@ -5,8 +5,8 @@ import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { createCategory, deleteCategory } from '../../../src/data/repositories/categories';
 import { setBudget } from '../../../src/data/repositories/budgets';
 import { toNumber, formatCurrency, getCurrencyMeta } from '../../../src/domain/money';
-import { Button, IconButton, Input, K, Muted } from '../../../src/ui/primitives';
-import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { Button, IconButton, Input, K, Muted, Rise } from '../../../src/ui/primitives';
+import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { useToday } from '../../../src/hooks/useToday';
@@ -144,10 +144,13 @@ export default function Categories() {
               {rows.length === 0 ? (
                 <Muted>No categories yet.</Muted>
               ) : (
-                rows.map((r) => (
-                  <View key={r.id} style={styles.row}>
+                rows.map((r, i) => (
+                  <Rise key={r.id} delay={Math.min(i, 10) * 45} style={styles.row}>
                     <View style={styles.rowTop}>
-                      <View style={{ flex: 1 }}>
+                      <View style={styles.initial}>
+                        <Text style={styles.initialText}>{r.name.charAt(0).toUpperCase()}</Text>
+                      </View>
+                      <View style={{ flex: 1, gap: 3 }}>
                         <Text style={styles.rowName}>{r.name}</Text>
                         <Muted style={styles.rowMeta}>{r.meta}</Muted>
                       </View>
@@ -158,7 +161,7 @@ export default function Categories() {
                           setPendingId(r.id);
                         }}
                       >
-                        <Text style={{ color: colors.accent2_700, fontSize: 16 }}>✕</Text>
+                        <Text style={{ color: colors.muted, fontSize: 15, fontFamily: fonts.heading }}>✕</Text>
                       </IconButton>
                     </View>
                     {pendingId === r.id && (
@@ -178,7 +181,7 @@ export default function Categories() {
                         </View>
                       </View>
                     )}
-                  </View>
+                  </Rise>
                 ))
               )}
             </View>
@@ -194,16 +197,18 @@ const styles = StyleSheet.create({
   content: { padding: spacing.s4, paddingBottom: 100 },
   intro: { fontSize: 13.5, lineHeight: 20 },
   addBlock: { marginTop: spacing.s4, gap: spacing.s2 },
-  addLabel: { paddingBottom: 9, borderBottomWidth: 1, borderBottomColor: colors.text, marginBottom: 3 },
+  addLabel: { marginBottom: 3 },
   addRow: { flexDirection: 'row', gap: spacing.s2 },
-  list: { marginTop: spacing.s4, gap: spacing.s3 },
-  listLabel: { paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.text, marginBottom: 2 },
-  row: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.dividerFaint },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  rowName: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
-  rowMeta: { fontSize: 11.5, marginTop: 3 },
-  confirm: { marginTop: 8, padding: 12, borderRadius: 2, backgroundColor: colors.accent2_100 },
-  confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.accent2_900 },
+  list: { marginTop: 28 },
+  listLabel: { marginBottom: 2 },
+  row: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.divider },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  initial: { width: 36, height: 36, borderWidth: 1, borderColor: colors.divider, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  initialText: { fontFamily: fonts.heading, fontSize: 14, color: colors.text },
+  rowName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+  rowMeta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2 },
+  confirm: { marginTop: 10, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
+  confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.text },
   confirmError: { fontFamily: fonts.heading, marginTop: 6 },
   confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
 });

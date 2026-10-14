@@ -10,12 +10,12 @@ export default function MoreLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
-        headerTintColor: colors.accent700,
-        headerTitleStyle: { fontFamily: fonts.heading, color: colors.text, fontSize: 17 },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontFamily: fonts.display, color: colors.text, fontSize: 22 },
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'More' }} />
+      <Stack.Screen name="index" options={{ title: 'More', headerShown: false }} />
       <Stack.Screen name="accounts" options={{ title: 'Accounts' }} />
       <Stack.Screen name="categories" options={{ title: 'Categories' }} />
       <Stack.Screen name="bills" options={{ title: 'Bills' }} />

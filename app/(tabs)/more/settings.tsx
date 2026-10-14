@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
@@ -11,7 +11,7 @@ import { requestNotificationPermission, checkNotificationPermission } from '../.
 import { scheduleDailyReminder, cancelDailyReminder } from '../../../src/notifications/dailyReminder';
 import { CURRENCIES } from '../../../src/domain/money';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
-import { Input, K, Muted } from '../../../src/ui/primitives';
+import { Input, K, Muted, Rise, Toggle } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 
@@ -83,7 +83,7 @@ export default function Settings() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.profile}>
+        <Rise style={styles.profile}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{email ? email[0].toUpperCase() : '·'}</Text>
           </View>
@@ -91,12 +91,12 @@ export default function Settings() {
             <Text style={styles.name}>{email}</Text>
             <Muted style={{ fontSize: 12.5 }}>Account · synced to this email</Muted>
           </View>
-        </View>
+        </Rise>
 
         <View style={styles.section}>
           <K style={styles.sectionLabel}>Account</K>
-          <Pressable style={[styles.row, { borderBottomWidth: 0 }]} onPress={signOut}>
-            <Text style={[styles.rowLabel, { color: colors.accent2_700 }]}>Sign out</Text>
+          <Pressable style={styles.row} onPress={signOut}>
+            <Text style={styles.rowLabel}>Sign out</Text>
             <Text style={styles.rowValue}>›</Text>
           </Pressable>
         </View>
@@ -111,7 +111,7 @@ export default function Settings() {
                 <Text style={styles.rowLabel}>Currency</Text>
                 <Text style={styles.rowValue}>{prefs.data?.currency_code ?? '—'} ›</Text>
               </Pressable>
-              <View style={[styles.row, { borderBottomWidth: 0 }]}>
+              <View style={styles.row}>
                 <Text style={styles.rowLabel}>Week starts on</Text>
                 <Text style={styles.rowValue}>{prefs.data?.week_start === 'SUNDAY' ? 'Sunday' : 'Monday'}</Text>
               </View>
@@ -121,7 +121,7 @@ export default function Settings() {
               <K style={styles.sectionLabel}>Nudges</K>
               <View style={styles.row}>
                 <Text style={styles.rowLabel}>Budget alerts</Text>
-                <Switch
+                <Toggle
                   testID="budget-alerts-switch"
                   value={!!prefs.data?.budget_alerts_enabled}
                   onValueChange={async (v) => {
@@ -131,12 +131,11 @@ export default function Settings() {
                     }
                     await setPref({ budget_alerts_enabled: v });
                   }}
-                  trackColor={{ true: colors.accent, false: colors.neutral300 }}
                 />
               </View>
-              <View style={[styles.row, prefs.data?.daily_reminder_enabled && { borderBottomWidth: 0 }]}>
+              <View style={styles.row}>
                 <Text style={styles.rowLabel}>Daily reminder</Text>
-                <Switch
+                <Toggle
                   testID="daily-reminder-switch"
                   value={!!prefs.data?.daily_reminder_enabled}
                   onValueChange={async (v) => {
@@ -153,11 +152,10 @@ export default function Settings() {
                       await setPref({ daily_reminder_enabled: false });
                     }
                   }}
-                  trackColor={{ true: colors.accent, false: colors.neutral300 }}
                 />
               </View>
               {!!prefs.data?.daily_reminder_enabled && (
-                <View style={[styles.row, { borderBottomWidth: 0 }]}>
+                <View style={styles.row}>
                   <Text style={styles.rowLabel}>Reminder time</Text>
                   <Input
                     value={reminderTimeText ?? prefs.data?.reminder_time ?? '20:00'}
@@ -180,7 +178,7 @@ export default function Settings() {
                 <K style={styles.sectionLabel}>SMS Detection</K>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Detect transactions from SMS</Text>
-                  <Switch
+                  <Toggle
                     testID="sms-detection-switch"
                     value={!!prefs.data?.sms_detection_enabled}
                     onValueChange={async (v) => {
@@ -194,10 +192,9 @@ export default function Settings() {
                       // actually stops detection when the toggle goes off.
                       await setSmsDetectionEnabled(v);
                     }}
-                    trackColor={{ true: colors.accent, false: colors.neutral300 }}
                   />
                 </View>
-                <Pressable style={[styles.row, { borderBottomWidth: 0 }]} onPress={runImport} disabled={importing}>
+                <Pressable style={styles.row} onPress={runImport} disabled={importing}>
                   <Text style={styles.rowLabel}>Import past bank SMS</Text>
                   <Text style={styles.rowValue}>{importing ? 'Importing…' : '›'}</Text>
                 </Pressable>
@@ -214,10 +211,10 @@ export default function Settings() {
             <Text style={styles.rowValue}>CSV, JSON ›</Text>
           </Pressable>
           <Pressable
-            style={[styles.row, { borderBottomWidth: 0 }]}
+            style={styles.row}
             onPress={() => Alert.alert('Not available yet', 'Account deletion is not built yet — contact support if you need this.')}
           >
-            <Text style={[styles.rowLabel, { color: colors.accent2_700 }]}>Delete everything</Text>
+            <Text style={[styles.rowLabel, { color: colors.accent }]}>Delete everything</Text>
             <Text style={styles.rowValue}>›</Text>
           </Pressable>
         </View>
@@ -239,26 +236,26 @@ const styles = StyleSheet.create({
   content: { padding: spacing.s4, paddingBottom: 100 },
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: spacing.s4 },
   avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.divider,
+    width: 48,
+    height: 48,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: fonts.heading, fontSize: 17, color: colors.accent700 },
+  avatarText: { fontFamily: fonts.display, fontSize: 24, color: colors.bg },
   name: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
-  section: { marginBottom: spacing.s4 },
-  sectionLabel: { paddingBottom: 7, borderBottomWidth: 1, borderBottomColor: colors.text, marginBottom: 4 },
+  section: { marginBottom: 28 },
+  sectionLabel: { marginBottom: 8 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.dividerFaint,
+    gap: 12,
+    minHeight: 56,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
   },
-  rowLabel: { fontFamily: fonts.body, fontSize: 14.5, color: colors.text },
-  rowValue: { fontFamily: fonts.body, fontSize: 14.5, color: colors.neutral700 },
+  rowLabel: { fontFamily: fonts.bold, fontSize: 16, color: colors.text, flexShrink: 1 },
+  rowValue: { fontFamily: fonts.bold, fontSize: 14, color: colors.muted },
 });

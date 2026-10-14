@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { StackActions } from '@react-navigation/native';
-import { colors, fonts } from '../theme/tokens';
+import { caps, colors } from '../theme/tokens';
 
-// Broadsheet Nav Bar spec: no icons, 52px content height + OS gesture inset,
-// active tab marked by a 26x2px accent rule on the top edge (not a React
-// Navigation default — hence a custom tabBar instead of tabBarIcon/-Style).
+// NeoPOP nav bar: no icons, all-caps labels, 64px content height + OS gesture
+// inset, active tab marked by a full-width accent rule on the top edge (not a
+// React Navigation default — hence a custom tabBar instead of tabBarIcon/-Style).
 export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
 
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
-    minHeight: 52,
+    minHeight: 64,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -78,19 +78,17 @@ const styles = StyleSheet.create({
   activeRule: {
     position: 'absolute',
     top: 0,
-    alignSelf: 'center',
-    width: 26,
-    height: 2,
+    left: 0,
+    right: 0,
+    height: 3,
     backgroundColor: colors.accent,
   },
   label: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.neutral700,
-    letterSpacing: 0.07,
+    ...caps,
+    letterSpacing: 1.5,
+    color: colors.muted,
   },
   labelActive: {
-    fontFamily: fonts.heading,
-    color: colors.accent700,
+    color: colors.text,
   },
 });

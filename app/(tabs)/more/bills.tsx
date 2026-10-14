@@ -6,9 +6,9 @@ import { archiveBill, createBill, markBillPaid, restoreBillDueDate, updateBill, 
 import type { Bill } from '../../../src/data/types';
 import { daysUntil, dueLabel, shortDate } from '../../../src/domain/bills';
 import { formatCurrency, toNumber } from '../../../src/domain/money';
-import { Button, Input, K, Muted, Seg } from '../../../src/ui/primitives';
+import { Button, Input, K, Muted, Rise, Seg } from '../../../src/ui/primitives';
 import { FormModal } from '../../../src/ui/FormModal';
-import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
@@ -156,19 +156,30 @@ export default function Bills() {
           <Muted style={styles.gap}>No bills yet.</Muted>
         ) : (
           <View style={styles.list}>
-            {(bills.data ?? []).map((b) => {
+            {(bills.data ?? []).map((b, i) => {
               const days = daysUntil(b.next_due_date, today);
+              const soon = days <= 2;
+              const [dueDayNum, dueMonth] = shortDate(b.next_due_date).split(' ');
               return (
-                <Pressable key={b.id} style={styles.row} onPress={() => openForm(b)}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowName}>{b.name}</Text>
-                    <Text style={[styles.rowMeta, days < 0 && styles.overdue]}>
-                      {formatCurrency(toNumber(b.amount), currencyCode)} · due {shortDate(b.next_due_date)} · {dueLabel(days)}
-                      {b.payments_left ? ` · ${b.payments_left} left` : ''}
-                    </Text>
-                  </View>
-                  <Button title="Paid" variant="secondary" onPress={() => pay(b)} loading={payingId === b.id} />
-                </Pressable>
+                <Rise key={b.id} delay={Math.min(i, 8) * 60}>
+                  <Pressable
+                    style={({ pressed }) => [styles.row, soon && styles.rowSoon, pressed && styles.rowPressed]}
+                    onPress={() => openForm(b)}
+                  >
+                    <View style={styles.dateBox}>
+                      <Text style={styles.dateDay}>{dueDayNum}</Text>
+                      <Text style={styles.dateMonth}>{dueMonth}</Text>
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={styles.rowName}>{b.name}</Text>
+                      <Text style={[styles.rowMeta, days < 0 && styles.overdue]}>
+                        {formatCurrency(toNumber(b.amount), currencyCode)} · {dueLabel(days)}
+                        {b.payments_left ? ` · ${b.payments_left} left` : ''}
+                      </Text>
+                    </View>
+                    <Button title="Paid" variant={soon ? 'primary' : 'secondary'} onPress={() => pay(b)} loading={payingId === b.id} />
+                  </Pressable>
+                </Rise>
               );
             })}
           </View>
@@ -223,24 +234,30 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.s4, paddingBottom: 100 },
   gap: { marginTop: spacing.s4 },
-  list: { marginTop: spacing.s4 },
+  list: { marginTop: spacing.s4, gap: 14 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.dividerFaint,
+    gap: 14,
+    padding: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
-  rowName: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
-  rowMeta: { fontFamily: fonts.body, fontSize: 12, color: colors.neutral700, marginTop: 3 },
-  overdue: { color: colors.accent2_700 },
-  undoLine: { fontFamily: fonts.body, fontSize: 13, color: colors.neutral700, marginTop: spacing.s2 },
-  undoLink: { fontFamily: fonts.body, color: colors.accent700 },
+  rowSoon: { borderColor: colors.accent },
+  rowPressed: { opacity: 0.8 },
+  dateBox: { width: 46, paddingVertical: 6, alignItems: 'center', borderWidth: 1, borderColor: colors.divider },
+  dateDay: { fontFamily: fonts.display, fontSize: 22, lineHeight: 24, color: colors.text },
+  dateMonth: { ...caps, fontSize: 9, letterSpacing: 1.5, color: colors.muted },
+  rowName: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
+  rowMeta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
+  overdue: { color: colors.accent },
+  undoLine: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted, marginTop: spacing.s3 },
+  undoLink: { fontFamily: fonts.heading, color: colors.accent },
   field: { marginTop: 6, marginBottom: spacing.s2 },
-  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent2_700, marginTop: spacing.s2 },
+  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent, marginTop: spacing.s2 },
   formActions: { marginTop: spacing.s3, gap: spacing.s2 },
-  confirm: { marginTop: spacing.s3, padding: 12, borderRadius: 2, backgroundColor: colors.accent2_100 },
-  confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.accent2_900 },
+  confirm: { marginTop: spacing.s3, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
+  confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.text },
   confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
 });

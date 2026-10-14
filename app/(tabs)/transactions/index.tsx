@@ -9,9 +9,9 @@ import { monthRange } from '../../../src/domain/dateRange';
 import { spendAmount } from '../../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
 import { formatCurrency, toNumber } from '../../../src/domain/money';
-import { Button, Chip, Input, K, Muted, ScreenHeader } from '../../../src/ui/primitives';
+import { Button, Chip, Input, K, Muted, Plunk, Rise, ScreenHeader } from '../../../src/ui/primitives';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
-import { colors, fonts, shadow, spacing } from '../../../src/theme/tokens';
+import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { archiveTransaction } from '../../../src/application/transactions';
@@ -137,8 +137,14 @@ export default function TransactionsList() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
+        {!selectMode && (
+          <K style={styles.kicker}>
+            {monthLabel}
+            {ready ? ` · ${formatCurrency(monthOut, currencyCode)} out` : ''}
+          </K>
+        )}
         <ScreenHeader
-          title={selectMode ? `${selectedIds.size} selected` : 'Transactions'}
+          title={selectMode ? `${selectedIds.size} selected` : 'The ledger'}
           right={
             selectMode ? (
               <View style={styles.selectActions}>
@@ -149,9 +155,7 @@ export default function TransactionsList() {
                   <Text style={[styles.link, selectedIds.size === 0 && styles.linkDisabled]}>Delete</Text>
                 </Pressable>
               </View>
-            ) : (
-              <K>{monthLabel}{ready ? ` · ${formatCurrency(monthOut, currencyCode)} out` : ''}</K>
-            )
+            ) : undefined
           }
         />
         {!selectMode && (
@@ -160,7 +164,7 @@ export default function TransactionsList() {
               placeholder="Search description"
               value={search}
               onChangeText={setSearch}
-              style={{ marginTop: 12 }}
+              style={{ marginTop: 20 }}
             />
             <View style={styles.filters}>
               {FILTERS.map((f) => (
@@ -194,8 +198,8 @@ export default function TransactionsList() {
         ) : groups.length === 0 ? (
           <Muted style={{ marginTop: spacing.s4 }}>No transactions match.</Muted>
         ) : (
-          groups.map((g) => (
-            <View key={g.day} style={styles.group}>
+          groups.map((g, gi) => (
+            <Rise key={g.day} delay={Math.min(gi, 6) * 60} style={styles.group}>
               <K style={styles.groupLabel}>{g.day}</K>
               {g.rows.map((r) => (
                 <TransactionRow
@@ -207,43 +211,33 @@ export default function TransactionsList() {
                   selected={selectedIds.has(r.id)}
                 />
               ))}
-            </View>
+            </Rise>
           ))
         )}
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => router.push('/transaction/new')}>
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
+      <Plunk tone="accent" onPress={() => router.push('/transaction/new')} accessibilityLabel="Add a transaction" style={styles.fab}>
+        <Text style={styles.fabText}>+ Add</Text>
+      </Plunk>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.s4, paddingTop: spacing.s2 },
+  header: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4 },
+  kicker: { marginBottom: 6 },
   filters: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 12 },
-  list: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4, paddingBottom: 100 },
-  group: { marginBottom: 14 },
-  groupLabel: { paddingBottom: 6 },
+  list: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4, paddingBottom: 120 },
+  group: { marginBottom: 22 },
+  groupLabel: { paddingBottom: 10, color: colors.text },
   selectActions: { flexDirection: 'row', gap: 16 },
-  link: { fontFamily: fonts.body, fontSize: 13, color: colors.accent700 },
-  linkDisabled: { color: colors.neutral500 },
-  confirm: { marginTop: 12, padding: 12, borderRadius: 2, backgroundColor: colors.accent2_100 },
-  confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.accent2_900 },
+  link: { ...caps, fontSize: 12, color: colors.accent },
+  linkDisabled: { color: colors.muted },
+  confirm: { marginTop: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
+  confirmText: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.text },
   confirmError: { fontFamily: fonts.heading, marginTop: 6 },
   confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  fab: {
-    position: 'absolute',
-    right: 18,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 2,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow.md,
-  },
-  fabText: { color: colors.bg, fontSize: 30, lineHeight: 32 },
+  fab: { position: 'absolute', right: 20, bottom: 24, height: 52, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
+  fabText: { ...caps, fontSize: 14, color: colors.bg },
 });
