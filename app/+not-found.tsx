@@ -10,7 +10,7 @@ export default function NotFound() {
       <View style={styles.screen}>
         <Heading>This screen doesn&rsquo;t exist</Heading>
         <Link href="/" style={{ marginTop: spacing.s3 }}>
-          <Body style={{ color: colors.accent700 }}>Go to home</Body>
+          <Body style={{ color: colors.accent }}>Go to home</Body>
         </Link>
       </View>
     </>

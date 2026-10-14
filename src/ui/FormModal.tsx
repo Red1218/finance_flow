@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(32,30,29,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
   },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 6, borderTopRightRadius: 6, padding: spacing.s4 },
+  sheet: { backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.divider, padding: spacing.s4 },
 });

@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   topBar: { paddingHorizontal: spacing.s4, paddingTop: spacing.s3 },
   content: { padding: spacing.s4, gap: spacing.s3 },
-  title: { fontSize: 24 },
+  title: { fontSize: 44, lineHeight: 48 },
   sub: { maxWidth: 320 },
   input: { marginTop: 4 },
-  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent2_700 },
+  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent },
 });

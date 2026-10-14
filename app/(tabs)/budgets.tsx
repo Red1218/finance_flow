@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
 import { useTransactions, useBudgets, useCategories, usePreferences } from '../../src/hooks/queries';
 import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { setBudget } from '../../src/data/repositories/budgets';
@@ -10,10 +9,10 @@ import { spendAmount } from '../../src/domain/transactionRules';
 import { toNumber, formatCurrency } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthRange } from '../../src/domain/dateRange';
-import { Bar, Button, Input, K, Muted, Num, ScreenHeader, Tag } from '../../src/ui/primitives';
+import { Bar, Button, Grow, Input, K, Muted, Plunk, Rise, ScreenHeader, Tag, useCountUp } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { FormModal } from '../../src/ui/FormModal';
-import { colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
 import { useToday } from '../../src/hooks/useToday';
@@ -79,9 +78,7 @@ export default function Budgets() {
   }, [tx.data, budgets.data, categories.data]);
 
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'long' });
-  const ringRadius = 50;
-  const circumference = 2 * Math.PI * ringRadius;
-  const offset = circumference * (1 - Math.min(1, data.overallProgress.pct / 100));
+  const usedShown = Math.round(useCountUp(ready ? data.overallProgress.pct : 0, 900));
 
   const openAddForCategory = (categoryId: string, existingAmount?: number) => {
     setFormCategoryId(categoryId);
@@ -130,68 +127,65 @@ export default function Budgets() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.accent} />}
       >
-        <ScreenHeader title="Budgets" right={<K style={{ color: colors.accent700 }}>{monthLabel}</K>} />
+        <Rise>
+          <K style={styles.kicker}>{monthLabel}</K>
+          <ScreenHeader title="Budgets" />
+        </Rise>
 
         {!ready ? (
           error ? <Muted>Couldn&rsquo;t load your budgets. Pull down to try again.</Muted> : null
         ) : (
           <>
-            <Pressable
-              style={styles.ringSection}
-              onPress={() => {
-                setOverallAmount(data.overall ? String(toNumber(data.overall.amount)) : '');
-                setOverallEditOpen(true);
-              }}
-            >
-              {data.hasOverall ? (
-                <>
-                  <View style={styles.ringBox}>
-                    <Svg width={118} height={118} viewBox="0 0 118 118">
-                      <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
-                      <Circle
-                        cx={59}
-                        cy={59}
-                        r={ringRadius}
-                        fill="none"
-                        stroke={data.overallProgress.isOver ? colors.accent2 : colors.accent}
-                        strokeWidth={10}
-                        strokeDasharray={`${circumference} ${circumference}`}
-                        strokeDashoffset={offset}
-                        strokeLinecap="round"
-                        transform="rotate(-90 59 59)"
-                      />
-                    </Svg>
-                    <View style={styles.ringLabel}>
-                      <Num style={styles.ringPct}>{data.overallProgress.pct}%</Num>
-                      <K>Used</K>
+            <Rise delay={80}>
+              <Plunk
+                tone="white"
+                depth={6}
+                accessibilityLabel={data.hasOverall ? 'Edit monthly limit' : 'Set a monthly limit'}
+                onPress={() => {
+                  setOverallAmount(data.overall ? String(toNumber(data.overall.amount)) : '');
+                  setOverallEditOpen(true);
+                }}
+                style={styles.limitCard}
+              >
+                <Text style={styles.limitCaps}>Monthly limit</Text>
+                {data.hasOverall ? (
+                  <>
+                    <View style={styles.rowTop}>
+                      <Text style={styles.limitAmount}>{formatCurrency(data.overallProgress.limit, currencyCode)}</Text>
+                      <Text style={styles.limitPct}>{usedShown}% used</Text>
                     </View>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Muted>Left across {data.rows.length + 1} budgets</Muted>
-                    <Num style={styles.leftAmount}>{formatCurrency(data.overallProgress.remaining, currencyCode)}</Num>
-                    <Muted>
-                      {formatCurrency(data.overallProgress.spent, currencyCode)} spent of {formatCurrency(data.overallProgress.limit, currencyCode)}
-                    </Muted>
-                  </View>
-                </>
-              ) : (
-                <View style={styles.ringBox}>
-                  <Svg width={118} height={118} viewBox="0 0 118 118">
-                    <Circle cx={59} cy={59} r={ringRadius} fill="none" stroke={colors.neutral300} strokeWidth={10} />
-                  </Svg>
-                </View>
-              )}
-              {!data.hasOverall && (
-                <View style={{ flex: 1 }}>
-                  <Muted>No overall budget set</Muted>
-                  <Text style={styles.emptyOverallCta}>Set a monthly limit →</Text>
-                </View>
-              )}
-            </Pressable>
+                    <View style={styles.limitTrack}>
+                      <View style={{ width: `${Math.min(100, data.overallProgress.pct)}%`, height: '100%' }}>
+                        <Grow axis="x" delay={300} style={styles.limitFill} />
+                      </View>
+                    </View>
+                    <View style={styles.limitStats}>
+                      <View style={styles.limitStat}>
+                        <Text style={styles.limitStatLabel}>Spent</Text>
+                        <Text style={styles.limitStatValue}>{formatCurrency(data.overallProgress.spent, currencyCode)}</Text>
+                      </View>
+                      <View style={styles.limitStat}>
+                        <Text style={styles.limitStatLabel}>{data.overallProgress.isOver ? 'Over' : 'Left'}</Text>
+                        <Text style={styles.limitStatValue}>{formatCurrency(Math.abs(data.overallProgress.remaining), currencyCode)}</Text>
+                      </View>
+                      <View style={styles.limitStat}>
+                        <Text style={styles.limitStatLabel}>Budgets</Text>
+                        <Text style={styles.limitStatValue}>{data.rows.length + 1}</Text>
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.limitAmount, styles.limitEmpty]}>No overall budget set</Text>
+                    <Text style={styles.limitCta}>Set a monthly limit →</Text>
+                  </>
+                )}
+              </Plunk>
+            </Rise>
 
             <View style={styles.overTag}>
               {data.overBudgetCount > 0 ? (
-                <Tag label={`● ${data.overBudgetCount} over budget`} variant="accent2" />
+                <Tag label={`● ${data.overBudgetCount} over budget`} variant="accent" />
               ) : (
                 <View />
               )}
@@ -200,26 +194,27 @@ export default function Budgets() {
               </Pressable>
             </View>
 
-            <View style={styles.rows}>
-              {data.rows.map((r) => (
+            <Rise delay={200} style={styles.rows}>
+              <K style={{ marginBottom: 10 }}>By category</K>
+              {data.rows.map((r, i) => (
                 <Pressable key={r.categoryId} style={styles.row} onPress={() => openAddForCategory(r.categoryId, r.limit)}>
                   <View style={styles.rowTop}>
                     <Text style={styles.rowName}>{r.name}</Text>
-                    <Text style={[styles.rowStatus, r.isOver && { color: colors.accent2_700 }]}>
+                    <Text style={[styles.rowStatus, r.isOver && { color: colors.accent }]}>
                       {r.isOver ? `${formatCurrency(r.spent - r.limit, currencyCode)} over` : `${formatCurrency(r.remaining, currencyCode)} left`}
                     </Text>
                   </View>
-                  <Muted style={{ fontSize: 12, marginBottom: 7 }}>
+                  <Muted style={styles.rowSub}>
                     {formatCurrency(r.spent, currencyCode)} of {formatCurrency(r.limit, currencyCode)} spent
                   </Muted>
-                  <Bar pct={r.pct} color={r.isOver ? colors.accent2 : colors.accent} />
+                  <Bar pct={r.pct} color={r.isOver ? colors.accent : colors.text} delay={350 + i * 90} />
                 </Pressable>
               ))}
 
               {data.availableForNewBudget.length > 0 && (
                 <Button title="Add a category budget" variant="secondary" onPress={() => setCategoryPickerOpen(true)} />
               )}
-            </View>
+            </Rise>
           </>
         )}
       </ScrollView>
@@ -263,18 +258,26 @@ export default function Budgets() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.s4, paddingBottom: 100, gap: spacing.s3 },
-  ringSection: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: spacing.s2 },
-  ringBox: { width: 118, height: 118, alignItems: 'center', justifyContent: 'center' },
-  ringLabel: { position: 'absolute', alignItems: 'center' },
-  ringPct: { fontFamily: fonts.heading, fontSize: 23 },
-  leftAmount: { fontFamily: fonts.heading, fontSize: 27, marginVertical: 2 },
-  emptyOverallCta: { fontFamily: fonts.heading, fontSize: 17, color: colors.accent700, marginTop: 4 },
-  overTag: { marginTop: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  manageLink: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent700 },
-  rows: { marginTop: spacing.s2, gap: spacing.s3 },
-  row: { paddingBottom: spacing.s2, borderBottomWidth: 1, borderBottomColor: colors.dividerFaint },
+  content: { padding: spacing.s4, paddingBottom: 100, gap: 24 },
+  kicker: { marginBottom: 6 },
+  limitCard: { padding: spacing.s4, gap: 14 },
+  limitCaps: { ...caps, color: colors.bg },
+  limitAmount: { fontFamily: fonts.display, fontSize: 44, lineHeight: 50, color: colors.bg },
+  limitPct: { fontFamily: fonts.heading, fontSize: 13, color: colors.bg, fontVariant: ['tabular-nums'] },
+  limitEmpty: { fontSize: 30, lineHeight: 36 },
+  limitCta: { fontFamily: fonts.heading, fontSize: 16, color: colors.bg },
+  limitTrack: { height: 10, backgroundColor: 'rgba(13,13,13,0.12)' },
+  limitFill: { height: '100%', backgroundColor: colors.bg },
+  limitStats: { flexDirection: 'row', gap: 8, borderTopWidth: 1, borderTopColor: 'rgba(13,13,13,0.15)', paddingTop: 14 },
+  limitStat: { flex: 1, gap: 4 },
+  limitStatLabel: { ...caps, fontSize: 10, letterSpacing: 1.5, color: colors.divider },
+  limitStatValue: { fontFamily: fonts.heading, fontSize: 16, color: colors.bg },
+  overTag: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  manageLink: { ...caps, fontSize: 12, color: colors.text },
+  rows: { gap: 0 },
+  row: { paddingVertical: 18, borderTopWidth: 1, borderTopColor: colors.divider },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  rowName: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
-  rowStatus: { fontFamily: fonts.body, fontSize: 12.5, color: colors.neutral700 },
+  rowName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+  rowStatus: { fontFamily: fonts.heading, fontSize: 13, color: colors.muted },
+  rowSub: { fontSize: 12, marginTop: 2, marginBottom: 10 },
 });

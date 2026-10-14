@@ -18,5 +18,5 @@ export function SignInPrompt({ message }: { message: string }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.s3, padding: spacing.s4 },
-  message: { textAlign: 'center', color: colors.neutral700, maxWidth: 280 },
+  message: { textAlign: 'center', color: colors.muted, maxWidth: 280 },
 });

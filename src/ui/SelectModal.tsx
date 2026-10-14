@@ -45,15 +45,15 @@ export function SelectModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(32,30,29,0.4)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.bg,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
     padding: spacing.s4,
     maxHeight: '60%',
   },
-  title: { fontFamily: fonts.heading, fontSize: 16, marginBottom: spacing.s2, color: colors.text },
-  row: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.dividerFaint },
-  rowText: { fontFamily: fonts.body, fontSize: 15, color: colors.text },
+  title: { fontFamily: fonts.display, fontSize: 24, marginBottom: spacing.s3, color: colors.text },
+  row: { minHeight: 52, justifyContent: 'center', borderTopWidth: 1, borderTopColor: colors.divider },
+  rowText: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
 });

@@ -15,7 +15,7 @@ import { formatCurrency } from '../../src/domain/money';
 import { expenseOptionLabel } from '../../src/domain/transactionView';
 import { K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
-import { colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
 
 export default function DetectedScreen() {
   const router = useRouter();
@@ -304,37 +304,38 @@ const styles = StyleSheet.create({
     paddingTop: spacing.s3,
   },
   selectActions: { flexDirection: 'row', gap: 16 },
-  link: { fontFamily: fonts.body, fontSize: 13, color: colors.accent700 },
-  linkDisabled: { color: colors.neutral500 },
+  link: { ...caps, fontSize: 12, color: colors.text },
+  linkDisabled: { color: colors.muted },
   assignError: {
     fontFamily: fonts.body,
     fontSize: 12.5,
-    color: colors.accent2_700,
+    color: colors.accent,
     paddingHorizontal: spacing.s4,
     paddingTop: spacing.s2,
   },
   scroll: { flex: 1 },
   content: { padding: spacing.s4, paddingBottom: 100 },
-  empty: { fontFamily: fonts.body, fontSize: 14, textAlign: 'center', marginTop: spacing.s4, color: colors.neutral700 },
+  empty: { fontFamily: fonts.body, fontSize: 14, textAlign: 'center', marginTop: spacing.s4, color: colors.muted },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.dividerFaint,
+    padding: 14,
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  merchant: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
-  meta: { fontFamily: fonts.body, fontSize: 12.5, color: colors.neutral700, marginTop: 3 },
-  credit: { color: colors.accent700 },
-  dismiss: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent700, marginLeft: spacing.s2 },
+  merchant: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
+  meta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted, marginTop: 4 },
+  credit: { color: colors.accent },
+  dismiss: { ...caps, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted, marginLeft: spacing.s2 },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: colors.neutral500,
+    borderColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },

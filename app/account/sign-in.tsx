@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/data/AuthContext';
 import { authErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Heading, Input, K } from '../../src/ui/primitives';
-import { colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
 
 export default function SignIn() {
   const router = useRouter();
@@ -64,10 +64,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.s4,
     paddingTop: spacing.s3,
   },
-  link: { fontFamily: fonts.body, fontSize: 13, color: colors.accent700 },
+  link: { ...caps, fontSize: 12, color: colors.text },
   content: { padding: spacing.s4, gap: spacing.s3 },
-  title: { fontSize: 24 },
+  title: { fontSize: 44, lineHeight: 48 },
   sub: { maxWidth: 320 },
   input: { marginTop: 4 },
-  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent2_700 },
+  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent },
 });

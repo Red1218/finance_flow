@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAccounts, useTransactions, usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { createAccount } from '../../../src/data/repositories/accounts';
@@ -8,7 +8,7 @@ import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { transactionSign } from '../../../src/domain/transactionRules';
 import { monthRange } from '../../../src/domain/dateRange';
 import type { Account, AccountType } from '../../../src/data/types';
-import { Button, Card, Input, K, Muted, Seg, Tag } from '../../../src/ui/primitives';
+import { Button, Card, Input, K, Muted, Plunk, Rise, Seg, Tag, useCountUp } from '../../../src/ui/primitives';
 import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
@@ -100,6 +100,8 @@ export default function Accounts() {
     }
   };
 
+  const netShown = useCountUp(ready ? data.netWorth : 0, 1100);
+
   if (!session) {
     return (
       <View style={styles.screen}>
@@ -114,32 +116,34 @@ export default function Accounts() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.accent} />}
       >
-        <View style={styles.rowBetween}>
-          <Pressable onPress={() => router.push('/onboarding/link-bank')}>
-            <Text style={styles.link}>Link a bank</Text>
-          </Pressable>
-          <Pressable onPress={() => setAddOpen(true)}>
-            <Text style={styles.link}>Add account</Text>
-          </Pressable>
+        <View style={styles.actions}>
+          <View style={{ flex: 1 }}>
+            <Button title="Link a bank" onPress={() => router.push('/onboarding/link-bank')} block />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button title="Add account" variant="secondary" onPress={() => setAddOpen(true)} block />
+          </View>
         </View>
 
         {!ready ? (
           error ? <Muted>Couldn&rsquo;t load your accounts. Pull down to try again.</Muted> : null
         ) : (
           <>
-            <View style={styles.netWorth}>
-              <K>Everything together</K>
-              <Text style={styles.netAmount}>{formatCurrency(data.netWorth, currencyCode)}</Text>
-              <Muted>
-                {data.monthChange >= 0 ? 'Up' : 'Down'} {formatCurrency(Math.abs(data.monthChange), currencyCode)} this month · {(accounts.data ?? []).length} accounts
-              </Muted>
-            </View>
+            <Rise>
+              <Plunk depth={6} style={styles.netWorth}>
+                <K>Everything together</K>
+                <Text style={styles.netAmount}>{formatCurrency(netShown, currencyCode)}</Text>
+                <Muted>
+                  {data.monthChange >= 0 ? 'Up' : 'Down'} {formatCurrency(Math.abs(data.monthChange), currencyCode)} this month · {(accounts.data ?? []).length} accounts
+                </Muted>
+              </Plunk>
+            </Rise>
 
-            {SECTIONS.map(({ title, types }) => {
+            {SECTIONS.map(({ title, types }, si) => {
               const group = (accounts.data ?? []).filter((a) => types.includes(a.type));
               if (group.length === 0) return null;
               return (
-                <View key={title} style={styles.list}>
+                <Rise key={title} delay={120 + si * 80} style={styles.list}>
                   <K>{title}</K>
                   {group.map((a) => {
                     const balance = data.balanceByAccount.get(a.id) ?? 0;
@@ -156,12 +160,12 @@ export default function Accounts() {
                               </View>
                             )}
                           </View>
-                          <Text style={[styles.balance, balance < 0 && { color: colors.accent2_700 }]}>{formatCurrency(balance, currencyCode)}</Text>
+                          <Text style={[styles.balance, balance < 0 && { color: colors.accent }]}>{formatCurrency(balance, currencyCode)}</Text>
                         </View>
                       </Card>
                     );
                   })}
-                </View>
+                </Rise>
               );
             })}
             {(accounts.data ?? []).length === 0 && <Muted>No accounts yet.</Muted>}
@@ -214,12 +218,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.s4, paddingBottom: 100, gap: spacing.s3 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  link: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent700 },
-  netWorth: { marginTop: spacing.s2 },
-  netAmount: { fontFamily: fonts.heading, fontSize: 38, color: colors.text, marginTop: 4 },
+  actions: { flexDirection: 'row', gap: spacing.s3 },
+  netWorth: { marginTop: spacing.s2, padding: spacing.s4, gap: 8, borderWidth: 1, borderColor: colors.divider },
+  netAmount: { fontFamily: fonts.display, fontSize: 44, lineHeight: 50, color: colors.accent, fontVariant: ['tabular-nums'] },
   list: { marginTop: spacing.s2, gap: spacing.s2 },
-  accountName: { fontFamily: fonts.heading, fontSize: 15.5, color: colors.text },
+  accountName: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
   tags: { flexDirection: 'row', gap: 6, marginTop: 6 },
   numbers: { fontSize: 12.5, marginTop: 3 },
-  balance: { fontFamily: fonts.heading, fontSize: 18, color: colors.text },
+  balance: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
 });

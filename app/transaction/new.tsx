@@ -13,7 +13,7 @@ import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
 import { accountLabel, expenseOptionLabel } from '../../src/domain/transactionView';
 import { DatePickerField } from '../../src/ui/DatePickerField';
 import { SelectModal } from '../../src/ui/SelectModal';
-import { colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
@@ -194,7 +194,10 @@ export default function NewTransaction() {
 
         <View style={styles.amountBlock}>
           <K>Amount</K>
-          <Text style={styles.amount}>{currency.symbol}{numeric ? numeric.toLocaleString(currency.locale) : amount}</Text>
+          <Text style={[styles.amount, kind === 'Income' && { color: colors.accent }]}>
+            {currency.symbol}
+            {numeric ? numeric.toLocaleString(currency.locale) : amount}
+          </Text>
         </View>
 
         {kind !== 'Transfer' ? (
@@ -256,7 +259,7 @@ export default function NewTransaction() {
         {KEYS.map((k) => (
           <Pressable
             key={k}
-            style={styles.key}
+            style={({ pressed }) => [styles.key, pressed && styles.keyPressed]}
             onPress={() => tapKey(k)}
             accessibilityRole="button"
             accessibilityLabel={k === '⌫' ? 'Delete' : k}
@@ -308,28 +311,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.s4,
     paddingTop: spacing.s3,
   },
-  link: { fontFamily: fonts.body, fontSize: 13, color: colors.accent700 },
-  linkDisabled: { color: colors.neutral500 },
+  link: { ...caps, fontSize: 12, color: colors.text },
+  linkDisabled: { color: colors.muted },
   scroll: { flex: 1 },
   content: { padding: spacing.s4, gap: spacing.s4 },
   amountBlock: { alignItems: 'center', paddingVertical: spacing.s2 },
-  amount: { fontFamily: fonts.heading, fontSize: 46, color: colors.text, marginTop: 6 },
+  amount: { fontFamily: fonts.display, fontSize: 60, lineHeight: 68, color: colors.text, marginTop: 6 },
   field: { gap: 9 },
   fieldLabel: {},
   categoryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  categoryToggle: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent700 },
+  categoryToggle: { ...caps, fontSize: 11, color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   accountRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  accountLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.accent700 },
-  error: { color: colors.accent2_700 },
+  accountLabel: { ...caps, fontSize: 12, letterSpacing: 1.5, color: colors.muted },
+  error: { color: colors.accent },
   keypad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     borderTopWidth: 1,
     borderTopColor: colors.divider,
-    paddingTop: spacing.s2,
-    paddingHorizontal: spacing.s4,
   },
-  key: { width: '33.33%', minHeight: 52, alignItems: 'center', justifyContent: 'center' },
-  keyText: { fontFamily: fonts.body, fontSize: 22, color: colors.text },
+  key: {
+    width: '33.33%',
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.divider,
+  },
+  keyPressed: { backgroundColor: colors.divider },
+  keyText: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
 });
