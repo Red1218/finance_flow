@@ -174,14 +174,14 @@ export default function Home() {
               )}
               <View style={styles.billsHead}>
                 <K>Bills due</K>
-                <Pressable onPress={() => router.push('/(tabs)/more/bills')}>
+                <Pressable onPress={() => router.push('/(tabs)/more/bills', { withAnchor: true })}>
                   <Text style={styles.link}>All bills →</Text>
                 </Pressable>
               </View>
               {billList.length === 0 ? (
                 <View style={styles.billsEmpty}>
                   <Muted>No bills yet.</Muted>
-                  <Pressable onPress={() => router.push('/(tabs)/more/bills')}>
+                  <Pressable onPress={() => router.push('/(tabs)/more/bills', { withAnchor: true })}>
                     <Text style={styles.link}>Add a bill</Text>
                   </Pressable>
                 </View>
@@ -191,7 +191,7 @@ export default function Home() {
                 billsDue.map((b) => {
                   const days = daysUntil(b.next_due_date, today);
                   return (
-                    <Pressable key={b.id} style={styles.billRow} onPress={() => router.push('/(tabs)/more/bills')}>
+                    <Pressable key={b.id} style={styles.billRow} onPress={() => router.push('/(tabs)/more/bills', { withAnchor: true })}>
                       <Text style={styles.billName}>{b.name}</Text>
                       <Text style={[styles.billMeta, days < 0 && styles.over]}>
                         {formatCurrency(toNumber(b.amount), d.currencyCode)} · {dueLabel(days)}
