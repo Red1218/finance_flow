@@ -6,7 +6,7 @@ import { archiveBill, createBill, markBillPaid, restoreBillDueDate, updateBill, 
 import type { Bill } from '../../../src/data/types';
 import { daysUntil, dueLabel, shortDate } from '../../../src/domain/bills';
 import { formatCurrency, toNumber } from '../../../src/domain/money';
-import { Button, Input, K, Muted } from '../../../src/ui/primitives';
+import { Button, Input, K, Muted, Seg } from '../../../src/ui/primitives';
 import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
@@ -28,6 +28,8 @@ export default function Bills() {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDay, setDueDay] = useState('');
+  const [repeats, setRepeats] = useState<'monthly' | 'fixed'>('monthly');
+  const [payments, setPayments] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -42,6 +44,8 @@ export default function Bills() {
     setName(bill?.name ?? '');
     setAmount(bill ? String(toNumber(bill.amount)) : '');
     setDueDay(bill ? String(bill.due_day) : '');
+    setRepeats(bill?.payments_left ? 'fixed' : 'monthly');
+    setPayments(bill?.payments_left ? String(bill.payments_left) : '');
     setConfirmDelete(false);
     setFormError(null);
     setFormOpen(true);
@@ -50,14 +54,20 @@ export default function Bills() {
   const parsed = (): BillInput | null => {
     const day = Number(dueDay);
     const value = parseFloat(amount);
+    const count = repeats === 'fixed' ? Number(payments) : null;
     if (!name.trim() || !(value > 0) || !Number.isInteger(day) || day < 1 || day > 31) return null;
-    return { name: name.trim(), amount: value, due_day: day };
+    if (count !== null && (!Number.isInteger(count) || count < 1)) return null;
+    return { name: name.trim(), amount: value, due_day: day, payments_left: count };
   };
 
   const save = async () => {
     const input = parsed();
     if (!input) {
-      setFormError('Enter a name, an amount above 0, and a due day from 1 to 31.');
+      setFormError(
+        repeats === 'fixed'
+          ? 'Enter a name, an amount above 0, a due day from 1 to 31, and at least 1 payment.'
+          : 'Enter a name, an amount above 0, and a due day from 1 to 31.',
+      );
       return;
     }
     setSaving(true);
@@ -132,7 +142,7 @@ export default function Bills() {
         <Button title="Add bill" variant="secondary" onPress={() => openForm(null)} block />
         {justPaid && (
           <Text style={styles.undoLine}>
-            Marked {justPaid.name} paid.{' '}
+            Marked {justPaid.name} paid.{justPaid.payments_left === 1 ? ' That was the last payment.' : ''}{' '}
             <Text style={styles.undoLink} onPress={undo}>
               Undo
             </Text>
@@ -154,6 +164,7 @@ export default function Bills() {
                     <Text style={styles.rowName}>{b.name}</Text>
                     <Text style={[styles.rowMeta, days < 0 && styles.overdue]}>
                       {formatCurrency(toNumber(b.amount), currencyCode)} · due {shortDate(b.next_due_date)} · {dueLabel(days)}
+                      {b.payments_left ? ` · ${b.payments_left} left` : ''}
                     </Text>
                   </View>
                   <Button title="Paid" variant="secondary" onPress={() => pay(b)} loading={payingId === b.id} />
@@ -171,6 +182,23 @@ export default function Bills() {
         <Input value={amount} onChangeText={setAmount} placeholder="Amount" keyboardType="decimal-pad" style={styles.field} />
         <K>Due day each month</K>
         <Input value={dueDay} onChangeText={setDueDay} placeholder="Day (1–31)" keyboardType="number-pad" maxLength={2} style={styles.field} />
+        <K>Repeats</K>
+        <View style={styles.field}>
+          <Seg
+            options={[
+              { label: 'Every month', value: 'monthly' },
+              { label: 'Set number of months', value: 'fixed' },
+            ]}
+            value={repeats}
+            onChange={setRepeats}
+          />
+        </View>
+        {repeats === 'fixed' && (
+          <>
+            <K>{editing ? 'Payments left' : 'How many payments'}</K>
+            <Input value={payments} onChangeText={setPayments} placeholder="Payments" keyboardType="number-pad" maxLength={2} style={styles.field} />
+          </>
+        )}
         {formError && <Text style={styles.error}>{formError}</Text>}
         {confirmDelete ? (
           <View style={styles.confirm}>
