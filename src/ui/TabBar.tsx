@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { StackActions } from '@react-navigation/native';
 import { colors, fonts } from '../theme/tokens';
 
 // Broadsheet Nav Bar spec: no icons, 52px content height + OS gesture inset,
@@ -16,11 +17,18 @@ export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarP
         const label = options.title ?? route.name;
         const isFocused = state.index === index;
 
+        // A tab always opens on its first screen. Home's bill links open Bills
+        // inside More and leave that link's params on the More tab route —
+        // passing them on (as the stock tab bar does) reopened Bills on every
+        // tap, hiding the More list.
         const onPress = () => {
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
+          if (event.defaultPrevented) return;
+          const nested = route.state;
+          if (nested?.key && (nested.index ?? 0) > 0) {
+            navigation.dispatch({ ...StackActions.popToTop(), target: nested.key });
           }
+          if (!isFocused) navigation.navigate(route.name);
         };
 
         const onLongPress = () => {
