@@ -9,7 +9,10 @@ import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime, parseDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
-import { useAccounts, useCategories, usePreferences, useRecentExpenses } from '../../src/hooks/queries';
+import { useAccounts, useBills, useCategories, usePreferences, useRecentExpenses } from '../../src/hooks/queries';
+import { markBillPaid } from '../../src/data/repositories/bills';
+import { billForDetection } from '../../src/domain/bills';
+import type { Bill } from '../../src/data/types';
 import { useLiveQuery } from '../../src/hooks/useLiveQuery';
 import { formatCurrency } from '../../src/domain/money';
 import { expenseOptionLabel } from '../../src/domain/transactionView';
@@ -28,6 +31,7 @@ export default function DetectedScreen() {
   // in this app already uses, no bespoke reload logic needed.
   const detections = useLiveQuery(() => listDetections(), []);
   const recentExpenses = useRecentExpenses();
+  const bills = useBills();
   const [paidBackFor, setPaidBackFor] = useState<PendingDetection | null>(null);
 
   const [selectMode, setSelectMode] = useState(false);
@@ -95,6 +99,20 @@ export default function DetectedScreen() {
         pairedDetectionId: into.id,
       },
     });
+  };
+
+  // Marks the matched bill paid, then opens the usual form so the expense is
+  // still logged (Paid on its own never creates a transaction).
+  const handleBillPaid = async (detection: PendingDetection, bill: Bill) => {
+    setAssignError(null);
+    try {
+      await markBillPaid(bill);
+    } catch (e) {
+      setAssignError(e instanceof Error ? e.message : 'Could not mark this bill paid.');
+      return;
+    }
+    bills.refetch();
+    handleOpen(detection);
   };
 
   const handleNotTransfer = async (out: PendingDetection, into: PendingDetection) => {
@@ -237,6 +255,7 @@ export default function DetectedScreen() {
               );
             }
             const d = entry.item;
+            const bill = billForDetection(d, bills.data ?? []);
             return (
               <View key={d.id} style={styles.row}>
                 <Pressable
@@ -263,6 +282,11 @@ export default function DetectedScreen() {
                 {!selectMode && d.direction === 'credit' && (
                   <Pressable onPress={() => setPaidBackFor(d)}>
                     <Text style={styles.dismiss}>Paid back</Text>
+                  </Pressable>
+                )}
+                {!selectMode && bill && (
+                  <Pressable onPress={() => handleBillPaid(d, bill)}>
+                    <Text style={styles.dismiss}>Paid {bill.name}</Text>
                   </Pressable>
                 )}
                 {!selectMode && (

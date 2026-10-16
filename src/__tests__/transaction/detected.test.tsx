@@ -4,6 +4,7 @@ import DetectedScreen from '../../../app/transaction/detected';
 import { listDetections, markNotTransfer, removeDetection } from '../../data/repositories/pendingDetections';
 import { createTransaction } from '../../application/transactions';
 import { checkBudgetAlerts } from '../../notifications/checkBudgetAlerts';
+import { markBillPaid } from '../../data/repositories/bills';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -32,11 +33,15 @@ jest.mock('../../hooks/queries', () => ({
     ],
   }),
   usePreferences: () => ({ data: { currency_code: 'INR' } }),
+  useBills: () => ({ data: mockBills, refetch: jest.fn() }),
   useCategories: () => ({ data: [{ id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' }] }),
   useRecentExpenses: () => [
     { id: 'tx-meal', type: 'EXPENSE', amount: 330, category_id: 'cat-food', description: 'Vridhhavan KITCHENS', occurred_at: '2026-10-12T13:08:52.000Z' },
   ],
 }));
+// Factory mock: the real module imports supabaseClient.ts, which throws without env vars.
+jest.mock('../../data/repositories/bills', () => ({ markBillPaid: jest.fn() }));
+let mockBills: unknown[] = [];
 jest.mock('../../application/transactions', () => ({ createTransaction: jest.fn() }));
 jest.mock('../../notifications/checkBudgetAlerts', () => ({ checkBudgetAlerts: jest.fn() }));
 
@@ -65,6 +70,8 @@ const sampleDetection2 = {
 };
 
 beforeEach(() => {
+  mockBills = [];
+  (markBillPaid as jest.Mock).mockReset();
   mockPush.mockClear();
   (listDetections as jest.Mock).mockResolvedValue([sampleDetection]);
   (removeDetection as jest.Mock).mockReset();
@@ -258,5 +265,21 @@ describe('DetectedScreen', () => {
     const { findByText, queryByText } = render(<DetectedScreen />);
     await findByText('GUNREDDY RAMANUJA RE');
     expect(queryByText('Paid back')).toBeNull();
+  });
+
+  it('offers "Paid <bill>" on a debit matching a bill, marks it paid, then opens the form', async () => {
+    const rent = { id: 'bill-1', name: 'Rent', amount: 150, due_day: 5, next_due_date: '2026-09-05', payments_left: null };
+    mockBills = [rent];
+    const { findByText } = render(<DetectedScreen />);
+    await userEvent.press(await findByText('Paid Rent'));
+    expect(markBillPaid).toHaveBeenCalledWith(rent);
+    await waitFor(() => expect(mockPush).toHaveBeenCalled());
+  });
+
+  it('offers no bill when none matches the amount and date', async () => {
+    mockBills = [{ id: 'bill-1', name: 'Rent', amount: 150, due_day: 25, next_due_date: '2026-09-25', payments_left: null }];
+    const { findByText, queryByText } = render(<DetectedScreen />);
+    await findByText('GUNREDDY RAMANUJA RE');
+    expect(queryByText('Paid Rent')).toBeNull();
   });
 });
