@@ -55,7 +55,7 @@ describe('pairTransfers', () => {
     expect(kinds(pairTransfers(items))).toEqual(['pair:out1>in', 'single:out2']);
   });
 
-  it('leaves out legs marked "not a transfer", card legs with nothing to pair, and messages with no account number', () => {
+  it('leaves out legs marked "not a transfer", credit cards, and messages with no account number', () => {
     const items = [
       d('out', { notTransfer: true }),
       d('in', { direction: 'credit', bankLabel: 'Axis', accountLast4: '1994' }),
@@ -63,19 +63,5 @@ describe('pairTransfers', () => {
       d('autopay', { accountLast4: '', bankLabel: 'Axis' }),
     ];
     expect(kinds(pairTransfers(items))).toEqual(['single:out', 'single:in', 'single:card', 'single:autopay']);
-  });
-
-  const cardPayment = (id: string, over: Partial<D> = {}) =>
-    d(id, { accountType: 'credit_card', accountLast4: '4030', direction: 'credit', merchant: 'Card payment', ...over });
-
-  it('pairs a credit card payment with the bank debit that paid it', () => {
-    expect(kinds(pairTransfers([cardPayment('card'), d('bank', {})]))).toEqual(['pair:bank>card']);
-  });
-
-  it('does not pair a card spend with a bank credit, or two card legs', () => {
-    const spend = d('spend', { accountType: 'credit_card', accountLast4: '4030' });
-    const bankCredit = d('bankIn', { direction: 'credit' });
-    expect(kinds(pairTransfers([spend, bankCredit]))).toEqual(['single:spend', 'single:bankIn']);
-    expect(kinds(pairTransfers([cardPayment('card'), spend]))).toEqual(['single:card', 'single:spend']);
   });
 });
