@@ -17,6 +17,11 @@ describe('parseSmsTransaction', () => {
     expect(result?.accountType).toBe('credit_card');
   });
 
+  it('dispatches a Kotak credit-card bill payment to the card as a credit', () => {
+    const body = 'Payment of INR 7000 is credited to your Kotak Bank Credit Card x4030 on 01-OCT-2026. Available Credit limit is INR 7003.97.';
+    expect(parseSmsTransaction('AX-KOTAKB-S', body)).toMatchObject({ direction: 'credit', accountType: 'credit_card', accountLast4: '4030', amount: 7000 });
+  });
+
   it('dispatches a Kotak savings-account message correctly even from a different sender prefix', () => {
     const body =
       'Sent Rs.150.00 from Kotak Bank A/c X8721 to GUNREDDY RAMANUJA RE on 07-09-26.' +
