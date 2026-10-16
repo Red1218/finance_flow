@@ -16,12 +16,9 @@ export const colors = {
 } as const;
 
 export const spacing = {
-  s1: 5,
   s2: 10,
   s3: 15,
   s4: 20,
-  s6: 30,
-  s8: 40,
 } as const;
 
 export const fonts = {
