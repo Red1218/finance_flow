@@ -74,6 +74,13 @@ describe('Home', () => {
     expect(screen.queryByText(/No budget set/)).toBeNull();
   });
 
+  it('does not count a transfer between your own accounts as spending', async () => {
+    mockBudgets = loaded([overallBudget]);
+    mockTransactions = loaded([tx('t1', 'Blinkit', 500), tx('t2', 'Transfer', 12000, 'TRANSFER_OUT'), tx('t3', 'Transfer', 12000, 'TRANSFER_IN')]);
+    render(<Home />);
+    expect(await screen.findByText('₹24,500', {}, { timeout: 3000 })).toBeTruthy();
+  });
+
   it('shows what was spent today and the biggest expense in the Today block', () => {
     mockBudgets = loaded([overallBudget]);
     mockTransactions = loaded([

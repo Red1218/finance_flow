@@ -38,6 +38,15 @@ describe('Ledger', () => {
     expect(screen.getByText('No transactions match.')).toBeTruthy();
   });
 
+  it('counts only spending in the month’s total out, not transfers between your accounts', () => {
+    const t = (id: string, type: string, amount: number) => ({
+      id, type, amount, description: id, occurred_at: new Date().toISOString(), category_id: null, account_id: 'acc-1', transfer_group_id: null, paid_back_for: null,
+    });
+    mockTransactions = loaded([t('meal', 'EXPENSE', 500), t('move', 'TRANSFER_OUT', 12000), t('move-in', 'TRANSFER_IN', 12000)]);
+    render(<Ledger />);
+    expect(screen.getByText(/₹500 out/)).toBeTruthy();
+  });
+
   it('shows a retry message instead of a blank list when loading fails', () => {
     mockTransactions = { data: null, loading: false, error: 'network down', refetch: jest.fn() };
     render(<Ledger />);

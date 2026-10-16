@@ -8,7 +8,7 @@ import { groupByDay } from '../../../src/domain/dashboard';
 import { monthRange } from '../../../src/domain/dateRange';
 import { spendAmount } from '../../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
-import { formatCurrency, toNumber } from '../../../src/domain/money';
+import { formatCurrency } from '../../../src/domain/money';
 import { AddButton, Button, Chip, Input, K, Muted, Rise, ScreenHeader } from '../../../src/ui/primitives';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
 import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
@@ -116,7 +116,7 @@ export default function TransactionsList() {
       return true;
     });
 
-    const out = rows.reduce((a, t) => a + (t.type === 'TRANSFER_OUT' ? toNumber(t.amount) : spendAmount(t)), 0);
+    const out = rows.reduce((a, t) => a + spendAmount(t), 0);
 
     const grouped = groupByDay(filtered, today).map((g) => ({
       day: g.day,

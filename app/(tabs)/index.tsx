@@ -40,7 +40,7 @@ export default function Home() {
 
     let spent = 0;
     for (const t of rows) {
-      spent += t.type === 'TRANSFER_OUT' ? toNumber(t.amount) : spendAmount(t);
+      spent += spendAmount(t);
     }
 
     const limit = overallBudget ? toNumber(overallBudget.amount) : 0;
