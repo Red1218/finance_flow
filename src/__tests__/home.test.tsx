@@ -10,6 +10,7 @@ const pending: Query = { data: null, loading: true, error: null, refetch: jest.f
 let mockBudgets: Query = pending;
 let mockTransactions: Query = loaded([]);
 let mockBills2: Query = loaded([]);
+jest.mock('../data/repositories/bills', () => ({ markBillPaid: jest.fn(), restoreBillDueDate: jest.fn() }));
 jest.mock('../hooks/queries', () => ({
   useTransactions: () => mockTransactions,
   useBudgets: () => mockBudgets,
@@ -65,20 +66,19 @@ describe('Home', () => {
     expect(screen.getByText(/No budget set/)).toBeTruthy();
   });
 
-  it('shows the left-to-spend amount once an overall budget has loaded', async () => {
+  it('shows the left-to-spend amount once an overall budget has loaded', () => {
     mockBudgets = loaded([overallBudget]);
     render(<Home />);
-    // The hero amount counts up from ₹0, so wait for it to land. On a month's
-    // last day the Left today tile also reads ₹25,000, so allow both.
-    expect((await screen.findAllByText('₹25,000', {}, { timeout: 3000 })).length).toBeGreaterThan(0);
+    // The hero amount is a rolling-digit counter, read as one value by its label.
+    expect(screen.getByLabelText('₹25,000')).toBeTruthy();
     expect(screen.queryByText(/No budget set/)).toBeNull();
   });
 
-  it('does not count a transfer between your own accounts as spending', async () => {
+  it('does not count a transfer between your own accounts as spending', () => {
     mockBudgets = loaded([overallBudget]);
     mockTransactions = loaded([tx('t1', 'Blinkit', 500), tx('t2', 'Transfer', 12000, 'TRANSFER_OUT'), tx('t3', 'Transfer', 12000, 'TRANSFER_IN')]);
     render(<Home />);
-    expect(await screen.findByText('₹24,500', {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.getByLabelText('₹24,500')).toBeTruthy();
   });
 
   it('shows what was spent today and the biggest expense in the Today block', () => {

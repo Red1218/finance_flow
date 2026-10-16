@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Heading, Input, K, Muted } from '../../src/ui/primitives';
-import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
+import { Body, Heading, Input, K, Muted, Rise } from '../../src/ui/primitives';
+import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 
 const BANKS = ['HDFC Bank', 'ICICI Bank', 'Axis Bank', 'State Bank of India'];
 
@@ -33,18 +33,19 @@ export default function LinkBank() {
         </Body>
 
         <K style={styles.listLabel}>Popular in India</K>
-        {banks.map((b) => (
-          <Pressable
-            key={b}
-            style={styles.bankRow}
-            onPress={() => Alert.alert('Not connected yet', `${b} sync isn't built. Add transactions by hand instead.`)}
-          >
-            <View style={styles.bankIcon}>
-              <Text style={styles.bankIconText}>{b[0]}</Text>
-            </View>
-            <Text style={styles.bankName}>{b}</Text>
-            <Text style={styles.chevron}>›</Text>
-          </Pressable>
+        {banks.map((b, i) => (
+          <Rise key={b} delay={i * 40}>
+            <Pressable
+              style={styles.bankRow}
+              onPress={() => Alert.alert('Not connected yet', `${b} sync isn't built. Add transactions by hand instead.`)}
+            >
+              <View style={styles.bankIcon}>
+                <Text style={styles.bankIconText}>{b[0]}</Text>
+              </View>
+              <Text style={styles.bankName}>{b}</Text>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+          </Rise>
         ))}
         <Input placeholder="Search banks" value={search} onChangeText={setSearch} style={{ marginTop: 16 }} />
 
@@ -58,37 +59,39 @@ export default function LinkBank() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.s4,
-    paddingTop: spacing.s3,
-  },
-  link: { ...caps, fontSize: 12, color: colors.text },
-  content: { padding: spacing.s4, paddingTop: spacing.s4 },
-  title: { fontSize: 40, lineHeight: 44 },
-  sub: { marginTop: 12, maxWidth: 320 },
-  listLabel: { marginTop: spacing.s4, paddingBottom: 8 },
-  bankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  bankIcon: {
-    width: 36,
-    height: 36,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bankIconText: { fontFamily: fonts.heading, fontSize: 14, color: colors.text },
-  bankName: { flex: 1, fontFamily: fonts.bold, fontSize: 16, color: colors.text },
-  chevron: { fontFamily: fonts.heading, color: colors.muted, fontSize: 20 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.s4,
+      paddingTop: spacing.s3,
+    },
+    link: { ...caps, fontSize: 12, color: colors.text },
+    content: { padding: spacing.s4, paddingTop: spacing.s4 },
+    title: { fontSize: 40, lineHeight: 44 },
+    sub: { marginTop: 12, maxWidth: 320 },
+    listLabel: { marginTop: spacing.s4, paddingBottom: 8 },
+    bankRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+    },
+    bankIcon: {
+      width: 36,
+      height: 36,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    bankIconText: { fontFamily: fonts.heading, fontSize: 14, color: colors.text },
+    bankName: { flex: 1, fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+    chevron: { fontFamily: fonts.heading, color: colors.muted, fontSize: 20 },
+  })
+);

@@ -9,9 +9,10 @@ import { monthRange } from '../../../src/domain/dateRange';
 import { attributePaidBack, spendAmount } from '../../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById, transactionsCsv } from '../../../src/domain/transactionView';
 import { formatCurrency } from '../../../src/domain/money';
-import { AddButton, Button, Chip, Input, K, Muted, Rise, ScreenHeader } from '../../../src/ui/primitives';
+import { Button, Input, K, Muted, Rise, ScreenHeader } from '../../../src/ui/primitives';
+import { QuickAdd, Skeleton, SlidingChips } from '../../../src/ui/motion';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
-import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { archiveTransaction } from '../../../src/application/transactions';
@@ -178,9 +179,7 @@ export default function TransactionsList() {
               style={{ marginTop: 20 }}
             />
             <View style={styles.filters}>
-              {FILTERS.map((f) => (
-                <Chip key={f} label={f} active={f === filter} onPress={() => setFilter(f)} />
-              ))}
+              <SlidingChips options={FILTERS.map((f) => ({ label: f, value: f }))} value={filter} onChange={setFilter} />
             </View>
           </>
         )}
@@ -205,7 +204,7 @@ export default function TransactionsList() {
         {!ready ? (
           error ? (
             <Muted style={{ marginTop: spacing.s4 }}>Couldn&rsquo;t load your transactions. Pull down to try again.</Muted>
-          ) : null
+          ) : <Skeleton />
         ) : groups.length === 0 ? (
           <Muted style={{ marginTop: spacing.s4 }}>No transactions match.</Muted>
         ) : (
@@ -227,24 +226,32 @@ export default function TransactionsList() {
         )}
       </ScrollView>
 
-      <AddButton onPress={() => router.push('/transaction/new')} />
+      <QuickAdd
+        actions={[
+          { label: 'Review detected', tone: 'dark', onPress: () => router.push('/transaction/detected') },
+          { label: '+ Income', tone: 'white', onPress: () => router.push({ pathname: '/transaction/new', params: { kind: 'Income' } }) },
+          { label: '− Expense', tone: 'accent', onPress: () => router.push({ pathname: '/transaction/new', params: { kind: 'Expense' } }) },
+        ]}
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4 },
-  kicker: { marginBottom: 6 },
-  filters: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 12 },
-  list: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4, paddingBottom: 120 },
-  group: { marginBottom: 22 },
-  groupLabel: { paddingBottom: 10, color: colors.text },
-  selectActions: { flexDirection: 'row', gap: 16 },
-  link: { ...caps, fontSize: 12, color: colors.accent },
-  linkDisabled: { color: colors.muted },
-  confirm: { marginTop: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
-  confirmText: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.text },
-  confirmError: { fontFamily: fonts.heading, marginTop: 6 },
-  confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    header: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4 },
+    kicker: { marginBottom: 6 },
+    filters: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 12 },
+    list: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4, paddingBottom: 120 },
+    group: { marginBottom: 22 },
+    groupLabel: { paddingBottom: 10, color: colors.text },
+    selectActions: { flexDirection: 'row', gap: 16 },
+    link: { ...caps, fontSize: 12, color: colors.accent },
+    linkDisabled: { color: colors.muted },
+    confirm: { marginTop: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
+    confirmText: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.text },
+    confirmError: { fontFamily: fonts.heading, marginTop: 6 },
+    confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  })
+);

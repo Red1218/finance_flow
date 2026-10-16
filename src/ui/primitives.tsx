@@ -18,7 +18,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
-import { caps, colors, fonts, spacing } from '../theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../theme/tokens';
 
 const useNativeDriver = Platform.OS !== 'web';
 
@@ -48,7 +48,7 @@ export function Muted({ style, ...props }: TextProps) {
 
 // Runs `start` unless the OS asks for reduced motion, in which case `skip`
 // jumps straight to the end state.
-function whenMotionAllowed(start: () => void, skip: () => void) {
+export function whenMotionAllowed(start: () => void, skip: () => void) {
   AccessibilityInfo.isReduceMotionEnabled()
     .then((reduce) => (reduce ? skip() : start()))
     .catch(start);
@@ -59,7 +59,7 @@ export function Rise({ delay = 0, style, children }: { delay?: number; style?: S
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     whenMotionAllowed(
-      () => Animated.timing(v, { toValue: 1, duration: 550, delay, easing: Easing.out(Easing.cubic), useNativeDriver }).start(),
+      () => Animated.timing(v, { toValue: 1, duration: 280, delay: Math.min(delay, 120), easing: Easing.out(Easing.cubic), useNativeDriver }).start(),
       () => v.setValue(1)
     );
   }, [v, delay]);
@@ -80,41 +80,12 @@ export function Grow({
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     whenMotionAllowed(
-      () => Animated.timing(v, { toValue: 1, duration: 750, delay, easing: Easing.out(Easing.cubic), useNativeDriver }).start(),
+      () => Animated.timing(v, { toValue: 1, duration: 400, delay: Math.min(delay, 200), easing: Easing.out(Easing.cubic), useNativeDriver }).start(),
       () => v.setValue(1)
     );
   }, [v, delay]);
   const transform = axis === 'x' ? [{ scaleX: v }] : [{ scaleY: v }];
   return <Animated.View style={[style, { transformOrigin: axis === 'x' ? 'left' : 'bottom', transform }]} />;
-}
-
-// Counts a number up from where it was to `target` (from 0 on first mount).
-export function useCountUp(target: number, duration = 1000) {
-  const [shown, setShown] = useState(0);
-  const shownRef = useRef(0);
-  useEffect(() => {
-    let raf = 0;
-    const from = shownRef.current;
-    const set = (n: number) => {
-      shownRef.current = n;
-      setShown(n);
-    };
-    whenMotionAllowed(
-      () => {
-        const t0 = Date.now();
-        const tick = () => {
-          const p = Math.min(1, (Date.now() - t0) / duration);
-          const e = 1 - Math.pow(1 - p, 3);
-          set(from + (target - from) * e);
-          if (p < 1) raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-      },
-      () => set(target)
-    );
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return shown;
 }
 
 // ---- Plunk: NeoPOP's raised surface -------------------------------------
@@ -124,11 +95,12 @@ export function useCountUp(target: number, duration = 1000) {
 
 export type PlunkTone = 'accent' | 'white' | 'dark';
 
-const plunkTones: Record<PlunkTone, { face: string; right: string; bottom: string }> = {
+// A function, not a constant, so it follows the active theme.
+const plunkTones = (): Record<PlunkTone, { face: string; right: string; bottom: string }> => ({
   accent: { face: colors.accent, right: colors.accentEdge, bottom: colors.accentShadow },
   white: { face: colors.text, right: colors.muted, bottom: colors.divider },
   dark: { face: colors.surface, right: colors.divider, bottom: colors.surface },
-};
+});
 
 export function Plunk({
   tone = 'dark',
@@ -147,7 +119,7 @@ export function Plunk({
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }) {
-  const t = plunkTones[tone];
+  const t = plunkTones()[tone];
   // The edges are drawn as SVG polygons hanging off the face's right and
   // bottom sides. (CSS-style skew transforms render wrongly on Android.)
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
@@ -203,19 +175,6 @@ export function Plunk({
 }
 
 // The floating "+ Add" on Home and the Ledger.
-export function AddButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Plunk tone="accent" onPress={onPress} accessibilityLabel="Add a transaction" style={addStyles.fab}>
-      <Text style={addStyles.text}>+ Add</Text>
-    </Plunk>
-  );
-}
-
-const addStyles = StyleSheet.create({
-  fab: { position: 'absolute', right: 20, bottom: 24, height: 52, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
-  text: { ...caps, fontSize: 14, color: colors.bg },
-});
-
 // ---- Button -----------------------------------------------------------
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
@@ -226,6 +185,7 @@ export function Button({
   variant = 'primary',
   block,
   disabled,
+  dimmed,
   loading,
 }: {
   title: string;
@@ -233,6 +193,8 @@ export function Button({
   variant?: ButtonVariant;
   block?: boolean;
   disabled?: boolean;
+  // Looks disabled but still takes taps, so the screen can say what's missing.
+  dimmed?: boolean;
   loading?: boolean;
 }) {
   const label = loading ? (
@@ -258,7 +220,7 @@ export function Button({
         tone="accent"
         onPress={onPress}
         disabled={disabled || loading}
-        style={[buttonStyles.base, block && buttonStyles.block]}
+        style={[buttonStyles.base, block && buttonStyles.block, dimmed && styles.disabled]}
       >
         {label}
       </Plunk>
@@ -274,7 +236,7 @@ export function Button({
         variant === 'secondary' && buttonStyles.secondary,
         block && buttonStyles.block,
         pressed && { opacity: 0.7 },
-        (disabled || loading) && styles.disabled,
+        (disabled || loading || dimmed) && styles.disabled,
       ]}
     >
       {label}
@@ -441,99 +403,121 @@ export function ScreenHeader({ title, right }: { title: string; right?: React.Re
 
 // ---- styles -----------------------------------------------------------
 
-const styles = StyleSheet.create({
-  k: { ...caps, color: colors.muted },
-  num: { fontFamily: fonts.heading, color: colors.text, fontVariant: ['tabular-nums'] },
-  heading: { fontFamily: fonts.display, color: colors.text, fontSize: 26 },
-  body: { fontFamily: fonts.body, color: colors.text, fontSize: 15, lineHeight: 22 },
-  muted: { color: colors.muted },
-  disabled: { opacity: 0.45 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    k: { ...caps, color: colors.muted },
+    num: { fontFamily: fonts.heading, color: colors.text, fontVariant: ['tabular-nums'] },
+    heading: { fontFamily: fonts.display, color: colors.text, fontSize: 26 },
+    body: { fontFamily: fonts.body, color: colors.text, fontSize: 15, lineHeight: 22 },
+    muted: { color: colors.muted },
+    disabled: { opacity: 0.45 },
+  })
+);
 
-const plunkStyles = StyleSheet.create({
-  edges: { position: 'absolute', top: 0, left: 0 },
-});
+const plunkStyles = themed(() =>
+  StyleSheet.create({
+    edges: { position: 'absolute', top: 0, left: 0 },
+  })
+);
 
-const buttonStyles = StyleSheet.create({
-  base: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-  },
-  secondary: { borderWidth: 1, borderColor: colors.divider, backgroundColor: 'transparent' },
-  icon: { width: 44, minHeight: 44, paddingHorizontal: 0, borderWidth: 1, borderColor: colors.divider },
-  block: { alignSelf: 'stretch' },
-  text: { ...caps, fontSize: 13, letterSpacing: 1.6, color: colors.text },
-});
+const buttonStyles = themed(() =>
+  StyleSheet.create({
+    base: {
+      minHeight: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+    },
+    secondary: { borderWidth: 1, borderColor: colors.divider, backgroundColor: 'transparent' },
+    icon: { width: 44, minHeight: 44, paddingHorizontal: 0, borderWidth: 1, borderColor: colors.divider },
+    block: { alignSelf: 'stretch' },
+    text: { ...caps, fontSize: 13, letterSpacing: 1.6, color: colors.text },
+  })
+);
 
-const tagStyles = StyleSheet.create({
-  base: { paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
-  accent: { backgroundColor: colors.accent },
-  neutral: { borderWidth: 1, borderColor: colors.divider },
-  text: { ...caps, fontSize: 10, letterSpacing: 1.5 },
-});
+const tagStyles = themed(() =>
+  StyleSheet.create({
+    base: { paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
+    accent: { backgroundColor: colors.accent },
+    neutral: { borderWidth: 1, borderColor: colors.divider },
+    text: { ...caps, fontSize: 10, letterSpacing: 1.5 },
+  })
+);
 
-const barStyles = StyleSheet.create({
-  track: { height: 8, backgroundColor: colors.divider, width: '100%' },
-  fill: { height: '100%' },
-});
+const barStyles = themed(() =>
+  StyleSheet.create({
+    track: { height: 8, backgroundColor: colors.divider, width: '100%' },
+    fill: { height: '100%' },
+  })
+);
 
-const chipStyles = StyleSheet.create({
-  base: {
-    paddingHorizontal: 12,
-    minHeight: 36,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  active: { borderColor: colors.accent, backgroundColor: colors.accent },
-  text: { ...caps, fontSize: 11, letterSpacing: 1.5, color: colors.muted },
-  textActive: { color: colors.bg },
-});
+const chipStyles = themed(() =>
+  StyleSheet.create({
+    base: {
+      paddingHorizontal: 12,
+      minHeight: 36,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    active: { borderColor: colors.accent, backgroundColor: colors.accent },
+    text: { ...caps, fontSize: 11, letterSpacing: 1.5, color: colors.muted },
+    textActive: { color: colors.bg },
+  })
+);
 
-const segStyles = StyleSheet.create({
-  row: { flexDirection: 'row', borderWidth: 1, borderColor: colors.divider },
-  opt: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  optBorder: { borderLeftWidth: 1, borderLeftColor: colors.divider },
-  optActive: { backgroundColor: colors.text },
-  text: { ...caps, fontSize: 11, letterSpacing: 1.5, color: colors.muted },
-  textActive: { color: colors.bg },
-});
+const segStyles = themed(() =>
+  StyleSheet.create({
+    row: { flexDirection: 'row', borderWidth: 1, borderColor: colors.divider },
+    opt: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+    optBorder: { borderLeftWidth: 1, borderLeftColor: colors.divider },
+    optActive: { backgroundColor: colors.text },
+    text: { ...caps, fontSize: 11, letterSpacing: 1.5, color: colors.muted },
+    textActive: { color: colors.bg },
+  })
+);
 
-const toggleStyles = StyleSheet.create({
-  track: { width: 52, height: 28, padding: 3, borderWidth: 1, borderColor: colors.divider, backgroundColor: colors.bg },
-  trackOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  knob: { width: 20, height: 20 },
-});
+const toggleStyles = themed(() =>
+  StyleSheet.create({
+    track: { width: 52, height: 28, padding: 3, borderWidth: 1, borderColor: colors.divider, backgroundColor: colors.bg },
+    trackOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+    knob: { width: 20, height: 20 },
+  })
+);
 
-const inputStyles = StyleSheet.create({
-  base: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    fontFamily: fonts.bold,
-    fontSize: 15,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  focused: { borderColor: colors.accent },
-});
+const inputStyles = themed(() =>
+  StyleSheet.create({
+    base: {
+      minHeight: 48,
+      paddingHorizontal: 14,
+      fontFamily: fonts.bold,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.divider,
+    },
+    focused: { borderColor: colors.accent },
+  })
+);
 
-const cardStyles = StyleSheet.create({
-  base: {
-    padding: spacing.s4,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    gap: spacing.s2,
-  },
-});
+const cardStyles = themed(() =>
+  StyleSheet.create({
+    base: {
+      padding: spacing.s4,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      gap: spacing.s2,
+    },
+  })
+);
 
-const headerStyles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  title: { fontSize: 40, lineHeight: 44 },
-});
+const headerStyles = themed(() =>
+  StyleSheet.create({
+    row: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+    title: { fontSize: 40, lineHeight: 44 },
+  })
+);

@@ -18,7 +18,7 @@ import { lastCategoryByMerchant, suggestPaidBackExpense } from '../../src/domain
 import { expenseOptionLabel } from '../../src/domain/transactionView';
 import { K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
-import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 
 export default function DetectedScreen() {
   const router = useRouter();
@@ -350,49 +350,51 @@ export default function DetectedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.s4,
-    paddingTop: spacing.s3,
-  },
-  selectActions: { flexDirection: 'row', gap: 16 },
-  link: { ...caps, fontSize: 12, color: colors.text },
-  linkDisabled: { color: colors.muted },
-  assignError: {
-    fontFamily: fonts.body,
-    fontSize: 12.5,
-    color: colors.accent,
-    paddingHorizontal: spacing.s4,
-    paddingTop: spacing.s2,
-  },
-  scroll: { flex: 1 },
-  content: { padding: spacing.s4, paddingBottom: 100 },
-  empty: { fontFamily: fonts.body, fontSize: 14, textAlign: 'center', marginTop: spacing.s4, color: colors.muted },
-  row: {
-    padding: 14,
-    marginBottom: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  rowMain: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.s4, rowGap: 8, marginTop: 10 },
-  merchant: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
-  meta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted, marginTop: 4 },
-  credit: { color: colors.accent },
-  dismiss: { ...caps, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1.5,
-    borderColor: colors.muted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: { backgroundColor: colors.accent, borderColor: colors.accent },
-  checkmark: { color: colors.bg, fontSize: 12, fontFamily: fonts.heading },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.s4,
+      paddingTop: spacing.s3,
+    },
+    selectActions: { flexDirection: 'row', gap: 16 },
+    link: { ...caps, fontSize: 12, color: colors.text },
+    linkDisabled: { color: colors.muted },
+    assignError: {
+      fontFamily: fonts.body,
+      fontSize: 12.5,
+      color: colors.accent,
+      paddingHorizontal: spacing.s4,
+      paddingTop: spacing.s2,
+    },
+    scroll: { flex: 1 },
+    content: { padding: spacing.s4, paddingBottom: 100 },
+    empty: { fontFamily: fonts.body, fontSize: 14, textAlign: 'center', marginTop: spacing.s4, color: colors.muted },
+    row: {
+      padding: 14,
+      marginBottom: 12,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.divider,
+    },
+    rowMain: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.s4, rowGap: 8, marginTop: 10 },
+    merchant: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
+    meta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted, marginTop: 4 },
+    credit: { color: colors.accent },
+    dismiss: { ...caps, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderWidth: 1.5,
+      borderColor: colors.muted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxChecked: { backgroundColor: colors.accent, borderColor: colors.accent },
+    checkmark: { color: colors.bg, fontSize: 12, fontFamily: fonts.heading },
+  })
+);

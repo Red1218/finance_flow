@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Body, Button } from './primitives';
-import { colors, spacing } from '../theme/tokens';
+import { colors, spacing, themed } from '../theme/tokens';
 
 // Shared locked-content state for every screen when signed out. RLS already
 // returns empty results for a null session, so no data hook needs to
@@ -16,7 +16,9 @@ export function SignInPrompt({ message }: { message: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.s3, padding: spacing.s4 },
-  message: { textAlign: 'center', color: colors.muted, maxWidth: 280 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.s3, padding: spacing.s4 },
+    message: { textAlign: 'center', color: colors.muted, maxWidth: 280 },
+  })
+);

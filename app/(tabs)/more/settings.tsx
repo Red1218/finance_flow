@@ -14,7 +14,8 @@ import { CURRENCIES } from '../../../src/domain/money';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { Input, K, Muted, Rise, Toggle } from '../../../src/ui/primitives';
 import { SelectModal } from '../../../src/ui/SelectModal';
-import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { colors, fonts, palettes, spacing, themed, type ThemeId } from '../../../src/theme/tokens';
+import { useTheme } from '../../../src/theme/ThemeContext';
 
 export default function Settings() {
   const prefs = usePreferences();
@@ -101,6 +102,8 @@ export default function Settings() {
             <Text style={styles.rowValue}>›</Text>
           </Pressable>
         </View>
+
+        <ThemePicker />
 
         {!ready ? (
           error ? <Muted>Couldn&rsquo;t load your preferences. Leave and come back to try again.</Muted> : null
@@ -239,32 +242,70 @@ export default function Settings() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.s4, paddingBottom: 100 },
-  profile: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: spacing.s4 },
-  avatar: {
-    width: 48,
-    height: 48,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontFamily: fonts.display, fontSize: 24, color: colors.bg },
-  name: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
-  section: { marginBottom: 28 },
-  sectionLabel: { marginBottom: 8 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: 56,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  rowLabel: { fontFamily: fonts.bold, fontSize: 16, color: colors.text, flexShrink: 1 },
-  rowValue: { fontFamily: fonts.bold, fontSize: 14, color: colors.muted },
-  version: { fontSize: 12, textAlign: 'center', marginTop: spacing.s4 },
-});
+// Palette choice for this phone. Picking one redraws the app in it straight away.
+function ThemePicker() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <View style={styles.section} accessibilityRole="radiogroup" accessibilityLabel="Theme">
+      <K style={styles.sectionLabel}>Theme</K>
+      {(Object.keys(palettes) as ThemeId[]).map((id) => {
+        const p = palettes[id];
+        const on = id === theme;
+        return (
+          <Pressable
+            key={id}
+            onPress={() => setTheme(id)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on }}
+            style={({ pressed }) => [styles.row, styles.themeRow, on && styles.themeRowOn, pressed && { opacity: 0.7 }]}
+          >
+            <View style={styles.swatches}>
+              {[p.bg, p.surface, p.divider, p.muted, p.text, p.accent].map((c, i) => (
+                <View key={i} style={[styles.swatch, { backgroundColor: c }]} />
+              ))}
+            </View>
+            <Text style={styles.rowLabel}>{p.name}</Text>
+            <Text style={[styles.themeCheck, !on && { opacity: 0 }]}>✓</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: spacing.s4, paddingBottom: 100 },
+    profile: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: spacing.s4 },
+    avatar: {
+      width: 48,
+      height: 48,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: { fontFamily: fonts.display, fontSize: 24, color: colors.bg },
+    name: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
+    section: { marginBottom: 28 },
+    sectionLabel: { marginBottom: 8 },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: 56,
+      paddingVertical: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.divider,
+    },
+    rowLabel: { fontFamily: fonts.bold, fontSize: 16, color: colors.text, flexShrink: 1 },
+    themeRow: { justifyContent: 'flex-start', paddingHorizontal: 10 },
+    themeRowOn: { backgroundColor: colors.surface },
+    swatches: { flexDirection: 'row' },
+    swatch: { width: 16, height: 24, marginLeft: -1, borderWidth: 1, borderColor: colors.divider },
+    themeCheck: { marginLeft: 'auto', fontFamily: fonts.heading, fontSize: 16, color: colors.accent },
+    rowValue: { fontFamily: fonts.bold, fontSize: 14, color: colors.muted },
+    version: { fontSize: 12, textAlign: 'center', marginTop: spacing.s4 },
+  })
+);

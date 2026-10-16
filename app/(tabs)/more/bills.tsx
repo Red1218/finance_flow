@@ -7,8 +7,9 @@ import type { Bill } from '../../../src/data/types';
 import { daysUntil, dueLabel, shortDate } from '../../../src/domain/bills';
 import { formatCurrency, toNumber } from '../../../src/domain/money';
 import { Button, Input, K, Muted, Rise, Seg } from '../../../src/ui/primitives';
+import { Confetti, Ring, Shake, Skeleton, Stamp } from '../../../src/ui/motion';
 import { FormModal } from '../../../src/ui/FormModal';
-import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
@@ -37,6 +38,8 @@ export default function Bills() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [justPaid, setJustPaid] = useState<Bill | null>(null);
+  // Bumped when a bill's last payment is made, to fire the confetti.
+  const [burst, setBurst] = useState(0);
 
   const openForm = (bill: Bill | null) => {
     setJustPaid(null);
@@ -105,6 +108,7 @@ export default function Bills() {
     try {
       await markBillPaid(bill);
       setJustPaid(bill);
+      if (bill.payments_left === 1) setBurst((n) => n + 1);
       bills.refetch();
     } catch (e) {
       setActionError(errorText(e, 'Could not mark this bill paid.'));
@@ -141,17 +145,20 @@ export default function Bills() {
       >
         <Button title="Add bill" variant="secondary" onPress={() => openForm(null)} block />
         {justPaid && (
-          <Text style={styles.undoLine}>
-            Marked {justPaid.name} paid.{justPaid.payments_left === 1 ? ' That was the last payment.' : ''}{' '}
-            <Text style={styles.undoLink} onPress={undo}>
-              Undo
+          <View style={styles.paidLine}>
+            <Stamp key={`${justPaid.id}:${justPaid.next_due_date}`} label="Paid ✓" />
+            <Text style={styles.undoLine}>
+              Marked {justPaid.name} paid.{justPaid.payments_left === 1 ? ' That was the last payment.' : ''}{' '}
+              <Text style={styles.undoLink} onPress={undo}>
+                Undo
+              </Text>
             </Text>
-          </Text>
+          </View>
         )}
         {actionError && <Text style={styles.error}>{actionError}</Text>}
 
         {!ready ? (
-          error ? <Muted style={styles.gap}>Couldn&rsquo;t load your bills. Pull down to try again.</Muted> : null
+          error ? <Muted style={styles.gap}>Couldn&rsquo;t load your bills. Pull down to try again.</Muted> : <Skeleton />
         ) : (bills.data ?? []).length === 0 ? (
           <Muted style={styles.gap}>No bills yet.</Muted>
         ) : (
@@ -166,10 +173,17 @@ export default function Bills() {
                     style={({ pressed }) => [styles.row, soon && styles.rowSoon, pressed && styles.rowPressed]}
                     onPress={() => openForm(b)}
                   >
-                    <View style={styles.dateBox}>
-                      <Text style={styles.dateDay}>{dueDayNum}</Text>
-                      <Text style={styles.dateMonth}>{dueMonth}</Text>
-                    </View>
+                    {days >= 0 && days <= 7 ? (
+                      // Countdown ring: fills up as the due day gets closer.
+                      <Ring size={46} stroke={4} pct={(7 - days) / 7}>
+                        <Text style={styles.dateDay}>{dueDayNum}</Text>
+                      </Ring>
+                    ) : (
+                      <View style={styles.dateBox}>
+                        <Text style={styles.dateDay}>{dueDayNum}</Text>
+                        <Text style={styles.dateMonth}>{dueMonth}</Text>
+                      </View>
+                    )}
                     <View style={{ flex: 1, gap: 4 }}>
                       <Text style={styles.rowName}>{b.name}</Text>
                       <Text style={[styles.rowMeta, days < 0 && styles.overdue]}>
@@ -210,7 +224,11 @@ export default function Bills() {
             <Input value={payments} onChangeText={setPayments} placeholder="Payments" keyboardType="number-pad" maxLength={2} style={styles.field} />
           </>
         )}
-        {formError && <Text style={styles.error}>{formError}</Text>}
+        {formError && (
+          <Shake trigger={formError}>
+            <Text style={styles.error}>{formError}</Text>
+          </Shake>
+        )}
         {confirmDelete ? (
           <View style={styles.confirm}>
             <Text style={styles.confirmText}>Delete this bill? It won&rsquo;t show up again.</Text>
@@ -226,38 +244,42 @@ export default function Bills() {
           </View>
         )}
       </FormModal>
+      <Confetti run={burst} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.s4, paddingBottom: 100 },
-  gap: { marginTop: spacing.s4 },
-  list: { marginTop: spacing.s4, gap: 14 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  rowSoon: { borderColor: colors.accent },
-  rowPressed: { opacity: 0.8 },
-  dateBox: { width: 46, paddingVertical: 6, alignItems: 'center', borderWidth: 1, borderColor: colors.divider },
-  dateDay: { fontFamily: fonts.display, fontSize: 22, lineHeight: 24, color: colors.text },
-  dateMonth: { ...caps, fontSize: 9, letterSpacing: 1.5, color: colors.muted },
-  rowName: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
-  rowMeta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
-  overdue: { color: colors.accent },
-  undoLine: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted, marginTop: spacing.s3 },
-  undoLink: { fontFamily: fonts.heading, color: colors.accent },
-  field: { marginTop: 6, marginBottom: spacing.s2 },
-  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent, marginTop: spacing.s2 },
-  formActions: { marginTop: spacing.s3, gap: spacing.s2 },
-  confirm: { marginTop: spacing.s3, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
-  confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.text },
-  confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: spacing.s4, paddingBottom: 100 },
+    gap: { marginTop: spacing.s4 },
+    list: { marginTop: spacing.s4, gap: 14 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      padding: 14,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.divider,
+    },
+    rowSoon: { borderColor: colors.accent },
+    rowPressed: { opacity: 0.8 },
+    dateBox: { width: 46, paddingVertical: 6, alignItems: 'center', borderWidth: 1, borderColor: colors.divider },
+    dateDay: { fontFamily: fonts.display, fontSize: 22, lineHeight: 24, color: colors.text },
+    dateMonth: { ...caps, fontSize: 9, letterSpacing: 1.5, color: colors.muted },
+    rowName: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
+    rowMeta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
+    overdue: { color: colors.accent },
+    paidLine: { marginTop: spacing.s3, gap: 8 },
+    undoLine: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted },
+    undoLink: { fontFamily: fonts.heading, color: colors.accent },
+    field: { marginTop: 6, marginBottom: spacing.s2 },
+    error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent, marginTop: spacing.s2 },
+    formActions: { marginTop: spacing.s3, gap: spacing.s2 },
+    confirm: { marginTop: spacing.s3, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
+    confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.text },
+    confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  })
+);

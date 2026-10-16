@@ -13,8 +13,9 @@ import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
 import { accountLabel, expenseOptionLabel } from '../../src/domain/transactionView';
 import { DatePickerField } from '../../src/ui/DatePickerField';
+import { Shake, SlideInText } from '../../src/ui/motion';
 import { SelectModal } from '../../src/ui/SelectModal';
-import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
@@ -93,6 +94,10 @@ export default function NewTransaction() {
   const toAccount = accounts.data?.find((a) => a.id === toAccountId);
   const pickedDate = parseDateInput(dateText);
 
+  // Save with no amount shakes the amount instead of doing nothing.
+  const missingAmount = numeric <= 0;
+  const [nudge, setNudge] = useState(0);
+  const [saved, setSaved] = useState(false);
   const canSave =
     numeric > 0 &&
     !saving &&
@@ -168,13 +173,15 @@ export default function NewTransaction() {
           console.warn('Could not clear the pending SMS detection', e);
         }
       }
-      router.back();
+      // A beat of ✓ before closing. `saving` stays true, so it can't be saved twice.
+      setSaved(true);
+      setTimeout(() => router.back(), 350);
     } catch (e) {
       setError(transactionErrorMessage(e));
-    } finally {
       setSaving(false);
     }
   };
+  const onSavePress = () => (missingAmount ? setNudge((n) => n + 1) : save());
 
   if (!session) {
     return (
@@ -191,7 +198,7 @@ export default function NewTransaction() {
           <Text style={styles.link}>Cancel</Text>
         </Pressable>
         <K>New entry</K>
-        <Pressable onPress={save} disabled={!canSave}>
+        <Pressable onPress={onSavePress} disabled={!canSave && !missingAmount}>
           <Text style={[styles.link, !canSave && styles.linkDisabled]}>Save</Text>
         </Pressable>
       </View>
@@ -209,10 +216,12 @@ export default function NewTransaction() {
 
         <View style={styles.amountBlock}>
           <K>Amount</K>
-          <Text style={[styles.amount, kind === 'Income' && { color: colors.accent }]}>
-            {currency.symbol}
-            {numeric ? numeric.toLocaleString(currency.locale) : amount}
-          </Text>
+          <Shake trigger={nudge}>
+            <SlideInText
+              text={`${currency.symbol}${numeric ? numeric.toLocaleString(currency.locale) : amount}`}
+              style={[styles.amount, kind === 'Income' && { color: colors.accent }]}
+            />
+          </Shake>
         </View>
 
         {kind !== 'Transfer' ? (
@@ -267,7 +276,14 @@ export default function NewTransaction() {
 
         {error ? <Body style={styles.error}>{error}</Body> : null}
 
-        <Button title={`Save ${kind.toLowerCase()}`} onPress={save} disabled={!canSave} loading={saving} block />
+        <Button
+          title={saved ? '✓ Saved' : `Save ${kind.toLowerCase()}`}
+          onPress={onSavePress}
+          disabled={!canSave && !missingAmount}
+          dimmed={missingAmount}
+          loading={saving && !saved}
+          block
+        />
       </ScrollView>
 
       <View style={styles.keypad}>
@@ -317,44 +333,46 @@ export default function NewTransaction() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.s4,
-    paddingTop: spacing.s3,
-  },
-  link: { ...caps, fontSize: 12, color: colors.text },
-  linkDisabled: { color: colors.muted },
-  scroll: { flex: 1 },
-  content: { padding: spacing.s4, gap: spacing.s4 },
-  amountBlock: { alignItems: 'center', paddingVertical: spacing.s2 },
-  amount: { fontFamily: fonts.display, fontSize: 60, lineHeight: 68, color: colors.text, marginTop: 6 },
-  field: { gap: 9 },
-  fieldLabel: {},
-  categoryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  categoryToggle: { ...caps, fontSize: 11, color: colors.text },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  accountRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  accountLabel: { ...caps, fontSize: 12, letterSpacing: 1.5, color: colors.muted },
-  error: { color: colors.accent },
-  keypad: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  key: {
-    width: '33.33%',
-    minHeight: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.divider,
-  },
-  keyPressed: { backgroundColor: colors.divider },
-  keyText: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.s4,
+      paddingTop: spacing.s3,
+    },
+    link: { ...caps, fontSize: 12, color: colors.text },
+    linkDisabled: { color: colors.muted },
+    scroll: { flex: 1 },
+    content: { padding: spacing.s4, gap: spacing.s4 },
+    amountBlock: { alignItems: 'center', paddingVertical: spacing.s2 },
+    amount: { fontFamily: fonts.display, fontSize: 60, lineHeight: 68, color: colors.text, marginTop: 6 },
+    field: { gap: 9 },
+    fieldLabel: {},
+    categoryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    categoryToggle: { ...caps, fontSize: 11, color: colors.text },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    accountRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    accountLabel: { ...caps, fontSize: 12, letterSpacing: 1.5, color: colors.muted },
+    error: { color: colors.accent },
+    keypad: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      borderTopWidth: 1,
+      borderTopColor: colors.divider,
+    },
+    key: {
+      width: '33.33%',
+      minHeight: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRightWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: colors.divider,
+    },
+    keyPressed: { backgroundColor: colors.divider },
+    keyText: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
+  })
+);

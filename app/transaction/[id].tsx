@@ -15,7 +15,7 @@ import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import type { Account, Category, Transaction } from '../../src/data/types';
 import { Body, Button, IconButton, Input, K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
-import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
 
@@ -404,32 +404,34 @@ export default function TransactionDetail() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  handle: { width: 38, height: 4, backgroundColor: colors.divider, alignSelf: 'center', marginTop: 10 },
-  content: { padding: spacing.s4, gap: spacing.s2 },
-  amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 4 },
-  amount: { fontFamily: fonts.display, fontSize: 52, lineHeight: 58, color: colors.text },
-  income: { color: colors.accent },
-  title: { fontFamily: fonts.heading, fontSize: 22, color: colors.text, marginTop: 8 },
-  table: { marginTop: spacing.s3 },
-  tableRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 56,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  tableLabel: { ...caps, color: colors.muted },
-  tableValue: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
-  tableValueLink: { ...caps, fontSize: 12, color: colors.accent },
-  transferBlock: { marginTop: spacing.s3, padding: spacing.s3, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
-  transferRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  actions: { marginTop: spacing.s3 },
-  actionsRow: { flexDirection: 'row', gap: 10, alignItems: 'stretch' },
-  accountRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-  editBlock: { marginTop: spacing.s3, gap: 6 },
-  editActions: { flexDirection: 'row', gap: 10, marginTop: spacing.s2 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+    handle: { width: 38, height: 4, backgroundColor: colors.divider, alignSelf: 'center', marginTop: 10 },
+    content: { padding: spacing.s4, gap: spacing.s2 },
+    amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 4 },
+    amount: { fontFamily: fonts.display, fontSize: 52, lineHeight: 58, color: colors.text },
+    income: { color: colors.accent },
+    title: { fontFamily: fonts.heading, fontSize: 22, color: colors.text, marginTop: 8 },
+    table: { marginTop: spacing.s3 },
+    tableRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      minHeight: 56,
+      borderTopWidth: 1,
+      borderTopColor: colors.divider,
+    },
+    tableLabel: { ...caps, color: colors.muted },
+    tableValue: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
+    tableValueLink: { ...caps, fontSize: 12, color: colors.accent },
+    transferBlock: { marginTop: spacing.s3, padding: spacing.s3, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
+    transferRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    actions: { marginTop: spacing.s3 },
+    actionsRow: { flexDirection: 'row', gap: 10, alignItems: 'stretch' },
+    accountRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+    editBlock: { marginTop: spacing.s3, gap: 6 },
+    editActions: { flexDirection: 'row', gap: 10, marginTop: spacing.s2 },
+  })
+);
