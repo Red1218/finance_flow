@@ -346,6 +346,14 @@ samples captured during planning, excluded from v1 by explicit user decision).
 Account matching is automatic by bank name and product type, editable on
 the review screen.
 
+**Detected improvements (2026-10-16):** Detected rows show and pre-fill the
+category last used for the same merchant (derived from the last 90 days of
+transactions, no stored table). A credit gets a one-tap "Paid back for X?"
+when an expense of roughly double (within 5%) is from the 7 days before it.
+`kotakCreditCardPayment.ts` detects "Payment of INR … is credited to your Kotak
+Bank Credit Card x4030" (sender `AX-KOTAKB-S`) as a credit on the card account,
+which opens as Income on the matched card.
+
 **Kotak debit card swipes (2026-10-12):** `Rs.292.00 spent via Kotak Debit Card
 XX6853 at <merchant> on 12/10/2026. Avl bal Rs.6177.97` (sender `AX-KOTAKB-T`)
 was not detected — no parser covered it. Added `kotakDebitCard.ts` (4-digit

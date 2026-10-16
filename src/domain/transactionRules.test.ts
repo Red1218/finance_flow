@@ -1,6 +1,8 @@
 import {
   attributePaidBack,
   spendAmount,
+  lastCategoryByMerchant,
+  suggestPaidBackExpense,
   validateAmount,
   validateDifferentAccounts,
   isValidTransferPair,
@@ -151,5 +153,32 @@ describe('attributePaidBack', () => {
   it('keeps everything else as it is', () => {
     const salary = { id: 'pay', type: 'INCOME', occurred_at: '2026-11-01T09:00:00.000Z', paid_back_for: null };
     expect(attributePaidBack([meal, salary])).toEqual([meal, salary]);
+  });
+});
+
+describe('lastCategoryByMerchant', () => {
+  it('keeps the newest expense category per merchant, case-insensitively', () => {
+    const map = lastCategoryByMerchant([
+      { type: 'EXPENSE', description: 'Vridhhavan KITCHENS', category_id: 'food' },
+      { type: 'EXPENSE', description: 'vridhhavan kitchens', category_id: 'old' },
+      { type: 'INCOME', description: 'Salary', category_id: 'inc' },
+      { type: 'EXPENSE', description: null, category_id: 'x' },
+    ]);
+    expect(map.get('vridhhavan kitchens')).toBe('food');
+    expect(map.has('salary')).toBe(false);
+    expect(map.size).toBe(1);
+  });
+});
+
+describe('suggestPaidBackExpense', () => {
+  const day = (d: string) => `${d}T12:00:00`;
+  const e = (id: string, amount: number, d: string) => ({ id, amount, occurred_at: day(d) });
+  const credit = { amount: 250, date: '2026-10-12' };
+
+  it('picks the closest roughly-double expense just before the credit', () => {
+    expect(suggestPaidBackExpense(credit, [e('a', 520, '2026-10-11'), e('b', 500, '2026-10-10')])?.id).toBe('b');
+  });
+  it('ignores wrong amounts, expenses after the credit, and old ones', () => {
+    expect(suggestPaidBackExpense(credit, [e('a', 300, '2026-10-11'), e('b', 500, '2026-10-13'), e('c', 500, '2026-10-01')])).toBeNull();
   });
 });

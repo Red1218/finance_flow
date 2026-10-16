@@ -33,6 +33,9 @@ jest.mock('../../hooks/queries', () => ({
   }),
   usePreferences: () => ({ data: { currency_code: 'INR' } }),
   useCategories: () => ({ data: [{ id: 'cat-1', name: 'Groceries', kind: 'EXPENSE' }] }),
+  useTransactions: () => ({
+    data: [{ type: 'EXPENSE', description: 'gunreddy ramanuja re', category_id: 'cat-1' }],
+  }),
   useRecentExpenses: () => [
     { id: 'tx-meal', type: 'EXPENSE', amount: 330, category_id: 'cat-food', description: 'Vridhhavan KITCHENS', occurred_at: '2026-10-12T13:08:52.000Z' },
   ],
@@ -148,6 +151,7 @@ describe('DetectedScreen', () => {
         note: 'GUNREDDY RAMANUJA RE',
         dateText: '2026-09-07',
         detectionId: 'KOTAKB:804121858190',
+        categoryId: 'cat-1',
       },
     });
   });
@@ -258,5 +262,13 @@ describe('DetectedScreen', () => {
     const { findByText, queryByText } = render(<DetectedScreen />);
     await findByText('GUNREDDY RAMANUJA RE');
     expect(queryByText('Paid back')).toBeNull();
+  });
+
+  it('suggests the roughly-double expense a credit paid back, and saves it in one tap', async () => {
+    const half = { ...sampleDetection, id: 'KOTAKB:165', dedupKey: 'KOTAKB:165', direction: 'credit' as const, amount: 165, merchant: 'MUNAGALA SRI HARSHA', date: '2026-10-12' };
+    (listDetections as jest.Mock).mockResolvedValue([half]);
+    const { findByText } = render(<DetectedScreen />);
+    await userEvent.press(await findByText('Paid back for Vridhhavan KITCHENS?'));
+    await waitFor(() => expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ type: 'INCOME', amount: 165, paidBackFor: 'tx-meal' })));
   });
 });
