@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { listDetections, markNotTransfer, removeDetection, type PendingDetection } from '../../src/data/repositories/pendingDetections';
 import { pairTransfers } from '../../src/domain/transferPairs';
-import { matchDetectionToAccount } from '../../src/domain/smsDetection';
+import { isCardPayment, matchDetectionToAccount, matchPayingAccount } from '../../src/domain/smsDetection';
 import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime, parseDateInput } from '../../src/domain/dateRange';
@@ -75,6 +75,21 @@ export default function DetectedScreen() {
   };
 
   const handleOpen = (detection: PendingDetection) => {
+    if (isCardPayment(detection)) {
+      router.push({
+        pathname: '/transaction/new',
+        params: {
+          amount: String(detection.amount),
+          kind: 'Transfer',
+          accountId: matchPayingAccount(detection, accounts.data ?? []) ?? '',
+          toAccountId: matchDetectionToAccount(detection, accounts.data ?? []) ?? '',
+          note: detection.merchant,
+          dateText: detection.date,
+          detectionId: detection.id,
+        },
+      });
+      return;
+    }
     const accountId = matchDetectionToAccount(detection, accounts.data ?? []);
     router.push({
       pathname: '/transaction/new',
@@ -161,7 +176,10 @@ export default function DetectedScreen() {
     setAssigning(true);
     setAssignError(null);
     const noAccountMessage = 'No account to assign these to — add an account first.';
-    const targets = items.filter((d) => selectedIds.has(d.id));
+    const selected = items.filter((d) => selectedIds.has(d.id));
+    // A card payment would save as Income on the card; it has to be opened and saved as a transfer.
+    const targets = selected.filter((d) => !isCardPayment(d));
+    const leftOut = selected.length - targets.length;
     try {
       let createdExpense = false;
       for (const detection of targets) {
@@ -202,6 +220,7 @@ export default function DetectedScreen() {
       if (createdExpense) checkBudgetAlerts({ type: 'EXPENSE', category_id: categoryId });
       setSelectMode(false);
       setSelectedIds(new Set());
+      if (leftOut > 0) setAssignError('Card payments were left out: open them to save as a transfer.');
     } catch (e) {
       setAssignError(e instanceof Error && e.message === noAccountMessage ? noAccountMessage : transactionErrorMessage(e));
     } finally {
