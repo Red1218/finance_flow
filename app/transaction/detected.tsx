@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { listDetections, markNotTransfer, removeDetection, type PendingDetection } from '../../src/data/repositories/pendingDetections';
 import { pairTransfers } from '../../src/domain/transferPairs';
-import { matchDetectionToAccount } from '../../src/domain/smsDetection';
+import { isCardPayment, matchDetectionToAccount, matchPayingAccount } from '../../src/domain/smsDetection';
 import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime, parseDateInput } from '../../src/domain/dateRange';
@@ -75,6 +75,21 @@ export default function DetectedScreen() {
   };
 
   const handleOpen = (detection: PendingDetection) => {
+    if (isCardPayment(detection)) {
+      router.push({
+        pathname: '/transaction/new',
+        params: {
+          amount: String(detection.amount),
+          kind: 'Transfer',
+          accountId: matchPayingAccount(detection, accounts.data ?? []) ?? '',
+          toAccountId: matchDetectionToAccount(detection, accounts.data ?? []) ?? '',
+          note: detection.merchant,
+          dateText: detection.date,
+          detectionId: detection.id,
+        },
+      });
+      return;
+    }
     const accountId = matchDetectionToAccount(detection, accounts.data ?? []);
     router.push({
       pathname: '/transaction/new',

@@ -35,3 +35,17 @@ export function matchDetectionToAccount(detection: ParsedTransaction, accounts: 
   });
   return match ? match.id : null;
 }
+
+// A card bill payment arrives as a credit on the card with no matching bank
+// debit SMS, so it opens as a transfer into the card. The paying account is
+// guessed as the one bank account named after the same bank; if that's
+// ambiguous the user picks.
+export function isCardPayment(detection: ParsedTransaction): boolean {
+  return detection.accountType === 'credit_card' && detection.direction === 'credit';
+}
+
+export function matchPayingAccount(detection: ParsedTransaction, accounts: Account[]): string | null {
+  const bank = detection.bankLabel.toLowerCase();
+  const banks = accounts.filter((a) => !a.archived_at && a.type === 'BANK' && a.name.toLowerCase().includes(bank));
+  return banks.length === 1 ? banks[0].id : null;
+}

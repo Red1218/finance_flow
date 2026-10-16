@@ -28,8 +28,9 @@ jest.mock('../../data/repositories/pendingDetections');
 jest.mock('../../hooks/queries', () => ({
   useAccounts: () => ({
     data: [
-      { id: 'acc-1', type: 'BANK', mask: '8721', archived_at: null },
-      { id: 'acc-2', type: 'BANK', mask: '1994', archived_at: null },
+      { id: 'acc-1', name: 'Kotak', type: 'BANK', mask: '8721', archived_at: null },
+      { id: 'acc-2', name: 'Axis', type: 'BANK', mask: '1994', archived_at: null },
+      { id: 'acc-cc', name: 'Kotak CC', type: 'CREDIT_CARD', mask: '4030', archived_at: null },
     ],
   }),
   usePreferences: () => ({ data: { currency_code: 'INR' } }),
@@ -293,5 +294,16 @@ describe('DetectedScreen', () => {
     const { findByText, queryByText } = render(<DetectedScreen />);
     await findByText('GUNREDDY RAMANUJA RE');
     expect(queryByText('Paid Rent')).toBeNull();
+  });
+
+  it('opens a card bill payment as a transfer from the same bank into the card', async () => {
+    const payment = { ...sampleDetection, id: 'KOTAKB-CCPAY:1', dedupKey: 'KOTAKB-CCPAY:1', direction: 'credit' as const, accountType: 'credit_card' as const, accountLast4: '4030', amount: 7000, merchant: 'Card payment', date: '2026-10-01' };
+    (listDetections as jest.Mock).mockResolvedValue([payment]);
+    const { findByText } = render(<DetectedScreen />);
+    await userEvent.press(await findByText('Card payment'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/transaction/new',
+      params: { amount: '7000', kind: 'Transfer', accountId: 'acc-1', toAccountId: 'acc-cc', note: 'Card payment', dateText: '2026-10-01', detectionId: 'KOTAKB-CCPAY:1' },
+    });
   });
 });

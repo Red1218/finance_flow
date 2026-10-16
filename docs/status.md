@@ -352,7 +352,7 @@ transactions, no stored table). A credit gets a one-tap "Paid back for X?"
 when an expense of roughly double (within 5%) is from the 7 days before it.
 `kotakCreditCardPayment.ts` detects "Payment of INR … is credited to your Kotak
 Bank Credit Card x4030" (sender `AX-KOTAKB-S`) as a credit on the card account,
-which opens as Income on the matched card.
+which opens as a Transfer into the matched card (from the one bank account named after the same bank, else the user picks) — Kotak sends no debit SMS for card payments, so there is nothing to pair it with.
 
 **Kotak debit card swipes (2026-10-12):** `Rs.292.00 spent via Kotak Debit Card
 XX6853 at <merchant> on 12/10/2026. Avl bal Rs.6177.97` (sender `AX-KOTAKB-T`)
