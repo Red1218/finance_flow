@@ -7,6 +7,7 @@ import {
   dueLabel,
   shortDate,
   dueSoon,
+  billForDetection,
 } from './bills';
 
 // Local dates (month is 0-based in the Date constructor).
@@ -91,5 +92,27 @@ describe('dueSoon', () => {
       { id: 'today', next_due_date: '2026-10-12' },
     ];
     expect(dueSoon(bills, oct12).map((b) => b.id)).toEqual(['overdue', 'today', 'week']);
+  });
+});
+
+describe('billForDetection', () => {
+  const rent = { id: 'rent', amount: '15000.00', next_due_date: '2026-11-05' };
+  const wifi = { id: 'wifi', amount: 999, next_due_date: '2026-11-10' };
+  const debit = (amount: number, date: string) => ({ amount, direction: 'debit', date });
+
+  it('matches a same-amount debit within 7 days of the due date, early or late', () => {
+    expect(billForDetection(debit(15000, '2026-10-29'), [rent, wifi])).toBe(rent);
+    expect(billForDetection(debit(15000, '2026-11-12'), [rent, wifi])).toBe(rent);
+  });
+
+  it('ignores debits further than 7 days out, other amounts, and credits', () => {
+    expect(billForDetection(debit(15000, '2026-10-28'), [rent])).toBeNull();
+    expect(billForDetection(debit(15001, '2026-11-05'), [rent])).toBeNull();
+    expect(billForDetection({ amount: 15000, direction: 'credit', date: '2026-11-05' }, [rent])).toBeNull();
+  });
+
+  it('picks the bill due closest to the SMS date when two match', () => {
+    const rent2 = { ...rent, id: 'rent2', next_due_date: '2026-11-09' };
+    expect(billForDetection(debit(15000, '2026-11-08'), [rent, rent2])).toBe(rent2);
   });
 });

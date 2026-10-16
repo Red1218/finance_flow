@@ -3,7 +3,7 @@
 // calendar arithmetic — never toISOString(), which shifts the day across the
 // UTC+5:30 boundary.
 
-import { toDateInput } from './dateRange';
+import { parseDateInput, toDateInput } from './dateRange';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -67,4 +67,18 @@ export function dueSoon<T extends { next_due_date: string }>(bills: T[], today: 
   return bills
     .filter((b) => daysUntil(b.next_due_date, today) <= 7)
     .sort((a, b) => a.next_due_date.localeCompare(b.next_due_date));
+}
+
+// A detected SMS debit pays a bill when the amount is the same and the SMS
+// date is within 7 days of the bill's next due date. Closest due date wins.
+export function billForDetection<T extends { amount: number | string; next_due_date: string }>(
+  detection: { amount: number; direction: string; date: string },
+  bills: T[],
+): T | null {
+  if (detection.direction !== 'debit') return null;
+  const smsDay = parseDateInput(detection.date);
+  if (!smsDay) return null;
+  const gap = (b: T) => Math.abs(daysUntil(b.next_due_date, smsDay));
+  const matches = bills.filter((b) => Math.abs(Number(b.amount) - detection.amount) < 0.005 && gap(b) <= 7);
+  return matches.sort((a, b) => gap(a) - gap(b))[0] ?? null;
 }
