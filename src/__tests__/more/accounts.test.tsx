@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
-import { createAccount } from '../../data/repositories/accounts';
+import { createAccount, updateAccount } from '../../data/repositories/accounts';
 import Accounts from '../../../app/(tabs)/more/accounts';
 
 type Query = { data: unknown; loading: boolean; error: string | null; refetch: () => void };
@@ -14,7 +14,7 @@ jest.mock('../../hooks/queries', () => ({
   usePreferences: () => loaded({ currency_code: 'INR' }),
 }));
 // Factory mock: the real module imports supabaseClient.ts, which throws without env vars.
-jest.mock('../../data/repositories/accounts', () => ({ createAccount: jest.fn() }));
+jest.mock('../../data/repositories/accounts', () => ({ createAccount: jest.fn(), updateAccount: jest.fn() }));
 jest.mock('../../data/AuthContext', () => ({ useAuth: () => ({ session: { user: { id: 'u1' } } }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
@@ -68,5 +68,18 @@ describe('Accounts', () => {
     expect(screen.getByText('A/c ••8721 · Debit card ••6853')).toBeTruthy();
     expect(screen.getByText('A/c ••1994')).toBeTruthy();
     expect(screen.getByText('Card ••4030')).toBeTruthy();
+  });
+
+  it('edits an account, so its opening balance can be set', async () => {
+    mockAccounts = loaded([
+      { id: 'k', name: 'Kotak', type: 'BANK', mask: '8721', card_mask: '6853', opening_balance: 0, is_default: false, archived_at: null },
+    ]);
+    render(<Accounts />);
+    await userEvent.press(screen.getByText('Kotak'));
+    expect(screen.getByDisplayValue('Kotak')).toBeTruthy();
+    expect(screen.getByDisplayValue('6853')).toBeTruthy();
+    fireEvent.changeText(screen.getByDisplayValue('0'), '5795.97');
+    await userEvent.press(screen.getByText('Save changes'));
+    expect(updateAccount).toHaveBeenCalledWith('k', { name: 'Kotak', opening_balance: 5795.97, mask: '8721', card_mask: '6853' });
   });
 });

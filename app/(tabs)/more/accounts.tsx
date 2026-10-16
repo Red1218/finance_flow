@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAccounts, useTransactions, usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
-import { createAccount } from '../../../src/data/repositories/accounts';
+import { createAccount, updateAccount } from '../../../src/data/repositories/accounts';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { transactionSign } from '../../../src/domain/transactionRules';
 import { monthRange } from '../../../src/domain/dateRange';
@@ -45,6 +45,7 @@ export default function Accounts() {
   const currencyCode = prefs.data?.currency_code ?? 'INR';
 
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<Account | null>(null);
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('BANK');
   const [opening, setOpening] = useState('0');
@@ -77,23 +78,30 @@ export default function Accounts() {
     return { balanceByAccount, netWorth, monthChange };
   }, [accounts.data, allTx.data, monthTx.data]);
 
+  // One form for adding and editing; `editing` is the account being changed.
+  const openForm = (account: Account | null) => {
+    setEditing(account);
+    setName(account?.name ?? '');
+    setType(account?.type ?? 'BANK');
+    setOpening(account ? String(toNumber(account.opening_balance)) : '0');
+    setMask(account?.mask ?? '');
+    setCardMask(account?.card_mask ?? '');
+    setAddOpen(true);
+  };
+
   const save = async () => {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await createAccount({
+      const fields = {
         name: name.trim(),
-        type,
-        currency_code: 'INR',
         opening_balance: parseFloat(opening) || 0,
         mask: mask.trim() || null,
         card_mask: type === 'BANK' ? cardMask.trim() || null : null,
-      });
+      };
+      if (editing) await updateAccount(editing.id, fields);
+      else await createAccount({ ...fields, type, currency_code: 'INR' });
       setAddOpen(false);
-      setName('');
-      setOpening('0');
-      setMask('');
-      setCardMask('');
       refetch();
     } finally {
       setSaving(false);
@@ -121,7 +129,7 @@ export default function Accounts() {
             <Button title="Link a bank" onPress={() => router.push('/onboarding/link-bank')} block />
           </View>
           <View style={{ flex: 1 }}>
-            <Button title="Add account" variant="secondary" onPress={() => setAddOpen(true)} block />
+            <Button title="Add account" variant="secondary" onPress={() => openForm(null)} block />
           </View>
         </View>
 
@@ -149,20 +157,22 @@ export default function Accounts() {
                     const balance = data.balanceByAccount.get(a.id) ?? 0;
                     const numbers = numbersLine(a);
                     return (
-                      <Card key={a.id}>
-                        <View style={styles.rowBetween}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.accountName}>{a.name}</Text>
-                            {numbers ? <Muted style={styles.numbers}>{numbers}</Muted> : null}
-                            {a.is_default && (
-                              <View style={styles.tags}>
-                                <Tag label="Default" variant="accent" />
-                              </View>
-                            )}
+                      <Pressable key={a.id} onPress={() => openForm(a)} accessibilityRole="button" accessibilityLabel={`Edit ${a.name}`}>
+                        <Card>
+                          <View style={styles.rowBetween}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.accountName}>{a.name}</Text>
+                              {numbers ? <Muted style={styles.numbers}>{numbers}</Muted> : null}
+                              {a.is_default && (
+                                <View style={styles.tags}>
+                                  <Tag label="Default" variant="accent" />
+                                </View>
+                              )}
+                            </View>
+                            <Text style={[styles.balance, balance < 0 && { color: colors.accent }]}>{formatCurrency(balance, currencyCode)}</Text>
                           </View>
-                          <Text style={[styles.balance, balance < 0 && { color: colors.accent }]}>{formatCurrency(balance, currencyCode)}</Text>
-                        </View>
-                      </Card>
+                        </Card>
+                      </Pressable>
                     );
                   })}
                 </Rise>
@@ -176,21 +186,29 @@ export default function Accounts() {
       <FormModal visible={addOpen} onClose={() => setAddOpen(false)}>
         <K>Account name</K>
         <Input value={name} onChangeText={setName} placeholder="e.g. Axis" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
-        <K>Type</K>
-        <View style={{ marginTop: 6, marginBottom: spacing.s2 }}>
-          <Seg
-            options={[
-              { label: 'Bank', value: 'BANK' as AccountType },
-              { label: 'Cash', value: 'CASH' as AccountType },
-              { label: 'Card', value: 'CREDIT_CARD' as AccountType },
-              { label: 'Wallet', value: 'WALLET' as AccountType },
-            ]}
-            value={type}
-            onChange={setType}
-          />
-        </View>
+        {/* Type stays fixed once an account exists: SMS matching depends on it. */}
+        {!editing && (
+          <>
+            <K>Type</K>
+            <View style={{ marginTop: 6, marginBottom: spacing.s2 }}>
+              <Seg
+                options={[
+                  { label: 'Bank', value: 'BANK' as AccountType },
+                  { label: 'Cash', value: 'CASH' as AccountType },
+                  { label: 'Card', value: 'CREDIT_CARD' as AccountType },
+                  { label: 'Wallet', value: 'WALLET' as AccountType },
+                ]}
+                value={type}
+                onChange={setType}
+              />
+            </View>
+          </>
+        )}
         <K>Opening balance</K>
-        <Input value={opening} onChangeText={setOpening} keyboardType="decimal-pad" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
+        <Muted style={{ marginTop: 4 }}>
+          {type === 'CREDIT_CARD' ? 'What you owed before your first entry here, as a minus amount.' : 'The balance before your first entry here.'}
+        </Muted>
+        <Input value={opening} onChangeText={setOpening} keyboardType="numbers-and-punctuation" style={{ marginTop: 6, marginBottom: spacing.s2 }} />
         <K>{type === 'CREDIT_CARD' ? 'Card last 4 (optional)' : 'Account no. last 4 (optional)'}</K>
         <Input
           value={mask}
@@ -207,7 +225,7 @@ export default function Accounts() {
           </>
         )}
         <View style={{ marginTop: spacing.s3 }}>
-          <Button title="Add account" onPress={save} loading={saving} block />
+          <Button title={editing ? 'Save changes' : 'Add account'} onPress={save} loading={saving} block />
         </View>
       </FormModal>
     </View>

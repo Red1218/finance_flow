@@ -38,3 +38,13 @@ export async function createAccount(input: {
   if (error) throw error;
   return data as Account;
 }
+
+// Type and currency stay fixed: SMS matching and the account's history depend on them.
+export async function updateAccount(
+  id: string,
+  patch: { name: string; opening_balance: number; mask: string | null; card_mask: string | null }
+): Promise<Account> {
+  const { data, error } = await supabase.from('accounts').update(patch).eq('id', id).select('*').single();
+  if (error) throw error;
+  return data as Account;
+}
