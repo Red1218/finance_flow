@@ -30,6 +30,8 @@ export default function NewTransaction() {
     note?: string;
     dateText?: string;
     detectionId?: string;
+    // Last category used for this merchant (set by Detected).
+    categoryId?: string;
     // The other SMS of a suggested transfer pair (see Detected), cleared on save too.
     pairedDetectionId?: string;
   }>();
@@ -67,11 +69,13 @@ export default function NewTransaction() {
 
   const relevantCategories = useMemo(() => categories.data ?? [], [categories.data]);
 
+  const presetKind = params.kind;
+  const presetCategory = params.categoryId || null;
   useEffect(() => {
-    setCategoryId(null);
+    setCategoryId(kind === presetKind ? presetCategory : null);
     setCategoriesExpanded(false);
     setPaidBackForId(null);
-  }, [kind]);
+  }, [kind, presetKind, presetCategory]);
 
   const INITIAL_CATEGORY_COUNT = 3;
   // Collapsed, the selected category stays visible even when it's past the

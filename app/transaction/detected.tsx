@@ -9,9 +9,10 @@ import { createTransaction } from '../../src/application/transactions';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime, parseDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
-import { useAccounts, useCategories, usePreferences, useRecentExpenses } from '../../src/hooks/queries';
+import { useAccounts, useCategories, usePreferences, useRecentExpenses, useTransactions } from '../../src/hooks/queries';
 import { useLiveQuery } from '../../src/hooks/useLiveQuery';
 import { formatCurrency } from '../../src/domain/money';
+import { lastCategoryByMerchant, suggestPaidBackExpense } from '../../src/domain/transactionRules';
 import { expenseOptionLabel } from '../../src/domain/transactionView';
 import { K } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
@@ -28,6 +29,11 @@ export default function DetectedScreen() {
   // in this app already uses, no bespoke reload logic needed.
   const detections = useLiveQuery(() => listDetections(), []);
   const recentExpenses = useRecentExpenses();
+  // Last category per merchant, from the last 90 days of saved transactions.
+  const since = useMemo(() => new Date(Date.now() - 90 * 86400000).toISOString(), []);
+  const history = useTransactions({ from: since });
+  const merchantCategories = useMemo(() => lastCategoryByMerchant(history.data ?? []), [history.data]);
+  const categoryFor = (d: PendingDetection) => (d.direction === 'debit' ? merchantCategories.get(d.merchant.trim().toLowerCase()) ?? '' : '');
   const [paidBackFor, setPaidBackFor] = useState<PendingDetection | null>(null);
 
   const [selectMode, setSelectMode] = useState(false);
@@ -75,6 +81,7 @@ export default function DetectedScreen() {
         note: detection.merchant,
         dateText: detection.date,
         detectionId: detection.id,
+        categoryId: categoryFor(detection),
       },
     });
   };
@@ -237,6 +244,8 @@ export default function DetectedScreen() {
               );
             }
             const d = entry.item;
+            const categoryName = categories.data?.find((c) => c.id === categoryFor(d))?.name;
+            const paidBackGuess = d.direction === 'credit' ? suggestPaidBackExpense(d, recentExpenses) : null;
             return (
               <View key={d.id} style={styles.row}>
                 <Pressable
@@ -257,9 +266,15 @@ export default function DetectedScreen() {
                         {formatCurrency(d.direction === 'credit' ? d.amount : -d.amount, currencyCode, { sign: true })}
                       </Text>{' '}
                       · {d.date}
+                      {categoryName ? ` · ${categoryName}` : ''}
                     </Text>
                   </View>
                 </Pressable>
+                {!selectMode && paidBackGuess && (
+                  <Pressable onPress={() => handlePaidBack(d, paidBackGuess.id)}>
+                    <Text style={styles.dismiss}>Paid back for {paidBackGuess.description?.trim() || 'expense'}?</Text>
+                  </Pressable>
+                )}
                 {!selectMode && d.direction === 'credit' && (
                   <Pressable onPress={() => setPaidBackFor(d)}>
                     <Text style={styles.dismiss}>Paid back</Text>

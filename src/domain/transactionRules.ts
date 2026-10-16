@@ -79,3 +79,38 @@ export function isValidTransferPair(a: TransferLeg, b: TransferLeg): boolean {
   if (a.userId !== b.userId) return false;
   return true;
 }
+
+type Described = { type: string; description: string | null; category_id: string | null };
+
+// The category last used for each merchant name. Detected drafts save the
+// merchant as the description, so a repeat merchant matches exactly. `txns`
+// must be newest-first (as listTransactions returns them).
+export function lastCategoryByMerchant(txns: Described[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const t of txns) {
+    const key = t.description?.trim().toLowerCase();
+    if (t.type === 'EXPENSE' && key && t.category_id && !map.has(key)) map.set(key, t.category_id);
+  }
+  return map;
+}
+
+// A credit that looks like a friend paying back their half: an expense of
+// roughly double the credit (within 5%), on or up to 7 days before it. The
+// closest amount wins. Only a suggestion — the user confirms it.
+export function suggestPaidBackExpense<E extends { id: string; amount: number | string; occurred_at: string }>(
+  credit: { amount: number; date: string },
+  expenses: E[]
+): E | null {
+  const creditDay = Date.parse(`${credit.date}T23:59:59`);
+  let best: E | null = null;
+  let bestGap = Infinity;
+  for (const e of expenses) {
+    const amount = typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount;
+    const age = creditDay - Date.parse(e.occurred_at);
+    const gap = Math.abs(amount - credit.amount * 2);
+    if (age < 0 || age > 8 * 86400000 || gap > amount * 0.05 || gap >= bestGap) continue;
+    best = e;
+    bestGap = gap;
+  }
+  return best;
+}
