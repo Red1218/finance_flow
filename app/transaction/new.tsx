@@ -6,6 +6,7 @@ import { useAccounts, useCategories, usePreferences, useRecentExpenses } from '.
 import { getCurrencyMeta } from '../../src/domain/money';
 import { createTransaction, createTransfer } from '../../src/application/transactions';
 import { removeDetection } from '../../src/data/repositories/pendingDetections';
+import { markBillPaidById } from '../../src/data/repositories/bills';
 import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime, parseDateInput, toDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
@@ -34,6 +35,8 @@ export default function NewTransaction() {
     categoryId?: string;
     // The other SMS of a suggested transfer pair (see Detected), cleared on save too.
     pairedDetectionId?: string;
+    // The bill this SMS pays (see Detected's "Paid <bill>"), marked paid on save.
+    billId?: string;
   }>();
   const { session } = useAuth();
   const accounts = useAccounts();
@@ -145,6 +148,14 @@ export default function NewTransaction() {
         // Fire-and-forget: checkBudgetAlerts never rejects, and per the design
         // spec the check must not block the save it's piggybacking on.
         checkBudgetAlerts(created);
+      }
+      // Same isolation as the detection cleanup below: the expense is saved.
+      if (params.billId) {
+        try {
+          await markBillPaidById(params.billId);
+        } catch (e) {
+          console.warn('Could not mark the bill paid', e);
+        }
       }
       // Deliberately in its own try: the transaction is already saved by this
       // point, so a failure clearing the pending draft must not surface as a

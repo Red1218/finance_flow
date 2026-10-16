@@ -9,6 +9,7 @@ import { render, screen, userEvent, waitFor } from '@testing-library/react-nativ
 import { useLocalSearchParams } from 'expo-router';
 import NewTransaction from '../../../app/transaction/new';
 import { removeDetection } from '../../data/repositories/pendingDetections';
+import { markBillPaidById } from '../../data/repositories/bills';
 import { checkBudgetAlerts } from '../../notifications/checkBudgetAlerts';
 import { useCategories } from '../../hooks/queries';
 
@@ -19,6 +20,8 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('../../data/repositories/pendingDetections', () => ({ removeDetection: jest.fn() }));
+// Factory mock: the real module imports supabaseClient.ts, which throws without env vars.
+jest.mock('../../data/repositories/bills', () => ({ markBillPaidById: jest.fn() }));
 
 jest.mock('../../notifications/checkBudgetAlerts', () => ({ checkBudgetAlerts: jest.fn() }));
 
@@ -78,6 +81,7 @@ describe('Add Transaction screen', () => {
     mockSession = { user: { id: 'u1' } };
     (useLocalSearchParams as jest.Mock).mockReturnValue({});
     (removeDetection as jest.Mock).mockClear();
+    (markBillPaidById as jest.Mock).mockClear();
   });
 
   it('shows a sign-in prompt instead of the form when signed out', () => {
@@ -247,6 +251,28 @@ describe('Add Transaction screen', () => {
     const { getByText } = render(<NewTransaction />);
     await userEvent.press(getByText('Save'));
     await waitFor(() => expect(removeDetection).toHaveBeenCalledWith('KOTAKB:1'));
+  });
+
+  it('marks the bill from "Paid <bill>" paid only after the expense saves', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({
+      amount: '150', kind: 'Expense', accountId: 'acc-1', note: 'x', dateText: '2026-09-07', detectionId: 'KOTAKB:1', billId: 'bill-1',
+    });
+    const { getByText } = render(<NewTransaction />);
+    expect(markBillPaidById).not.toHaveBeenCalled();
+    await userEvent.press(getByText('Save'));
+    await waitFor(() => expect(markBillPaidById).toHaveBeenCalledWith('bill-1'));
+    expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the bill unpaid when the save fails', async () => {
+    mockCreateTransaction.mockRejectedValue(new Error('network down'));
+    (useLocalSearchParams as jest.Mock).mockReturnValue({
+      amount: '150', kind: 'Expense', accountId: 'acc-1', note: 'x', dateText: '2026-09-07', billId: 'bill-1',
+    });
+    const { getByText } = render(<NewTransaction />);
+    await userEvent.press(getByText('Save'));
+    await waitFor(() => expect(mockCreateTransaction).toHaveBeenCalled());
+    expect(markBillPaidById).not.toHaveBeenCalled();
   });
 
   it('saves a prefilled suggested transfer and clears both of its detections', async () => {

@@ -69,8 +69,9 @@ export function dueSoon<T extends { next_due_date: string }>(bills: T[], today: 
     .sort((a, b) => a.next_due_date.localeCompare(b.next_due_date));
 }
 
-// A detected SMS debit pays a bill when the amount is the same and the SMS
-// date is within 7 days of the bill's next due date. Closest due date wins.
+// A detected SMS debit pays a bill when its amount is within 10% of the bill's
+// (so varying bills like electricity still match) and the SMS date is within
+// 7 days of the bill's next due date. Closest due date wins, then closest amount.
 export function billForDetection<T extends { amount: number | string; next_due_date: string }>(
   detection: { amount: number; direction: string; date: string },
   bills: T[],
@@ -79,6 +80,7 @@ export function billForDetection<T extends { amount: number | string; next_due_d
   const smsDay = parseDateInput(detection.date);
   if (!smsDay) return null;
   const gap = (b: T) => Math.abs(daysUntil(b.next_due_date, smsDay));
-  const matches = bills.filter((b) => Math.abs(Number(b.amount) - detection.amount) < 0.005 && gap(b) <= 7);
-  return matches.sort((a, b) => gap(a) - gap(b))[0] ?? null;
+  const off = (b: T) => Math.abs(Number(b.amount) - detection.amount);
+  const matches = bills.filter((b) => off(b) <= Number(b.amount) * 0.1 && gap(b) <= 7);
+  return matches.sort((a, b) => gap(a) - gap(b) || off(a) - off(b))[0] ?? null;
 }
