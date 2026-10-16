@@ -176,7 +176,10 @@ export default function DetectedScreen() {
     setAssigning(true);
     setAssignError(null);
     const noAccountMessage = 'No account to assign these to — add an account first.';
-    const targets = items.filter((d) => selectedIds.has(d.id));
+    const selected = items.filter((d) => selectedIds.has(d.id));
+    // A card payment would save as Income on the card; it has to be opened and saved as a transfer.
+    const targets = selected.filter((d) => !isCardPayment(d));
+    const leftOut = selected.length - targets.length;
     try {
       let createdExpense = false;
       for (const detection of targets) {
@@ -217,6 +220,7 @@ export default function DetectedScreen() {
       if (createdExpense) checkBudgetAlerts({ type: 'EXPENSE', category_id: categoryId });
       setSelectMode(false);
       setSelectedIds(new Set());
+      if (leftOut > 0) setAssignError('Card payments were left out: open them to save as a transfer.');
     } catch (e) {
       setAssignError(e instanceof Error && e.message === noAccountMessage ? noAccountMessage : transactionErrorMessage(e));
     } finally {

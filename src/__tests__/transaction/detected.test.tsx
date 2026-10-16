@@ -306,4 +306,20 @@ describe('DetectedScreen', () => {
       params: { amount: '7000', kind: 'Transfer', accountId: 'acc-1', toAccountId: 'acc-cc', note: 'Card payment', dateText: '2026-10-01', detectionId: 'KOTAKB-CCPAY:1' },
     });
   });
+
+  it('leaves card payments out of a bulk category assign and says so', async () => {
+    const payment = { ...sampleDetection2, id: 'KOTAKB-CCPAY:2', dedupKey: 'KOTAKB-CCPAY:2', direction: 'credit' as const, accountType: 'credit_card' as const, accountLast4: '4030', merchant: 'Card payment' };
+    (listDetections as jest.Mock).mockResolvedValue([sampleDetection, payment]);
+    const { findByText } = render(<DetectedScreen />);
+
+    fireEvent(await findByText('GUNREDDY RAMANUJA RE'), 'longPress');
+    await userEvent.press(await findByText('Card payment'));
+    await userEvent.press(await findByText('Assign category'));
+    await userEvent.press(await findByText('Groceries'));
+
+    expect(await findByText('Card payments were left out: open them to save as a transfer.')).toBeTruthy();
+    expect(createTransaction).toHaveBeenCalledTimes(1);
+    expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amount: 150, type: 'EXPENSE' }));
+    expect(removeDetection).not.toHaveBeenCalledWith('KOTAKB-CCPAY:2');
+  });
 });
