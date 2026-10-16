@@ -262,9 +262,11 @@ export default function DetectedScreen() {
                     </View>
                   </Pressable>
                   {!selectMode && (
-                    <Pressable onPress={() => handleNotTransfer(out, into)}>
-                      <Text style={styles.dismiss}>Not a transfer</Text>
-                    </Pressable>
+                    <View style={styles.actions}>
+                      <Pressable onPress={() => handleNotTransfer(out, into)}>
+                        <Text style={styles.dismiss}>Not a transfer</Text>
+                      </Pressable>
+                    </View>
                   )}
                 </View>
               );
@@ -297,28 +299,32 @@ export default function DetectedScreen() {
                     </Text>
                   </View>
                 </Pressable>
-                {!selectMode && paidBackGuess && (
-                  <Pressable onPress={() => handlePaidBack(d, paidBackGuess.id)}>
-                    <Text style={styles.dismiss}>Paid back for {paidBackGuess.description?.trim() || 'expense'}?</Text>
-                  </Pressable>
-                )}
-                {!selectMode && d.direction === 'credit' && (
-                  <Pressable onPress={() => setPaidBackFor(d)}>
-                    <Text style={styles.dismiss}>Paid back</Text>
-                  </Pressable>
-                )}
-                {!selectMode && bill && (
-                  <Pressable onPress={() => handleOpen(d, bill)}>
-                    <Text style={styles.dismiss}>
-                      Paid {bill.name}
-                      {toNumber(bill.amount) !== d.amount && ` (bill ${formatCurrency(toNumber(bill.amount), currencyCode)})`}
-                    </Text>
-                  </Pressable>
-                )}
+                {/* Actions sit under the item and wrap: on one line beside it, a long
+                    "Paid back for …?" squeezed the name to a letter per line. */}
                 {!selectMode && (
-                  <Pressable onPress={() => handleDismiss(d.id)}>
-                    <Text style={styles.dismiss}>Not a transaction</Text>
-                  </Pressable>
+                  <View style={styles.actions}>
+                    {paidBackGuess && (
+                      <Pressable onPress={() => handlePaidBack(d, paidBackGuess.id)}>
+                        <Text style={styles.dismiss}>Paid back for {paidBackGuess.description?.trim() || 'expense'}?</Text>
+                      </Pressable>
+                    )}
+                    {d.direction === 'credit' && (
+                      <Pressable onPress={() => setPaidBackFor(d)}>
+                        <Text style={styles.dismiss}>Paid back</Text>
+                      </Pressable>
+                    )}
+                    {bill && (
+                      <Pressable onPress={() => handleOpen(d, bill)}>
+                        <Text style={styles.dismiss}>
+                          Paid {bill.name}
+                          {toNumber(bill.amount) !== d.amount && ` (bill ${formatCurrency(toNumber(bill.amount), currencyCode)})`}
+                        </Text>
+                      </Pressable>
+                    )}
+                    <Pressable onPress={() => handleDismiss(d.id)}>
+                      <Text style={styles.dismiss}>Not a transaction</Text>
+                    </Pressable>
+                  </View>
                 )}
               </View>
             );
@@ -367,20 +373,18 @@ const styles = StyleSheet.create({
   content: { padding: spacing.s4, paddingBottom: 100 },
   empty: { fontFamily: fonts.body, fontSize: 14, textAlign: 'center', marginTop: spacing.s4, color: colors.muted },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 14,
     marginBottom: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.divider,
   },
-  rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rowMain: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.s4, rowGap: 8, marginTop: 10 },
   merchant: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
   meta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted, marginTop: 4 },
   credit: { color: colors.accent },
-  dismiss: { ...caps, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted, marginLeft: spacing.s2 },
+  dismiss: { ...caps, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
   checkbox: {
     width: 20,
     height: 20,
