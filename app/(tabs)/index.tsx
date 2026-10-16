@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTransactions, useBudgets, useCategories, useAccounts, usePreferences, useBills } from '../../src/hooks/queries';
 import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { formatCurrency, toNumber } from '../../src/domain/money';
@@ -11,7 +11,10 @@ import { monthProgress, dailyAllowance, last7DaysTotals, todaySummary } from '..
 import { monthRange } from '../../src/domain/dateRange';
 import { attributePaidBack, spendAmount } from '../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../src/domain/transactionView';
-import { AddButton, Grow, K, Muted, Num, Plunk, Rise, Tag, useCountUp } from '../../src/ui/primitives';
+import { Grow, K, Muted, Num, Plunk, Rise, Tag } from '../../src/ui/primitives';
+import { Odometer, QuickAdd, Ring, Shine, Skeleton, SwipeToConfirm, TiltCard, Toast } from '../../src/ui/motion';
+import { markBillPaid, restoreBillDueDate } from '../../src/data/repositories/bills';
+import type { Bill } from '../../src/data/types';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { caps, colors, fonts, spacing, themed, withAlpha } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
@@ -90,13 +93,33 @@ export default function Home() {
   const { ready, error } = firstLoad(tx, budgets, categories, accounts, bills);
   const billList = bills.data ?? [];
   const billsDue = dueSoon(billList, today);
+  // The soonest bill due today or tomorrow (or overdue) gets a swipe-to-pay card.
+  const payable = billsDue.find((b) => daysUntil(b.next_due_date, today) <= 1) ?? null;
+  const [toast, setToast] = useState<{ message: string; error?: boolean; undo?: Bill } | null>(null);
+  const swipePay = async (b: Bill) => {
+    try {
+      await markBillPaid(b);
+      setToast({ message: `Marked ${b.name} paid.`, undo: b });
+    } catch {
+      setToast({ message: 'Could not mark this bill paid.', error: true });
+    }
+    bills.refetch();
+  };
+  const undoPay = async (b: Bill) => {
+    setToast(null);
+    try {
+      await restoreBillDueDate(b);
+    } catch {
+      setToast({ message: 'Could not undo this.', error: true });
+    }
+    bills.refetch();
+  };
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'long' });
   const dateLabel = today.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
   // Weekday initial under each of the last 7 bars, oldest first, today last.
   const barDays = d.bars.map((_, i) =>
     new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - i)).toLocaleDateString('en-IN', { weekday: 'narrow' })
   );
-  const leftShown = useCountUp(ready ? d.leftToSpend : 0);
 
   if (!session) {
     return (
@@ -122,36 +145,41 @@ export default function Home() {
         {!ready ? (
           error ? (
             <Muted>Couldn&rsquo;t load your spending. Pull down to try again.</Muted>
-          ) : null
+          ) : <Skeleton />
         ) : (
           <>
             <Rise delay={80}>
-              <Plunk tone="accent" depth={6} style={styles.hero}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.heroCaps}>Left to spend</Text>
-                  <Text style={styles.heroCaps}>{monthLabel}</Text>
-                </View>
-                <View style={styles.leftRow}>
-                  <Text style={styles.leftAmount}>{formatCurrency(leftShown, d.currencyCode)}</Text>
-                  {d.hasBudget && <Text style={styles.heroOf}>of {formatCurrency(d.limit, d.currencyCode)}</Text>}
-                </View>
-                {d.hasBudget && (
-                  <View style={styles.segments}>
-                    {Array.from({ length: 20 }, (_, i) => (
-                      <View key={i} style={styles.segTrack}>
-                        {i < Math.round(Math.min(100, d.spentPct) / 5) && (
-                          <Grow axis="x" delay={300 + i * 40} style={styles.segFill} />
-                        )}
-                      </View>
-                    ))}
+              <TiltCard>
+                <Plunk tone="accent" depth={6} style={styles.hero}>
+                  <View style={styles.shineClip} pointerEvents="none">
+                    <Shine />
                   </View>
-                )}
-                <Text style={styles.coach}>
-                  {d.hasBudget
-                    ? `${d.daysLeft} ${d.daysLeft === 1 ? 'day' : 'days'} left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
-                    : 'No budget set for this month yet — set one from the Budgets tab.'}
-                </Text>
-              </Plunk>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.heroCaps}>Left to spend</Text>
+                    <Text style={styles.heroCaps}>{monthLabel}</Text>
+                  </View>
+                  <View style={styles.leftRow}>
+                    <Odometer value={formatCurrency(d.leftToSpend, d.currencyCode)} style={styles.leftAmount} lineHeight={58} />
+                    {d.hasBudget && <Text style={styles.heroOf}>of {formatCurrency(d.limit, d.currencyCode)}</Text>}
+                  </View>
+                  {d.hasBudget && (
+                    <View style={styles.segments}>
+                      {Array.from({ length: 20 }, (_, i) => (
+                        <View key={i} style={styles.segTrack}>
+                          {i < Math.round(Math.min(100, d.spentPct) / 5) && (
+                            <Grow axis="x" delay={300 + i * 40} style={styles.segFill} />
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <Text style={styles.coach}>
+                    {d.hasBudget
+                      ? `${d.daysLeft} ${d.daysLeft === 1 ? 'day' : 'days'} left. Spend about ${formatCurrency(d.dailyAllowance, d.currencyCode)} a day and you land on budget.`
+                      : 'No budget set for this month yet — set one from the Budgets tab.'}
+                  </Text>
+                </Plunk>
+              </TiltCard>
             </Rise>
 
             <Rise delay={160}>
@@ -195,7 +223,10 @@ export default function Home() {
                 ) : d.leftToday < 0 ? (
                   <Num style={[styles.tileAmount, styles.over]}>{formatCurrency(-d.leftToday, d.currencyCode)} over</Num>
                 ) : (
-                  <Num style={[styles.tileAmount, styles.over]}>{formatCurrency(d.leftToday, d.currencyCode)}</Num>
+                  <View style={styles.leftTodayRow}>
+                    <Num style={[styles.tileAmount, styles.over]}>{formatCurrency(d.leftToday, d.currencyCode)}</Num>
+                    <Ring size={40} stroke={6} pct={d.dailyAllowance > 0 ? d.leftToday / d.dailyAllowance : 0} />
+                  </View>
                 )}
               </Plunk>
             </Rise>
@@ -216,6 +247,17 @@ export default function Home() {
                   <Text style={styles.link}>All bills →</Text>
                 </Pressable>
               </View>
+              {payable && (
+                <View key={payable.id} style={styles.payCard}>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.billName}>{payable.name}</Text>
+                    <Text style={styles.billMeta}>
+                      {formatCurrency(toNumber(payable.amount), d.currencyCode)} · {dueLabel(daysUntil(payable.next_due_date, today))}
+                    </Text>
+                  </View>
+                  <SwipeToConfirm label="Swipe to mark paid" onConfirm={() => swipePay(payable)} />
+                </View>
+              )}
               {billList.length === 0 ? (
                 <View style={styles.billsEmpty}>
                   <Muted>No bills yet.</Muted>
@@ -226,7 +268,7 @@ export default function Home() {
               ) : billsDue.length === 0 ? (
                 <Muted>Nothing due this week.</Muted>
               ) : (
-                billsDue.map((b) => {
+                billsDue.filter((b) => b !== payable).map((b) => {
                   const days = daysUntil(b.next_due_date, today);
                   return (
                     <Pressable key={b.id} style={styles.billRow} onPress={() => router.push('/(tabs)/more/bills', { withAnchor: true })}>
@@ -260,7 +302,22 @@ export default function Home() {
         )}
       </ScrollView>
 
-      <AddButton onPress={() => router.push('/transaction/new')} />
+      <QuickAdd
+        actions={[
+          { label: 'Review detected', tone: 'dark', onPress: () => router.push('/transaction/detected') },
+          { label: '+ Income', tone: 'white', onPress: () => router.push({ pathname: '/transaction/new', params: { kind: 'Income' } }) },
+          { label: '− Expense', tone: 'accent', onPress: () => router.push({ pathname: '/transaction/new', params: { kind: 'Expense' } }) },
+        ]}
+      />
+      {toast && (
+        <Toast
+          message={toast.message}
+          error={toast.error}
+          actionLabel={toast.undo ? 'Undo' : undefined}
+          onAction={toast.undo ? () => undoPay(toast.undo!) : undefined}
+          onHide={() => setToast(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -279,6 +336,9 @@ const styles = themed(() =>
     segTrack: { flex: 1, height: 10, backgroundColor: withAlpha(colors.bg, 0.15) },
     segFill: { height: 10, backgroundColor: colors.bg },
     coach: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.bg },
+    shineClip: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+    leftTodayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    payCard: { gap: 12, padding: 14, marginBottom: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
     rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
     bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 110, marginTop: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
     barTrack: { flex: 1, height: '100%', justifyContent: 'flex-end' },

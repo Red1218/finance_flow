@@ -6,6 +6,7 @@ import { createCategory, deleteCategory } from '../../../src/data/repositories/c
 import { setBudget } from '../../../src/data/repositories/budgets';
 import { toNumber, formatCurrency, getCurrencyMeta } from '../../../src/domain/money';
 import { Button, IconButton, Input, K, Muted, Rise } from '../../../src/ui/primitives';
+import { Shake, Skeleton } from '../../../src/ui/motion';
 import { caps, colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
@@ -134,7 +135,7 @@ export default function Categories() {
         </View>
 
         {!ready ? (
-          error ? <Muted>Couldn&rsquo;t load your categories. Pull down to try again.</Muted> : null
+          error ? <Muted>Couldn&rsquo;t load your categories. Pull down to try again.</Muted> : <Skeleton />
         ) : (
           <>
             <View style={styles.list}>
@@ -165,21 +166,24 @@ export default function Categories() {
                       </IconButton>
                     </View>
                     {pendingId === r.id && (
-                      <View style={styles.confirm}>
-                        <Text style={styles.confirmText}>{r.isSystem ? "This is a default category and can't be removed." : r.warn}</Text>
-                        {deleteError && <Text style={[styles.confirmText, styles.confirmError]}>{deleteError}</Text>}
-                        <View style={styles.confirmActions}>
-                          {!r.isSystem && (
-                            <Button
-                              title="Delete anyway"
-                              variant="secondary"
-                              onPress={() => confirmDelete(r.id, r.isSystem)}
-                              loading={deletingId === r.id}
-                            />
-                          )}
-                          <Button title="Keep it" variant="ghost" onPress={() => setPendingId(null)} />
+                      // A default category can't go: the note shakes to say so.
+                      <Shake trigger={r.isSystem ? r.id : null}>
+                        <View style={styles.confirm}>
+                          <Text style={styles.confirmText}>{r.isSystem ? "This is a default category and can't be removed." : r.warn}</Text>
+                          {deleteError && <Text style={[styles.confirmText, styles.confirmError]}>{deleteError}</Text>}
+                          <View style={styles.confirmActions}>
+                            {!r.isSystem && (
+                              <Button
+                                title="Delete anyway"
+                                variant="secondary"
+                                onPress={() => confirmDelete(r.id, r.isSystem)}
+                                loading={deletingId === r.id}
+                              />
+                            )}
+                            <Button title="Keep it" variant="ghost" onPress={() => setPendingId(null)} />
+                          </View>
                         </View>
-                      </View>
+                      </Shake>
                     )}
                   </Rise>
                 ))

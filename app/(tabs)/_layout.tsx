@@ -7,6 +7,8 @@ export default function TabsLayout() {
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        // Screens slide and fade as you switch tabs (native, built into React Navigation).
+        animation: 'shift',
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Home' }} />

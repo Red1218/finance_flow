@@ -11,6 +11,7 @@ import { useNotificationTapObserver } from '../src/notifications/useNotification
 import { Body, Button } from '../src/ui/primitives';
 import { colors, spacing, themed } from '../src/theme/tokens';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
+import { LaunchIntro } from '../src/ui/motion';
 
 // Module scope, run once on import: how a notification is shown while the
 // app is in the foreground.
@@ -89,9 +90,12 @@ function FontGate({ onRetry }: { onRetry: () => void }) {
   }
 
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+      <LaunchIntro />
+    </>
   );
 }
 

@@ -1,17 +1,31 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { StackActions } from '@react-navigation/native';
 import { caps, colors, themed } from '../theme/tokens';
 
 // NeoPOP nav bar: no icons, all-caps labels, 64px content height + OS gesture
-// inset, active tab marked by a full-width accent rule on the top edge (not a
-// React Navigation default — hence a custom tabBar instead of tabBarIcon/-Style).
+// inset, active tab marked by an accent rule on the top edge that springs
+// between tabs (not a React Navigation default — hence a custom tabBar).
 export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  const [width, setWidth] = useState(0);
+  const slot = width / state.routes.length;
+  const x = useRef(new Animated.Value(0)).current;
+  const placed = useRef(false);
+  useEffect(() => {
+    if (!slot) return;
+    if (!placed.current) {
+      x.setValue(state.index * slot);
+      placed.current = true;
+      return;
+    }
+    Animated.spring(x, { toValue: state.index * slot, speed: 18, bounciness: 8, useNativeDriver: Platform.OS !== 'web' }).start();
+  }, [x, slot, state.index]);
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom }]}>
+    <View style={[styles.bar, { paddingBottom: insets.bottom }]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {slot > 0 && <Animated.View style={[styles.activeRule, { width: slot, transform: [{ translateX: x }] }]} />}
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const label = options.title ?? route.name;
@@ -47,7 +61,6 @@ export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarP
             accessibilityLabel={label}
             style={[styles.item, focusedKey === route.key && styles.itemFocused]}
           >
-            {isFocused && <View style={styles.activeRule} />}
             <Text style={[styles.label, isFocused && styles.labelActive]}>{label}</Text>
           </Pressable>
         );
@@ -78,10 +91,10 @@ const styles = themed(() =>
     },
     activeRule: {
       position: 'absolute',
-      top: 0,
+      top: -1,
       left: 0,
-      right: 0,
       height: 3,
+      zIndex: 1,
       backgroundColor: colors.accent,
     },
     label: {

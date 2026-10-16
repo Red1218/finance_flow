@@ -8,7 +8,8 @@ import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { transactionSign } from '../../../src/domain/transactionRules';
 import { monthRange } from '../../../src/domain/dateRange';
 import type { Account, AccountType } from '../../../src/data/types';
-import { Button, Card, Input, K, Muted, Plunk, Rise, Seg, Tag, useCountUp } from '../../../src/ui/primitives';
+import { Button, Card, Input, K, Muted, Plunk, Rise, Seg, Tag } from '../../../src/ui/primitives';
+import { Odometer, Skeleton } from '../../../src/ui/motion';
 import { FormModal } from '../../../src/ui/FormModal';
 import { colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
@@ -108,7 +109,6 @@ export default function Accounts() {
     }
   };
 
-  const netShown = useCountUp(ready ? data.netWorth : 0, 1100);
 
   if (!session) {
     return (
@@ -134,13 +134,13 @@ export default function Accounts() {
         </View>
 
         {!ready ? (
-          error ? <Muted>Couldn&rsquo;t load your accounts. Pull down to try again.</Muted> : null
+          error ? <Muted>Couldn&rsquo;t load your accounts. Pull down to try again.</Muted> : <Skeleton />
         ) : (
           <>
             <Rise>
               <Plunk depth={6} style={styles.netWorth}>
                 <K>Everything together</K>
-                <Text style={styles.netAmount}>{formatCurrency(netShown, currencyCode)}</Text>
+                <Odometer value={formatCurrency(data.netWorth, currencyCode)} style={styles.netAmount} lineHeight={50} />
                 <Muted>
                   {data.monthChange >= 0 ? 'Up' : 'Down'} {formatCurrency(Math.abs(data.monthChange), currencyCode)} this month · {(accounts.data ?? []).length} accounts
                 </Muted>

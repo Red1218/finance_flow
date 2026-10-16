@@ -7,6 +7,7 @@ import { useAuth } from '../../src/data/AuthContext';
 import { authErrorMessage } from '../../src/ui/errorMessages';
 import { EmailAlreadyRegisteredError } from '../../src/data/repositories/authErrors';
 import { Body, Button, Heading, Input, K, Muted } from '../../src/ui/primitives';
+import { Shake } from '../../src/ui/motion';
 import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 
 type Step = 'emailPassword' | 'otp' | 'done';
@@ -96,7 +97,11 @@ export default function CreateAccount() {
             </Body>
             <Input placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={styles.input} />
             <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={styles.input} />
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && (
+              <Shake trigger={error}>
+                <Text style={styles.error}>{error}</Text>
+              </Shake>
+            )}
             {emailTaken && (
               <Pressable onPress={() => router.push('/account/sign-in')}>
                 <Text style={styles.link}>Sign in</Text>
@@ -111,7 +116,11 @@ export default function CreateAccount() {
             <Heading style={styles.title}>Check your email</Heading>
             <Body style={styles.sub}>We sent a 6-digit code to {email}.</Body>
             <Input placeholder="6-digit code" keyboardType="number-pad" value={otp} onChangeText={setOtp} style={styles.input} />
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && (
+              <Shake trigger={error}>
+                <Text style={styles.error}>{error}</Text>
+              </Shake>
+            )}
             {resendMessage && <Muted style={styles.resendMessage}>{resendMessage}</Muted>}
             <Button title="Verify" onPress={submitOtp} loading={loading} block />
             <Pressable onPress={resendCode} disabled={resending}>

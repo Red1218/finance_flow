@@ -48,7 +48,7 @@ export function Muted({ style, ...props }: TextProps) {
 
 // Runs `start` unless the OS asks for reduced motion, in which case `skip`
 // jumps straight to the end state.
-function whenMotionAllowed(start: () => void, skip: () => void) {
+export function whenMotionAllowed(start: () => void, skip: () => void) {
   AccessibilityInfo.isReduceMotionEnabled()
     .then((reduce) => (reduce ? skip() : start()))
     .catch(start);
@@ -59,7 +59,7 @@ export function Rise({ delay = 0, style, children }: { delay?: number; style?: S
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     whenMotionAllowed(
-      () => Animated.timing(v, { toValue: 1, duration: 550, delay, easing: Easing.out(Easing.cubic), useNativeDriver }).start(),
+      () => Animated.timing(v, { toValue: 1, duration: 280, delay: Math.min(delay, 120), easing: Easing.out(Easing.cubic), useNativeDriver }).start(),
       () => v.setValue(1)
     );
   }, [v, delay]);
@@ -80,41 +80,12 @@ export function Grow({
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     whenMotionAllowed(
-      () => Animated.timing(v, { toValue: 1, duration: 750, delay, easing: Easing.out(Easing.cubic), useNativeDriver }).start(),
+      () => Animated.timing(v, { toValue: 1, duration: 400, delay: Math.min(delay, 200), easing: Easing.out(Easing.cubic), useNativeDriver }).start(),
       () => v.setValue(1)
     );
   }, [v, delay]);
   const transform = axis === 'x' ? [{ scaleX: v }] : [{ scaleY: v }];
   return <Animated.View style={[style, { transformOrigin: axis === 'x' ? 'left' : 'bottom', transform }]} />;
-}
-
-// Counts a number up from where it was to `target` (from 0 on first mount).
-export function useCountUp(target: number, duration = 1000) {
-  const [shown, setShown] = useState(0);
-  const shownRef = useRef(0);
-  useEffect(() => {
-    let raf = 0;
-    const from = shownRef.current;
-    const set = (n: number) => {
-      shownRef.current = n;
-      setShown(n);
-    };
-    whenMotionAllowed(
-      () => {
-        const t0 = Date.now();
-        const tick = () => {
-          const p = Math.min(1, (Date.now() - t0) / duration);
-          const e = 1 - Math.pow(1 - p, 3);
-          set(from + (target - from) * e);
-          if (p < 1) raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-      },
-      () => set(target)
-    );
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return shown;
 }
 
 // ---- Plunk: NeoPOP's raised surface -------------------------------------
@@ -204,21 +175,6 @@ export function Plunk({
 }
 
 // The floating "+ Add" on Home and the Ledger.
-export function AddButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Plunk tone="accent" onPress={onPress} accessibilityLabel="Add a transaction" style={addStyles.fab}>
-      <Text style={addStyles.text}>+ Add</Text>
-    </Plunk>
-  );
-}
-
-const addStyles = themed(() =>
-  StyleSheet.create({
-    fab: { position: 'absolute', right: 20, bottom: 24, height: 52, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
-    text: { ...caps, fontSize: 14, color: colors.bg },
-  })
-);
-
 // ---- Button -----------------------------------------------------------
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
@@ -229,6 +185,7 @@ export function Button({
   variant = 'primary',
   block,
   disabled,
+  dimmed,
   loading,
 }: {
   title: string;
@@ -236,6 +193,8 @@ export function Button({
   variant?: ButtonVariant;
   block?: boolean;
   disabled?: boolean;
+  // Looks disabled but still takes taps, so the screen can say what's missing.
+  dimmed?: boolean;
   loading?: boolean;
 }) {
   const label = loading ? (
@@ -261,7 +220,7 @@ export function Button({
         tone="accent"
         onPress={onPress}
         disabled={disabled || loading}
-        style={[buttonStyles.base, block && buttonStyles.block]}
+        style={[buttonStyles.base, block && buttonStyles.block, dimmed && styles.disabled]}
       >
         {label}
       </Plunk>
@@ -277,7 +236,7 @@ export function Button({
         variant === 'secondary' && buttonStyles.secondary,
         block && buttonStyles.block,
         pressed && { opacity: 0.7 },
-        (disabled || loading) && styles.disabled,
+        (disabled || loading || dimmed) && styles.disabled,
       ]}
     >
       {label}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Heading, Input, K, Muted } from '../../src/ui/primitives';
+import { Body, Heading, Input, K, Muted, Rise } from '../../src/ui/primitives';
 import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 
 const BANKS = ['HDFC Bank', 'ICICI Bank', 'Axis Bank', 'State Bank of India'];
@@ -33,18 +33,19 @@ export default function LinkBank() {
         </Body>
 
         <K style={styles.listLabel}>Popular in India</K>
-        {banks.map((b) => (
-          <Pressable
-            key={b}
-            style={styles.bankRow}
-            onPress={() => Alert.alert('Not connected yet', `${b} sync isn't built. Add transactions by hand instead.`)}
-          >
-            <View style={styles.bankIcon}>
-              <Text style={styles.bankIconText}>{b[0]}</Text>
-            </View>
-            <Text style={styles.bankName}>{b}</Text>
-            <Text style={styles.chevron}>›</Text>
-          </Pressable>
+        {banks.map((b, i) => (
+          <Rise key={b} delay={i * 40}>
+            <Pressable
+              style={styles.bankRow}
+              onPress={() => Alert.alert('Not connected yet', `${b} sync isn't built. Add transactions by hand instead.`)}
+            >
+              <View style={styles.bankIcon}>
+                <Text style={styles.bankIconText}>{b[0]}</Text>
+              </View>
+              <Text style={styles.bankName}>{b}</Text>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+          </Rise>
         ))}
         <Input placeholder="Search banks" value={search} onChangeText={setSearch} style={{ marginTop: 16 }} />
 

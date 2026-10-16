@@ -1,5 +1,6 @@
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { colors, fonts, spacing, themed } from '../theme/tokens';
+import { useSheetMotion } from './motion';
 
 export interface SelectOption {
   id: string;
@@ -19,10 +20,12 @@ export function SelectModal({
   onSelect: (opt: SelectOption) => void;
   onClose: () => void;
 }) {
+  const { backdropStyle, sheetStyle } = useSheetMotion(visible);
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.dim, backdropStyle]} pointerEvents="none" />
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, sheetStyle]}>
           <Text style={styles.title}>{title}</Text>
           <ScrollView>
             {options.map((opt) => (
@@ -38,7 +41,7 @@ export function SelectModal({
               </Pressable>
             ))}
           </ScrollView>
-        </View>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
@@ -46,7 +49,8 @@ export function SelectModal({
 
 const styles = themed(() =>
   StyleSheet.create({
-    backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+    dim: { backgroundColor: 'rgba(0,0,0,0.7)' },
+    backdrop: { flex: 1, justifyContent: 'flex-end' },
     sheet: {
       backgroundColor: colors.bg,
       borderTopWidth: 1,

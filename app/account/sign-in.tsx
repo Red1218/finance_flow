@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/data/AuthContext';
 import { authErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Heading, Input, K } from '../../src/ui/primitives';
+import { Shake } from '../../src/ui/motion';
 import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 
 export default function SignIn() {
@@ -42,7 +43,11 @@ export default function SignIn() {
         <Body style={styles.sub}>Sign in to see your data on this device.</Body>
         <Input placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={styles.input} />
         <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={styles.input} />
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && (
+              <Shake trigger={error}>
+                <Text style={styles.error}>{error}</Text>
+              </Shake>
+            )}
         <Button title="Sign in" onPress={submit} loading={loading} block />
         <Pressable onPress={() => router.push('/account/forgot-password')} style={{ marginTop: spacing.s2 }}>
           <Text style={styles.link}>Forgot password?</Text>

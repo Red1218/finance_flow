@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { BackHandler, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { colors, spacing, themed } from '../theme/tokens';
+import { useSheetMotion } from './motion';
 
 export function FormModal({
   visible,
@@ -20,6 +21,8 @@ export function FormModal({
     return () => sub.remove();
   }, [visible, onClose]);
 
+  const { backdropStyle, sheetStyle } = useSheetMotion(visible);
+
   if (!visible) return null;
 
   return (
@@ -35,6 +38,7 @@ export function FormModal({
     // entirely; the trade-off is this sheet layers above its own screen's
     // content but not above the tab bar, unlike a native Modal.
     <View style={styles.overlay} pointerEvents="box-none">
+      <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]} pointerEvents="none" />
       <Pressable
         style={StyleSheet.absoluteFillObject}
         onPress={onClose}
@@ -51,9 +55,11 @@ export function FormModal({
             View touchable at all, for its whole bounds, not for propagation
             purposes (it's already a sibling of the backdrop, not nested
             inside it, so there's no ancestor to out-negotiate). */}
-        <Pressable style={styles.sheet} onPress={() => {}} testID="form-modal-sheet" accessibilityViewIsModal>
-          {children}
-        </Pressable>
+        <Animated.View style={sheetStyle}>
+          <Pressable style={styles.sheet} onPress={() => {}} testID="form-modal-sheet" accessibilityViewIsModal>
+            {children}
+          </Pressable>
+        </Animated.View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -64,8 +70,8 @@ const styles = themed(() =>
     overlay: {
       ...StyleSheet.absoluteFillObject,
       justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0,0,0,0.7)',
     },
+    backdrop: { backgroundColor: 'rgba(0,0,0,0.7)' },
     sheet: { backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.divider, padding: spacing.s4 },
   })
 );

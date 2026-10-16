@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/data/AuthContext';
 import { authErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Heading, Input, K } from '../../src/ui/primitives';
+import { Shake } from '../../src/ui/motion';
 import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 
 export default function ForgotPassword() {
@@ -43,7 +44,11 @@ export default function ForgotPassword() {
             <Heading style={styles.title}>Forgot your password?</Heading>
             <Body style={styles.sub}>We&rsquo;ll email you a link to set a new one.</Body>
             <Input placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={styles.input} />
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && (
+              <Shake trigger={error}>
+                <Text style={styles.error}>{error}</Text>
+              </Shake>
+            )}
             <Button title="Send reset link" onPress={submit} loading={loading} block />
           </>
         ) : (

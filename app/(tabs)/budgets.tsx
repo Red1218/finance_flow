@@ -9,7 +9,8 @@ import { attributePaidBack, spendAmount } from '../../src/domain/transactionRule
 import { toNumber, formatCurrency } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthRange } from '../../src/domain/dateRange';
-import { Bar, Button, Grow, Input, K, Muted, Plunk, Rise, ScreenHeader, Tag, useCountUp } from '../../src/ui/primitives';
+import { Bar, Button, Grow, Input, K, Muted, Plunk, Rise, ScreenHeader, Tag } from '../../src/ui/primitives';
+import { Odometer, Pulse, Skeleton } from '../../src/ui/motion';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { FormModal } from '../../src/ui/FormModal';
 import { caps, colors, fonts, spacing, themed, withAlpha } from '../../src/theme/tokens';
@@ -78,7 +79,6 @@ export default function Budgets() {
   }, [tx.data, budgets.data, categories.data]);
 
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'long' });
-  const usedShown = Math.round(useCountUp(ready ? data.overallProgress.pct : 0, 900));
 
   const openAddForCategory = (categoryId: string, existingAmount?: number) => {
     setFormCategoryId(categoryId);
@@ -133,7 +133,7 @@ export default function Budgets() {
         </Rise>
 
         {!ready ? (
-          error ? <Muted>Couldn&rsquo;t load your budgets. Pull down to try again.</Muted> : null
+          error ? <Muted>Couldn&rsquo;t load your budgets. Pull down to try again.</Muted> : <Skeleton />
         ) : (
           <>
             <Rise delay={80}>
@@ -152,7 +152,7 @@ export default function Budgets() {
                   <>
                     <View style={styles.rowTop}>
                       <Text style={styles.limitAmount}>{formatCurrency(data.overallProgress.limit, currencyCode)}</Text>
-                      <Text style={styles.limitPct}>{usedShown}% used</Text>
+                      <Odometer value={`${data.overallProgress.pct}% used`} style={styles.limitPct} lineHeight={18} />
                     </View>
                     <View style={styles.limitTrack}>
                       <View style={{ width: `${Math.min(100, data.overallProgress.pct)}%`, height: '100%' }}>
@@ -185,7 +185,9 @@ export default function Budgets() {
 
             <View style={styles.overTag}>
               {data.overBudgetCount > 0 ? (
-                <Tag label={`● ${data.overBudgetCount} over budget`} variant="accent" />
+                <Pulse>
+                  <Tag label={`● ${data.overBudgetCount} over budget`} variant="accent" />
+                </Pulse>
               ) : (
                 <View />
               )}
