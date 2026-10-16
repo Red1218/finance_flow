@@ -11,7 +11,7 @@ import { monthProgress, dailyAllowance, last7DaysTotals, todaySummary } from '..
 import { monthRange } from '../../src/domain/dateRange';
 import { spendAmount } from '../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../src/domain/transactionView';
-import { Grow, K, Muted, Num, Plunk, Rise, Tag, useCountUp } from '../../src/ui/primitives';
+import { AddButton, Grow, K, Muted, Num, Plunk, Rise, Tag, useCountUp } from '../../src/ui/primitives';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
@@ -259,9 +259,7 @@ export default function Home() {
         )}
       </ScrollView>
 
-      <Plunk tone="accent" onPress={() => router.push('/transaction/new')} accessibilityLabel="Add a transaction" style={styles.fab}>
-        <Text style={styles.fabText}>+ Add</Text>
-      </Plunk>
+      <AddButton onPress={() => router.push('/transaction/new')} />
     </SafeAreaView>
   );
 }
@@ -297,6 +295,4 @@ const styles = StyleSheet.create({
   billRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.divider },
   billName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
   billMeta: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted },
-  fab: { position: 'absolute', right: 20, bottom: 24, height: 52, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
-  fabText: { ...caps, fontSize: 14, color: colors.bg },
 });

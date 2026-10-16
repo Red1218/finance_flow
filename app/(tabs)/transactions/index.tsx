@@ -9,7 +9,7 @@ import { monthRange } from '../../../src/domain/dateRange';
 import { spendAmount } from '../../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
 import { formatCurrency, toNumber } from '../../../src/domain/money';
-import { Button, Chip, Input, K, Muted, Plunk, Rise, ScreenHeader } from '../../../src/ui/primitives';
+import { AddButton, Button, Chip, Input, K, Muted, Rise, ScreenHeader } from '../../../src/ui/primitives';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
 import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
@@ -216,9 +216,7 @@ export default function TransactionsList() {
         )}
       </ScrollView>
 
-      <Plunk tone="accent" onPress={() => router.push('/transaction/new')} accessibilityLabel="Add a transaction" style={styles.fab}>
-        <Text style={styles.fabText}>+ Add</Text>
-      </Plunk>
+      <AddButton onPress={() => router.push('/transaction/new')} />
     </SafeAreaView>
   );
 }
@@ -238,6 +236,4 @@ const styles = StyleSheet.create({
   confirmText: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.text },
   confirmError: { fontFamily: fonts.heading, marginTop: 6 },
   confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  fab: { position: 'absolute', right: 20, bottom: 24, height: 52, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
-  fabText: { ...caps, fontSize: 14, color: colors.bg },
 });

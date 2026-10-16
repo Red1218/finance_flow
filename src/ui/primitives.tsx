@@ -124,15 +124,11 @@ export function useCountUp(target: number, duration = 1000) {
 
 export type PlunkTone = 'accent' | 'white' | 'dark';
 
-const plunkTones: Record<PlunkTone, { face: string; right: string; bottom: string; ink: string }> = {
-  accent: { face: colors.accent, right: colors.accentEdge, bottom: colors.accentShadow, ink: colors.bg },
-  white: { face: colors.text, right: colors.muted, bottom: colors.divider, ink: colors.bg },
-  dark: { face: colors.surface, right: colors.divider, bottom: colors.surface, ink: colors.text },
+const plunkTones: Record<PlunkTone, { face: string; right: string; bottom: string }> = {
+  accent: { face: colors.accent, right: colors.accentEdge, bottom: colors.accentShadow },
+  white: { face: colors.text, right: colors.muted, bottom: colors.divider },
+  dark: { face: colors.surface, right: colors.divider, bottom: colors.surface },
 };
-
-export function plunkInk(tone: PlunkTone) {
-  return plunkTones[tone].ink;
-}
 
 export function Plunk({
   tone = 'dark',
@@ -140,7 +136,6 @@ export function Plunk({
   onPress,
   disabled,
   accessibilityLabel,
-  accessibilityRole,
   style,
   children,
 }: {
@@ -149,7 +144,6 @@ export function Plunk({
   onPress?: () => void;
   disabled?: boolean;
   accessibilityLabel?: string;
-  accessibilityRole?: 'button' | 'link';
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }) {
@@ -193,7 +187,7 @@ export function Plunk({
       onLayout={onLayout}
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole={accessibilityRole ?? 'button'}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [base, pressed && { transform: [{ translateX: depth }, { translateY: depth }] }, disabled && styles.disabled]}
@@ -207,6 +201,20 @@ export function Plunk({
     </Pressable>
   );
 }
+
+// The floating "+ Add" on Home and the Ledger.
+export function AddButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Plunk tone="accent" onPress={onPress} accessibilityLabel="Add a transaction" style={addStyles.fab}>
+      <Text style={addStyles.text}>+ Add</Text>
+    </Plunk>
+  );
+}
+
+const addStyles = StyleSheet.create({
+  fab: { position: 'absolute', right: 20, bottom: 24, height: 52, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
+  text: { ...caps, fontSize: 14, color: colors.bg },
+});
 
 // ---- Button -----------------------------------------------------------
 
