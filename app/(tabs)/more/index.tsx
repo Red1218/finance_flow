@@ -8,7 +8,7 @@ import { listDetections } from '../../../src/data/repositories/pendingDetections
 import { shortDate } from '../../../src/domain/bills';
 import { toNumber, formatCurrency } from '../../../src/domain/money';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { Rise, ScreenHeader, Tag } from '../../../src/ui/primitives';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
@@ -97,20 +97,22 @@ export default function MoreHub() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, padding: spacing.s4 },
-  title: { marginBottom: 24 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  rowPressed: { backgroundColor: colors.surface },
-  label: { fontFamily: fonts.heading, fontSize: 18, color: colors.text },
-  subtitle: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
-  chevron: { fontFamily: fonts.heading, color: colors.muted, fontSize: 22 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg, padding: spacing.s4 },
+    title: { marginBottom: 24 },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.divider,
+    },
+    rowPressed: { backgroundColor: colors.surface },
+    label: { fontFamily: fonts.heading, fontSize: 18, color: colors.text },
+    subtitle: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
+    chevron: { fontFamily: fonts.heading, color: colors.muted, fontSize: 22 },
+  })
+);

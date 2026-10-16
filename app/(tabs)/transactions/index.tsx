@@ -11,7 +11,7 @@ import { buildTransactionRowVM, indexById, transactionsCsv } from '../../../src/
 import { formatCurrency } from '../../../src/domain/money';
 import { AddButton, Button, Chip, Input, K, Muted, Rise, ScreenHeader } from '../../../src/ui/primitives';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
-import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { archiveTransaction } from '../../../src/application/transactions';
@@ -232,19 +232,21 @@ export default function TransactionsList() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4 },
-  kicker: { marginBottom: 6 },
-  filters: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 12 },
-  list: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4, paddingBottom: 120 },
-  group: { marginBottom: 22 },
-  groupLabel: { paddingBottom: 10, color: colors.text },
-  selectActions: { flexDirection: 'row', gap: 16 },
-  link: { ...caps, fontSize: 12, color: colors.accent },
-  linkDisabled: { color: colors.muted },
-  confirm: { marginTop: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
-  confirmText: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.text },
-  confirmError: { fontFamily: fonts.heading, marginTop: 6 },
-  confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    header: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4 },
+    kicker: { marginBottom: 6 },
+    filters: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 12 },
+    list: { paddingHorizontal: spacing.s4, paddingTop: spacing.s4, paddingBottom: 120 },
+    group: { marginBottom: 22 },
+    groupLabel: { paddingBottom: 10, color: colors.text },
+    selectActions: { flexDirection: 'row', gap: 16 },
+    link: { ...caps, fontSize: 12, color: colors.accent },
+    linkDisabled: { color: colors.muted },
+    confirm: { marginTop: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
+    confirmText: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.text },
+    confirmError: { fontFamily: fonts.heading, marginTop: 6 },
+    confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  })
+);

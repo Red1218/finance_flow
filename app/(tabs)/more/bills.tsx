@@ -8,7 +8,7 @@ import { daysUntil, dueLabel, shortDate } from '../../../src/domain/bills';
 import { formatCurrency, toNumber } from '../../../src/domain/money';
 import { Button, Input, K, Muted, Rise, Seg } from '../../../src/ui/primitives';
 import { FormModal } from '../../../src/ui/FormModal';
-import { caps, colors, fonts, spacing } from '../../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 
@@ -230,34 +230,36 @@ export default function Bills() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.s4, paddingBottom: 100 },
-  gap: { marginTop: spacing.s4 },
-  list: { marginTop: spacing.s4, gap: 14 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  rowSoon: { borderColor: colors.accent },
-  rowPressed: { opacity: 0.8 },
-  dateBox: { width: 46, paddingVertical: 6, alignItems: 'center', borderWidth: 1, borderColor: colors.divider },
-  dateDay: { fontFamily: fonts.display, fontSize: 22, lineHeight: 24, color: colors.text },
-  dateMonth: { ...caps, fontSize: 9, letterSpacing: 1.5, color: colors.muted },
-  rowName: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
-  rowMeta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
-  overdue: { color: colors.accent },
-  undoLine: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted, marginTop: spacing.s3 },
-  undoLink: { fontFamily: fonts.heading, color: colors.accent },
-  field: { marginTop: 6, marginBottom: spacing.s2 },
-  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent, marginTop: spacing.s2 },
-  formActions: { marginTop: spacing.s3, gap: spacing.s2 },
-  confirm: { marginTop: spacing.s3, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
-  confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.text },
-  confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: spacing.s4, paddingBottom: 100 },
+    gap: { marginTop: spacing.s4 },
+    list: { marginTop: spacing.s4, gap: 14 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      padding: 14,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.divider,
+    },
+    rowSoon: { borderColor: colors.accent },
+    rowPressed: { opacity: 0.8 },
+    dateBox: { width: 46, paddingVertical: 6, alignItems: 'center', borderWidth: 1, borderColor: colors.divider },
+    dateDay: { fontFamily: fonts.display, fontSize: 22, lineHeight: 24, color: colors.text },
+    dateMonth: { ...caps, fontSize: 9, letterSpacing: 1.5, color: colors.muted },
+    rowName: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
+    rowMeta: { ...caps, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.2, color: colors.muted },
+    overdue: { color: colors.accent },
+    undoLine: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted, marginTop: spacing.s3 },
+    undoLink: { fontFamily: fonts.heading, color: colors.accent },
+    field: { marginTop: 6, marginBottom: spacing.s2 },
+    error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent, marginTop: spacing.s2 },
+    formActions: { marginTop: spacing.s3, gap: spacing.s2 },
+    confirm: { marginTop: spacing.s3, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent },
+    confirmText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18.5, color: colors.text },
+    confirmActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  })
+);

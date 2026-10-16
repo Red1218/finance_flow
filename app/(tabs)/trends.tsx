@@ -8,7 +8,7 @@ import { attributePaidBack } from '../../src/domain/transactionRules';
 import { monthlyExpenseTotals, findCategoryWatch } from '../../src/domain/trends';
 import { monthProgress } from '../../src/domain/dashboard';
 import { Body, Grow, K, Muted, Plunk, Rise, ScreenHeader, Tag, useCountUp } from '../../src/ui/primitives';
-import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
 import { useToday } from '../../src/hooks/useToday';
@@ -181,26 +181,28 @@ export default function Trends() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.s4, paddingBottom: 100, gap: 28 },
-  kicker: { marginBottom: 6 },
-  chartBlock: { gap: 4 },
-  selectedAmount: { fontFamily: fonts.display, fontSize: 40, lineHeight: 46, color: colors.text, fontVariant: ['tabular-nums'] },
-  delta: { fontFamily: fonts.heading, fontSize: 13, color: colors.text },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 170, marginTop: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  barSlot: { flex: 1, height: '100%', justifyContent: 'flex-end' },
-  barFill: { height: '100%', backgroundColor: colors.divider, borderTopWidth: 2, borderTopColor: colors.muted },
-  barFillSelected: { backgroundColor: colors.accent, borderTopColor: colors.accent },
-  monthLabels: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  monthLabel: { flex: 1, textAlign: 'center' },
-  insights: { gap: spacing.s4 },
-  watchCard: { padding: 18, gap: 8 },
-  watchCaps: { ...caps, color: colors.bg },
-  watchTitle: { fontFamily: fonts.display, fontSize: 23, lineHeight: 27, color: colors.bg },
-  watchBody: { fontFamily: fonts.bold, fontSize: 13, color: colors.bg },
-  insight: { paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.divider },
-  insightHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  insightBody: { marginTop: 8 },
-  bold: { fontFamily: fonts.heading },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: spacing.s4, paddingBottom: 100, gap: 28 },
+    kicker: { marginBottom: 6 },
+    chartBlock: { gap: 4 },
+    selectedAmount: { fontFamily: fonts.display, fontSize: 40, lineHeight: 46, color: colors.text, fontVariant: ['tabular-nums'] },
+    delta: { fontFamily: fonts.heading, fontSize: 13, color: colors.text },
+    bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 170, marginTop: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
+    barSlot: { flex: 1, height: '100%', justifyContent: 'flex-end' },
+    barFill: { height: '100%', backgroundColor: colors.divider, borderTopWidth: 2, borderTopColor: colors.muted },
+    barFillSelected: { backgroundColor: colors.accent, borderTopColor: colors.accent },
+    monthLabels: { flexDirection: 'row', gap: 10, marginTop: 8 },
+    monthLabel: { flex: 1, textAlign: 'center' },
+    insights: { gap: spacing.s4 },
+    watchCard: { padding: 18, gap: 8 },
+    watchCaps: { ...caps, color: colors.bg },
+    watchTitle: { fontFamily: fonts.display, fontSize: 23, lineHeight: 27, color: colors.bg },
+    watchBody: { fontFamily: fonts.bold, fontSize: 13, color: colors.bg },
+    insight: { paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.divider },
+    insightHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+    insightBody: { marginTop: 8 },
+    bold: { fontFamily: fonts.heading },
+  })
+);

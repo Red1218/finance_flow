@@ -1,7 +1,7 @@
 import { Link, Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Body, Heading } from '../src/ui/primitives';
-import { colors, spacing } from '../src/theme/tokens';
+import { colors, spacing, themed } from '../src/theme/tokens';
 
 export default function NotFound() {
   return (
@@ -17,6 +17,8 @@ export default function NotFound() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: spacing.s4 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: spacing.s4 },
+  })
+);

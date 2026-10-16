@@ -9,7 +9,8 @@ import { AuthProvider, useAuth } from '../src/data/AuthContext';
 import { useSmsDetectionBootstrap } from '../src/data/useSmsDetectionBootstrap';
 import { useNotificationTapObserver } from '../src/notifications/useNotificationTapObserver';
 import { Body, Button } from '../src/ui/primitives';
-import { colors, spacing } from '../src/theme/tokens';
+import { colors, spacing, themed } from '../src/theme/tokens';
+import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
 
 // Module scope, run once on import: how a notification is shown while the
 // app is in the foreground.
@@ -23,6 +24,7 @@ Notifications.setNotificationHandler({
 });
 
 function RootNavigator() {
+  const { theme } = useTheme();
   const { status, error, retry } = useAuth();
 
   if (status === 'initializing') {
@@ -43,7 +45,8 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+    // Keyed on the theme: a palette switch re-renders every screen with the new colours.
+    <Stack key={theme} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="transaction/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal' }} />
@@ -98,17 +101,23 @@ export default function RootLayout() {
   // below) — it only reads device SMS and writes to a local queue.
   useSmsDetectionBootstrap();
   useNotificationTapObserver();
-  return <FontGate key={attempt} onRetry={() => setAttempt((a) => a + 1)} />;
+  return (
+    <ThemeProvider>
+      <FontGate key={attempt} onRetry={() => setAttempt((a) => a + 1)} />
+    </ThemeProvider>
+  );
 }
 
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bg,
-    gap: spacing.s3,
-    padding: spacing.s4,
-  },
-  errorText: { textAlign: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    loading: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.bg,
+      gap: spacing.s3,
+      padding: spacing.s4,
+    },
+    errorText: { textAlign: 'center' },
+  })
+);

@@ -12,7 +12,7 @@ import { monthRange } from '../../src/domain/dateRange';
 import { Bar, Button, Grow, Input, K, Muted, Plunk, Rise, ScreenHeader, Tag, useCountUp } from '../../src/ui/primitives';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { FormModal } from '../../src/ui/FormModal';
-import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed, withAlpha } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
 import { useToday } from '../../src/hooks/useToday';
@@ -256,28 +256,30 @@ export default function Budgets() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.s4, paddingBottom: 100, gap: 24 },
-  kicker: { marginBottom: 6 },
-  limitCard: { padding: spacing.s4, gap: 14 },
-  limitCaps: { ...caps, color: colors.bg },
-  limitAmount: { fontFamily: fonts.display, fontSize: 44, lineHeight: 50, color: colors.bg },
-  limitPct: { fontFamily: fonts.heading, fontSize: 13, color: colors.bg, fontVariant: ['tabular-nums'] },
-  limitEmpty: { fontSize: 30, lineHeight: 36 },
-  limitCta: { fontFamily: fonts.heading, fontSize: 16, color: colors.bg },
-  limitTrack: { height: 10, backgroundColor: 'rgba(13,13,13,0.12)' },
-  limitFill: { height: '100%', backgroundColor: colors.bg },
-  limitStats: { flexDirection: 'row', gap: 8, borderTopWidth: 1, borderTopColor: 'rgba(13,13,13,0.15)', paddingTop: 14 },
-  limitStat: { flex: 1, gap: 4 },
-  limitStatLabel: { ...caps, fontSize: 10, letterSpacing: 1.5, color: colors.divider },
-  limitStatValue: { fontFamily: fonts.heading, fontSize: 16, color: colors.bg },
-  overTag: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  manageLink: { ...caps, fontSize: 12, color: colors.text },
-  rows: { gap: 0 },
-  row: { paddingVertical: 18, borderTopWidth: 1, borderTopColor: colors.divider },
-  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  rowName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
-  rowStatus: { fontFamily: fonts.heading, fontSize: 13, color: colors.muted },
-  rowSub: { fontSize: 12, marginTop: 2, marginBottom: 10 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: spacing.s4, paddingBottom: 100, gap: 24 },
+    kicker: { marginBottom: 6 },
+    limitCard: { padding: spacing.s4, gap: 14 },
+    limitCaps: { ...caps, color: colors.bg },
+    limitAmount: { fontFamily: fonts.display, fontSize: 44, lineHeight: 50, color: colors.bg },
+    limitPct: { fontFamily: fonts.heading, fontSize: 13, color: colors.bg, fontVariant: ['tabular-nums'] },
+    limitEmpty: { fontSize: 30, lineHeight: 36 },
+    limitCta: { fontFamily: fonts.heading, fontSize: 16, color: colors.bg },
+    limitTrack: { height: 10, backgroundColor: withAlpha(colors.bg, 0.12) },
+    limitFill: { height: '100%', backgroundColor: colors.bg },
+    limitStats: { flexDirection: 'row', gap: 8, borderTopWidth: 1, borderTopColor: withAlpha(colors.bg, 0.15), paddingTop: 14 },
+    limitStat: { flex: 1, gap: 4 },
+    limitStatLabel: { ...caps, fontSize: 10, letterSpacing: 1.5, color: colors.divider },
+    limitStatValue: { fontFamily: fonts.heading, fontSize: 16, color: colors.bg },
+    overTag: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    manageLink: { ...caps, fontSize: 12, color: colors.text },
+    rows: { gap: 0 },
+    row: { paddingVertical: 18, borderTopWidth: 1, borderTopColor: colors.divider },
+    rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+    rowName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+    rowStatus: { fontFamily: fonts.heading, fontSize: 13, color: colors.muted },
+    rowSub: { fontSize: 12, marginTop: 2, marginBottom: 10 },
+  })
+);

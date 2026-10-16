@@ -10,7 +10,7 @@ import { monthRange } from '../../../src/domain/dateRange';
 import type { Account, AccountType } from '../../../src/data/types';
 import { Button, Card, Input, K, Muted, Plunk, Rise, Seg, Tag, useCountUp } from '../../../src/ui/primitives';
 import { FormModal } from '../../../src/ui/FormModal';
-import { colors, fonts, spacing } from '../../../src/theme/tokens';
+import { colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
 import { useToday } from '../../../src/hooks/useToday';
@@ -232,16 +232,18 @@ export default function Accounts() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.s4, paddingBottom: 100, gap: spacing.s3 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  actions: { flexDirection: 'row', gap: spacing.s3 },
-  netWorth: { marginTop: spacing.s2, padding: spacing.s4, gap: 8, borderWidth: 1, borderColor: colors.divider },
-  netAmount: { fontFamily: fonts.display, fontSize: 44, lineHeight: 50, color: colors.accent, fontVariant: ['tabular-nums'] },
-  list: { marginTop: spacing.s2, gap: spacing.s2 },
-  accountName: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
-  tags: { flexDirection: 'row', gap: 6, marginTop: 6 },
-  numbers: { fontSize: 12.5, marginTop: 3 },
-  balance: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: spacing.s4, paddingBottom: 100, gap: spacing.s3 },
+    rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    actions: { flexDirection: 'row', gap: spacing.s3 },
+    netWorth: { marginTop: spacing.s2, padding: spacing.s4, gap: 8, borderWidth: 1, borderColor: colors.divider },
+    netAmount: { fontFamily: fonts.display, fontSize: 44, lineHeight: 50, color: colors.accent, fontVariant: ['tabular-nums'] },
+    list: { marginTop: spacing.s2, gap: spacing.s2 },
+    accountName: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
+    tags: { flexDirection: 'row', gap: 6, marginTop: 6 },
+    numbers: { fontSize: 12.5, marginTop: 3 },
+    balance: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
+  })
+);

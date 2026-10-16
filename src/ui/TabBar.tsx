@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { StackActions } from '@react-navigation/native';
-import { caps, colors } from '../theme/tokens';
+import { caps, colors, themed } from '../theme/tokens';
 
 // NeoPOP nav bar: no icons, all-caps labels, 64px content height + OS gesture
 // inset, active tab marked by a full-width accent rule on the top edge (not a
@@ -56,39 +56,41 @@ export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarP
   );
 }
 
-const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    backgroundColor: colors.bg,
-  },
-  item: {
-    flex: 1,
-    minHeight: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  itemFocused: {
-    outlineStyle: 'solid',
-    outlineWidth: 2,
-    outlineColor: colors.accent,
-    outlineOffset: -2,
-  },
-  activeRule: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: colors.accent,
-  },
-  label: {
-    ...caps,
-    letterSpacing: 1.5,
-    color: colors.muted,
-  },
-  labelActive: {
-    color: colors.text,
-  },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    bar: {
+      flexDirection: 'row',
+      borderTopWidth: 1,
+      borderTopColor: colors.divider,
+      backgroundColor: colors.bg,
+    },
+    item: {
+      flex: 1,
+      minHeight: 64,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    itemFocused: {
+      outlineStyle: 'solid',
+      outlineWidth: 2,
+      outlineColor: colors.accent,
+      outlineOffset: -2,
+    },
+    activeRule: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+      backgroundColor: colors.accent,
+    },
+    label: {
+      ...caps,
+      letterSpacing: 1.5,
+      color: colors.muted,
+    },
+    labelActive: {
+      color: colors.text,
+    },
+  })
+);

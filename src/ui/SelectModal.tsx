@@ -1,5 +1,5 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, spacing } from '../theme/tokens';
+import { colors, fonts, spacing, themed } from '../theme/tokens';
 
 export interface SelectOption {
   id: string;
@@ -44,16 +44,18 @@ export function SelectModal({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.bg,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    padding: spacing.s4,
-    maxHeight: '60%',
-  },
-  title: { fontFamily: fonts.display, fontSize: 24, marginBottom: spacing.s3, color: colors.text },
-  row: { minHeight: 52, justifyContent: 'center', borderTopWidth: 1, borderTopColor: colors.divider },
-  rowText: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: colors.bg,
+      borderTopWidth: 1,
+      borderTopColor: colors.divider,
+      padding: spacing.s4,
+      maxHeight: '60%',
+    },
+    title: { fontFamily: fonts.display, fontSize: 24, marginBottom: spacing.s3, color: colors.text },
+    row: { minHeight: 52, justifyContent: 'center', borderTopWidth: 1, borderTopColor: colors.divider },
+    rowText: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+  })
+);

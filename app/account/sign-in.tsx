@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/data/AuthContext';
 import { authErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Heading, Input, K } from '../../src/ui/primitives';
-import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 
 export default function SignIn() {
   const router = useRouter();
@@ -55,19 +55,21 @@ export default function SignIn() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.s4,
-    paddingTop: spacing.s3,
-  },
-  link: { ...caps, fontSize: 12, color: colors.text },
-  content: { padding: spacing.s4, gap: spacing.s3 },
-  title: { fontSize: 44, lineHeight: 48 },
-  sub: { maxWidth: 320 },
-  input: { marginTop: 4 },
-  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.s4,
+      paddingTop: spacing.s3,
+    },
+    link: { ...caps, fontSize: 12, color: colors.text },
+    content: { padding: spacing.s4, gap: spacing.s3 },
+    title: { fontSize: 44, lineHeight: 48 },
+    sub: { maxWidth: 320 },
+    input: { marginTop: 4 },
+    error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent },
+  })
+);

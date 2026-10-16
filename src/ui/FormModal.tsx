@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BackHandler, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { colors, spacing, themed } from '../theme/tokens';
 
 export function FormModal({
   visible,
@@ -59,11 +59,13 @@ export function FormModal({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-  },
-  sheet: { backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.divider, padding: spacing.s4 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.7)',
+    },
+    sheet: { backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.divider, padding: spacing.s4 },
+  })
+);

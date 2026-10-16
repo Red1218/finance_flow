@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { isSameDay, monthGridDays } from '../domain/dateRange';
 import { K } from './primitives';
-import { colors, fonts, spacing } from '../theme/tokens';
+import { colors, fonts, spacing, themed } from '../theme/tokens';
 import { useToday } from '../hooks/useToday';
 
 const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -187,58 +187,60 @@ export function DatePickerField({ value, onChange }: { value: Date; onChange: (d
   );
 }
 
-const styles = StyleSheet.create({
-  field: { gap: 9 },
-  headRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  link: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent },
-  strip: { flexDirection: 'row', gap: 4 },
-  stripCell: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 3,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  stripCellSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
-  stripDow: { fontFamily: fonts.body, fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted },
-  stripDowSelected: { color: colors.bg },
-  stripNum: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
-  stripNumSelected: { color: colors.bg },
-  summaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  summary: { fontFamily: fonts.body, fontSize: 13, color: colors.text },
-  monthHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  monthHead: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
-  monthNav: { flexDirection: 'row', gap: 6 },
-  navBtn: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  navBtnText: { fontFamily: fonts.body, fontSize: 15, color: colors.accent },
-  weekLabels: { flexDirection: 'row', marginBottom: 4 },
-  weekLabel: {
-    flex: 1,
-    textAlign: 'center',
-    fontFamily: fonts.body,
-    fontSize: 9.5,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: colors.muted,
-  },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
-  dayCell: { width: `${100 / 7}%`, height: 36, alignItems: 'center', justifyContent: 'center' },
-  dayCellSelected: { backgroundColor: colors.accent },
-  dayCellToday: { borderWidth: 1, borderColor: colors.accent },
-  dayText: { fontFamily: fonts.body, fontSize: 14, color: colors.text },
-  dayTextMuted: { color: colors.muted },
-  dayTextSelected: { color: colors.bg, fontFamily: fonts.heading },
-  jumpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  jumpCell: { width: `${100 / 4 - 1}%`, height: 38, alignItems: 'center', justifyContent: 'center' },
-  jumpCellActive: { backgroundColor: colors.accent },
-  jumpText: { fontFamily: fonts.body, fontSize: 13.5, color: colors.text },
-  jumpTextActive: { color: colors.bg, fontFamily: fonts.heading },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    field: { gap: 9 },
+    headRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+    link: { fontFamily: fonts.body, fontSize: 12.5, color: colors.accent },
+    strip: { flexDirection: 'row', gap: 4 },
+    stripCell: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 3,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.divider,
+    },
+    stripCellSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
+    stripDow: { fontFamily: fonts.body, fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted },
+    stripDowSelected: { color: colors.bg },
+    stripNum: { fontFamily: fonts.heading, fontSize: 15, color: colors.text },
+    stripNumSelected: { color: colors.bg },
+    summaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+    summary: { fontFamily: fonts.body, fontSize: 13, color: colors.text },
+    monthHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+    monthHead: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
+    monthNav: { flexDirection: 'row', gap: 6 },
+    navBtn: {
+      width: 34,
+      height: 34,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.divider,
+    },
+    navBtnText: { fontFamily: fonts.body, fontSize: 15, color: colors.accent },
+    weekLabels: { flexDirection: 'row', marginBottom: 4 },
+    weekLabel: {
+      flex: 1,
+      textAlign: 'center',
+      fontFamily: fonts.body,
+      fontSize: 9.5,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      color: colors.muted,
+    },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
+    dayCell: { width: `${100 / 7}%`, height: 36, alignItems: 'center', justifyContent: 'center' },
+    dayCellSelected: { backgroundColor: colors.accent },
+    dayCellToday: { borderWidth: 1, borderColor: colors.accent },
+    dayText: { fontFamily: fonts.body, fontSize: 14, color: colors.text },
+    dayTextMuted: { color: colors.muted },
+    dayTextSelected: { color: colors.bg, fontFamily: fonts.heading },
+    jumpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+    jumpCell: { width: `${100 / 4 - 1}%`, height: 38, alignItems: 'center', justifyContent: 'center' },
+    jumpCellActive: { backgroundColor: colors.accent },
+    jumpText: { fontFamily: fonts.body, fontSize: 13.5, color: colors.text },
+    jumpTextActive: { color: colors.bg, fontFamily: fonts.heading },
+  })
+);

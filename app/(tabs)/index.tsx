@@ -13,7 +13,7 @@ import { attributePaidBack, spendAmount } from '../../src/domain/transactionRule
 import { buildTransactionRowVM, indexById } from '../../src/domain/transactionView';
 import { AddButton, Grow, K, Muted, Num, Plunk, Rise, Tag, useCountUp } from '../../src/ui/primitives';
 import { TransactionRow } from '../../src/ui/TransactionRow';
-import { caps, colors, fonts, spacing } from '../../src/theme/tokens';
+import { caps, colors, fonts, spacing, themed, withAlpha } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
 import { useToday } from '../../src/hooks/useToday';
@@ -265,35 +265,37 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.s4, paddingBottom: 120, gap: 32 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: spacing.s2 },
-  hero: { padding: spacing.s4, gap: 14 },
-  heroCaps: { ...caps, color: colors.bg },
-  leftRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
-  leftAmount: { fontFamily: fonts.display, fontSize: 52, lineHeight: 58, color: colors.bg, fontVariant: ['tabular-nums'] },
-  heroOf: { fontFamily: fonts.bold, fontSize: 14, color: colors.bg },
-  segments: { flexDirection: 'row', gap: 3 },
-  segTrack: { flex: 1, height: 10, backgroundColor: 'rgba(13,13,13,0.15)' },
-  segFill: { height: 10, backgroundColor: colors.bg },
-  coach: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.bg },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 110, marginTop: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  barTrack: { flex: 1, height: '100%', justifyContent: 'flex-end' },
-  barFill: { height: '100%', backgroundColor: colors.divider },
-  barLabels: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  barLabel: { ...caps, flex: 1, textAlign: 'center', color: colors.muted },
-  tiles: { flexDirection: 'row', gap: spacing.s3 },
-  tile: { flex: 1, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.divider },
-  tileAmount: { fontFamily: fonts.display, fontSize: 28, color: colors.text },
-  tileLink: { fontSize: 15 },
-  over: { color: colors.accent },
-  sectionLabel: { marginBottom: 12 },
-  ledgerTitle: { fontFamily: fonts.display, fontSize: 26, color: colors.text },
-  link: { ...caps, fontSize: 12, color: colors.text },
-  billsEmpty: { flexDirection: 'row', gap: spacing.s2, alignItems: 'baseline' },
-  billRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.divider },
-  billName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
-  billMeta: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: spacing.s4, paddingBottom: 120, gap: 32 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: spacing.s2 },
+    hero: { padding: spacing.s4, gap: 14 },
+    heroCaps: { ...caps, color: colors.bg },
+    leftRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
+    leftAmount: { fontFamily: fonts.display, fontSize: 52, lineHeight: 58, color: colors.bg, fontVariant: ['tabular-nums'] },
+    heroOf: { fontFamily: fonts.bold, fontSize: 14, color: colors.bg },
+    segments: { flexDirection: 'row', gap: 3 },
+    segTrack: { flex: 1, height: 10, backgroundColor: withAlpha(colors.bg, 0.15) },
+    segFill: { height: 10, backgroundColor: colors.bg },
+    coach: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.bg },
+    rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+    bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 110, marginTop: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
+    barTrack: { flex: 1, height: '100%', justifyContent: 'flex-end' },
+    barFill: { height: '100%', backgroundColor: colors.divider },
+    barLabels: { flexDirection: 'row', gap: 8, marginTop: 8 },
+    barLabel: { ...caps, flex: 1, textAlign: 'center', color: colors.muted },
+    tiles: { flexDirection: 'row', gap: spacing.s3 },
+    tile: { flex: 1, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.divider },
+    tileAmount: { fontFamily: fonts.display, fontSize: 28, color: colors.text },
+    tileLink: { fontSize: 15 },
+    over: { color: colors.accent },
+    sectionLabel: { marginBottom: 12 },
+    ledgerTitle: { fontFamily: fonts.display, fontSize: 26, color: colors.text },
+    link: { ...caps, fontSize: 12, color: colors.text },
+    billsEmpty: { flexDirection: 'row', gap: spacing.s2, alignItems: 'baseline' },
+    billRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.divider },
+    billName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+    billMeta: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted },
+  })
+);
