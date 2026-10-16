@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTransactions, useBudgets, useCategories, usePreferences } from '../../src/hooks/queries';
 import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { toNumber, formatCurrency } from '../../src/domain/money';
+import { attributePaidBack } from '../../src/domain/transactionRules';
 import { monthlyExpenseTotals, findCategoryWatch } from '../../src/domain/trends';
 import { monthProgress } from '../../src/domain/dashboard';
 import { Body, Grow, K, Muted, Plunk, Rise, ScreenHeader, Tag, useCountUp } from '../../src/ui/primitives';
@@ -34,7 +35,7 @@ export default function Trends() {
   };
 
   const data = useMemo(() => {
-    const rows = (tx.data ?? []).map((t) => ({
+    const rows = attributePaidBack(tx.data ?? []).map((t) => ({
       occurred_at: t.occurred_at,
       amount: toNumber(t.amount),
       type: t.type,

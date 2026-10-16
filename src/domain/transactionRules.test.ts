@@ -1,4 +1,5 @@
 import {
+  attributePaidBack,
   spendAmount,
   validateAmount,
   validateDifferentAccounts,
@@ -132,5 +133,23 @@ describe('spendAmount', () => {
     expect(spendAmount({ type: 'INCOME', amount: '150', paid_back_for: 'tx-1' })).toBe(-150);
     expect(spendAmount({ type: 'INCOME', amount: 150, paid_back_for: null })).toBe(0);
     expect(spendAmount({ type: 'TRANSFER_OUT', amount: 700 })).toBe(0);
+  });
+});
+
+describe('attributePaidBack', () => {
+  const meal = { id: 'meal', type: 'EXPENSE', occurred_at: '2026-10-31T13:00:00.000Z', paid_back_for: null };
+  const back = { id: 'back', type: 'INCOME', occurred_at: '2026-11-01T09:00:00.000Z', paid_back_for: 'meal' };
+
+  it('dates money paid back on the day of the expense it was for', () => {
+    expect(attributePaidBack([meal, back]).find((r) => r.id === 'back')?.occurred_at).toBe(meal.occurred_at);
+  });
+
+  it('leaves it out when that expense is outside the rows (an earlier month)', () => {
+    expect(attributePaidBack([back]).map((r) => r.id)).toEqual([]);
+  });
+
+  it('keeps everything else as it is', () => {
+    const salary = { id: 'pay', type: 'INCOME', occurred_at: '2026-11-01T09:00:00.000Z', paid_back_for: null };
+    expect(attributePaidBack([meal, salary])).toEqual([meal, salary]);
   });
 });

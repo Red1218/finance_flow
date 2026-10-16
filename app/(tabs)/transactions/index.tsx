@@ -6,7 +6,7 @@ import { useTransactions, useCategories, useAccounts, usePreferences } from '../
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { groupByDay } from '../../../src/domain/dashboard';
 import { monthRange } from '../../../src/domain/dateRange';
-import { spendAmount } from '../../../src/domain/transactionRules';
+import { attributePaidBack, spendAmount } from '../../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
 import { formatCurrency } from '../../../src/domain/money';
 import { AddButton, Button, Chip, Input, K, Muted, Rise, ScreenHeader } from '../../../src/ui/primitives';
@@ -116,7 +116,7 @@ export default function TransactionsList() {
       return true;
     });
 
-    const out = rows.reduce((a, t) => a + spendAmount(t), 0);
+    const out = attributePaidBack(rows).reduce((a, t) => a + spendAmount(t), 0);
 
     const grouped = groupByDay(filtered, today).map((g) => ({
       day: g.day,
