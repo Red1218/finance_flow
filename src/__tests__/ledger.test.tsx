@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import Ledger from '../../app/(tabs)/transactions/index';
 
 type Query = { data: unknown; loading: boolean; error: string | null; refetch: () => void };
@@ -7,8 +7,12 @@ const loaded = (data: unknown): Query => ({ data, loading: false, error: null, r
 const pending: Query = { data: null, loading: true, error: null, refetch: jest.fn() };
 
 let mockTransactions: Query = pending;
+const mockUseTransactions = jest.fn();
 jest.mock('../hooks/queries', () => ({
-  useTransactions: () => mockTransactions,
+  useTransactions: (params: unknown) => {
+    mockUseTransactions(params);
+    return mockTransactions;
+  },
   useCategories: () => loaded([]),
   useAccounts: () => loaded([]),
   usePreferences: () => loaded({ currency_code: 'INR' }),
@@ -51,5 +55,12 @@ describe('Ledger', () => {
     mockTransactions = { data: null, loading: false, error: 'network down', refetch: jest.fn() };
     render(<Ledger />);
     expect(screen.getByText(/Couldn.t load/)).toBeTruthy();
+  });
+
+  it('searches every month, not just this one', () => {
+    mockTransactions = loaded([]);
+    render(<Ledger />);
+    fireEvent.changeText(screen.getByPlaceholderText('Search description'), 'kitchens');
+    expect(mockUseTransactions).toHaveBeenLastCalledWith({ search: 'kitchens' });
   });
 });

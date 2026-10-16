@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTransactions, useCategories, useAccounts, usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { groupByDay } from '../../../src/domain/dashboard';
 import { monthRange } from '../../../src/domain/dateRange';
 import { attributePaidBack, spendAmount } from '../../../src/domain/transactionRules';
-import { buildTransactionRowVM, indexById } from '../../../src/domain/transactionView';
+import { buildTransactionRowVM, indexById, transactionsCsv } from '../../../src/domain/transactionView';
 import { formatCurrency } from '../../../src/domain/money';
 import { AddButton, Button, Chip, Input, K, Muted, Rise, ScreenHeader } from '../../../src/ui/primitives';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
@@ -89,7 +89,8 @@ export default function TransactionsList() {
   const today = useToday();
   const { from, to } = useMemo(() => monthRange(today), [today]);
 
-  const tx = useTransactions({ from, to, search: search || undefined });
+  // A search looks through every month; otherwise the Ledger shows this month.
+  const tx = useTransactions(search ? { search } : { from, to });
   const categories = useCategories();
   const accounts = useAccounts();
   const prefs = usePreferences();
@@ -104,7 +105,7 @@ export default function TransactionsList() {
 
   const monthLabel = today.toLocaleDateString('en-IN', { month: 'short' });
 
-  const { groups, monthOut } = useMemo(() => {
+  const { groups, monthOut, shown } = useMemo(() => {
     const rows = tx.data ?? [];
     const categoriesById = indexById(categories.data ?? []);
     const accountsById = indexById(accounts.data ?? []);
@@ -123,8 +124,14 @@ export default function TransactionsList() {
       rows: g.rows.map((r) => buildTransactionRowVM(r, categoriesById, accountsById, currencyCode)),
     }));
 
-    return { groups: grouped, monthOut: out };
+    return { groups: grouped, monthOut: out, shown: filtered };
   }, [tx.data, categories.data, accounts.data, filter, today, currencyCode]);
+
+  // ponytail: shares the CSV as text; save-to-file needs expo-file-system + expo-sharing.
+  const exportCsv = () => {
+    const csv = transactionsCsv(shown, indexById(categories.data ?? []), indexById(accounts.data ?? []));
+    Share.share({ title: 'Finance Flow transactions', message: csv });
+  };
 
   if (!session) {
     return (
@@ -139,8 +146,8 @@ export default function TransactionsList() {
       <View style={styles.header}>
         {!selectMode && (
           <K style={styles.kicker}>
-            {monthLabel}
-            {ready ? ` · ${formatCurrency(monthOut, currencyCode)} out` : ''}
+            {search ? 'All months' : monthLabel}
+            {ready ? (search ? ` · ${shown.length} found` : ` · ${formatCurrency(monthOut, currencyCode)} out`) : ''}
           </K>
         )}
         <ScreenHeader
@@ -155,6 +162,10 @@ export default function TransactionsList() {
                   <Text style={[styles.link, selectedIds.size === 0 && styles.linkDisabled]}>Delete</Text>
                 </Pressable>
               </View>
+            ) : ready && shown.length > 0 ? (
+              <Pressable onPress={exportCsv} accessibilityRole="button">
+                <Text style={styles.link}>Export</Text>
+              </Pressable>
             ) : undefined
           }
         />
