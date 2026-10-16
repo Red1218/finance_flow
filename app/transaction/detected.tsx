@@ -10,11 +10,10 @@ import { checkBudgetAlerts } from '../../src/notifications/checkBudgetAlerts';
 import { combineLocalDateWithCurrentTime, parseDateInput } from '../../src/domain/dateRange';
 import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { useAccounts, useBills, useCategories, usePreferences, useRecentExpenses, useTransactions } from '../../src/hooks/queries';
-import { markBillPaid } from '../../src/data/repositories/bills';
 import { billForDetection } from '../../src/domain/bills';
 import type { Bill } from '../../src/data/types';
 import { useLiveQuery } from '../../src/hooks/useLiveQuery';
-import { formatCurrency } from '../../src/domain/money';
+import { formatCurrency, toNumber } from '../../src/domain/money';
 import { lastCategoryByMerchant, suggestPaidBackExpense } from '../../src/domain/transactionRules';
 import { expenseOptionLabel } from '../../src/domain/transactionView';
 import { K } from '../../src/ui/primitives';
@@ -74,7 +73,9 @@ export default function DetectedScreen() {
     detections.refetch();
   };
 
-  const handleOpen = (detection: PendingDetection) => {
+  // `bill`: the bill this SMS pays ("Paid <bill>"); the form marks it paid
+  // only once the expense is saved, so cancelling leaves the bill unpaid.
+  const handleOpen = (detection: PendingDetection, bill?: Bill) => {
     if (isCardPayment(detection)) {
       router.push({
         pathname: '/transaction/new',
@@ -101,6 +102,7 @@ export default function DetectedScreen() {
         dateText: detection.date,
         detectionId: detection.id,
         categoryId: categoryFor(detection),
+        ...(bill && { billId: bill.id }),
       },
     });
   };
@@ -123,19 +125,6 @@ export default function DetectedScreen() {
     });
   };
 
-  // Marks the matched bill paid, then opens the usual form so the expense is
-  // still logged (Paid on its own never creates a transaction).
-  const handleBillPaid = async (detection: PendingDetection, bill: Bill) => {
-    setAssignError(null);
-    try {
-      await markBillPaid(bill);
-    } catch (e) {
-      setAssignError(e instanceof Error ? e.message : 'Could not mark this bill paid.');
-      return;
-    }
-    bills.refetch();
-    handleOpen(detection);
-  };
 
   const handleNotTransfer = async (out: PendingDetection, into: PendingDetection) => {
     await markNotTransfer([out.id, into.id]);
@@ -319,8 +308,11 @@ export default function DetectedScreen() {
                   </Pressable>
                 )}
                 {!selectMode && bill && (
-                  <Pressable onPress={() => handleBillPaid(d, bill)}>
-                    <Text style={styles.dismiss}>Paid {bill.name}</Text>
+                  <Pressable onPress={() => handleOpen(d, bill)}>
+                    <Text style={styles.dismiss}>
+                      Paid {bill.name}
+                      {toNumber(bill.amount) !== d.amount && ` (bill ${formatCurrency(toNumber(bill.amount), currencyCode)})`}
+                    </Text>
                   </Pressable>
                 )}
                 {!selectMode && (

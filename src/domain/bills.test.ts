@@ -105,14 +105,25 @@ describe('billForDetection', () => {
     expect(billForDetection(debit(15000, '2026-11-12'), [rent, wifi])).toBe(rent);
   });
 
-  it('ignores debits further than 7 days out, other amounts, and credits', () => {
+  it('matches an amount within 10% of the bill, either way', () => {
+    expect(billForDetection(debit(16500, '2026-11-05'), [rent])).toBe(rent);
+    expect(billForDetection(debit(13500, '2026-11-05'), [rent])).toBe(rent);
+  });
+
+  it('ignores debits further than 7 days out, more than 10% off, and credits', () => {
     expect(billForDetection(debit(15000, '2026-10-28'), [rent])).toBeNull();
-    expect(billForDetection(debit(15001, '2026-11-05'), [rent])).toBeNull();
+    expect(billForDetection(debit(16501, '2026-11-05'), [rent])).toBeNull();
+    expect(billForDetection(debit(13499, '2026-11-05'), [rent])).toBeNull();
     expect(billForDetection({ amount: 15000, direction: 'credit', date: '2026-11-05' }, [rent])).toBeNull();
   });
 
   it('picks the bill due closest to the SMS date when two match', () => {
     const rent2 = { ...rent, id: 'rent2', next_due_date: '2026-11-09' };
     expect(billForDetection(debit(15000, '2026-11-08'), [rent, rent2])).toBe(rent2);
+  });
+
+  it('breaks a due-date tie with the closer amount', () => {
+    const power = { id: 'power', amount: 14000, next_due_date: '2026-11-05' };
+    expect(billForDetection(debit(14100, '2026-11-05'), [rent, power])).toBe(power);
   });
 });

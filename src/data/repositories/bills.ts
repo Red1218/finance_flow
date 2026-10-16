@@ -63,6 +63,14 @@ export async function markBillPaid(bill: Bill): Promise<Bill> {
   return data as Bill;
 }
 
+// Used after saving the expense for a bill's SMS: reads the bill fresh so the
+// count-down uses its current next_due_date / payments_left.
+export async function markBillPaidById(id: string): Promise<Bill> {
+  const { data, error } = await supabase.from('recurring_items').select('*').eq('id', id).single();
+  if (error) throw error;
+  return markBillPaid(data as Bill);
+}
+
 export async function restoreBillDueDate(bill: Bill): Promise<Bill> {
   const { data, error } = await supabase
     .from('recurring_items')
