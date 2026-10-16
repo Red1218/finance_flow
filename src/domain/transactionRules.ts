@@ -27,6 +27,19 @@ export function spendAmount(t: { type: string; amount: number | string; paid_bac
   return 0;
 }
 
+// For spending totals: money paid back counts on the day of the expense it was
+// for, so a friend repaying on 1 Nov for a 31 Oct meal lowers October. When
+// that expense isn't in `rows` (it's in an earlier period), the payback is
+// left out of these totals.
+export function attributePaidBack<T extends { id: string; type: string; occurred_at: string; paid_back_for?: string | null }>(rows: T[]): T[] {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return rows.flatMap((r) => {
+    if (r.type !== 'INCOME' || !r.paid_back_for) return [r];
+    const expense = byId.get(r.paid_back_for);
+    return expense ? [{ ...r, occurred_at: expense.occurred_at }] : [];
+  });
+}
+
 export function validateAmount(amount: number, precision: number): void {
   if (!(amount > 0)) throw new InvalidAmountError();
   const factor = 10 ** precision;

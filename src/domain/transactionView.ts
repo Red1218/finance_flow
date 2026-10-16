@@ -4,6 +4,7 @@
 import { toNumber, formatCurrency, formatMoney } from './money';
 import type { Transaction, Category, Account } from '../data/types';
 import { transactionSign } from './transactionRules';
+import { toDateInput } from './dateRange';
 
 export interface TransactionRowVM {
   id: string;
@@ -55,6 +56,31 @@ export function expenseOptionLabel(e: Transaction, currencyCode: string): string
 // "Kotak ••8721" — empty when there's no account.
 export function accountLabel(a: Pick<Account, 'name' | 'mask'> | undefined): string {
   return a ? a.name + (a.mask ? ' ••' + a.mask : '') : '';
+}
+
+const TYPE_LABEL: Record<Transaction['type'], string> = {
+  EXPENSE: 'Expense',
+  INCOME: 'Income',
+  TRANSFER_OUT: 'Transfer out',
+  TRANSFER_IN: 'Transfer in',
+};
+
+// Spreadsheet export of the Ledger: one row per transaction, money out negative.
+export function transactionsCsv(rows: Transaction[], categoriesById: Map<string, Category>, accountsById: Map<string, Account>): string {
+  const cell = (v: string) => (/[",\n]/.test(v) ?`"${v.replace(/"/g, '""')}"` : v);
+  const lines = rows.map((t) =>
+    [
+      toDateInput(new Date(t.occurred_at)),
+      t.description ?? '',
+      t.category_id ? categoriesById.get(t.category_id)?.name ?? '' : '',
+      accountLabel(accountsById.get(t.account_id)),
+      t.paid_back_for ? 'Paid back' : TYPE_LABEL[t.type],
+      String(toNumber(t.amount) * transactionSign(t.type)),
+    ]
+      .map(cell)
+      .join(',')
+  );
+  return ['Date,Description,Category,Account,Type,Amount', ...lines].join('\n');
 }
 
 export function indexById<T extends { id: string }>(rows: T[]): Map<string, T> {

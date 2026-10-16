@@ -6,6 +6,9 @@ module.exports = {
   // jest.integration.config.js. Everything else here is a pure/mocked unit
   // test with no network access.
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/android/', '\\.integration\\.test\\.'],
+  // The first test in the transaction screen suites pays for loading the
+  // screen module; on a busy machine that alone passed the 5s default.
+  testTimeout: 20000,
   // @react-native-async-storage/async-storage has no meaning outside a real
   // device and ships its own official Jest mock for exactly this — used by
   // supabaseClient.ts's persistSession config. Not a network/behavior mock.

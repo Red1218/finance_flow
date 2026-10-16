@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTransactions, useBudgets, useCategories, usePreferences } from '../../src/hooks/queries';
 import { firstLoad } from '../../src/hooks/useLiveQuery';
 import { setBudget } from '../../src/data/repositories/budgets';
-import { spendAmount } from '../../src/domain/transactionRules';
+import { attributePaidBack, spendAmount } from '../../src/domain/transactionRules';
 import { toNumber, formatCurrency } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthRange } from '../../src/domain/dateRange';
@@ -50,7 +50,7 @@ export default function Budgets() {
 
     const spendByCategory = new Map<string, number>();
     let totalSpend = 0;
-    for (const t of rows) {
+    for (const t of attributePaidBack(rows)) {
       const amt = spendAmount(t);
       if (!amt) continue;
       totalSpend += amt;

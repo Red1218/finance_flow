@@ -9,7 +9,7 @@ import { daysUntil, dueLabel, dueSoon } from '../../src/domain/bills';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthProgress, dailyAllowance, last7DaysTotals, todaySummary } from '../../src/domain/dashboard';
 import { monthRange } from '../../src/domain/dateRange';
-import { spendAmount } from '../../src/domain/transactionRules';
+import { attributePaidBack, spendAmount } from '../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../src/domain/transactionView';
 import { AddButton, Grow, K, Muted, Num, Plunk, Rise, Tag, useCountUp } from '../../src/ui/primitives';
 import { TransactionRow } from '../../src/ui/TransactionRow';
@@ -38,16 +38,17 @@ export default function Home() {
     const categoriesById = indexById(categories.data ?? []);
     const accountsById = indexById(accounts.data ?? []);
 
+    const spendRows = attributePaidBack(rows);
     let spent = 0;
-    for (const t of rows) {
-      spent += t.type === 'TRANSFER_OUT' ? toNumber(t.amount) : spendAmount(t);
+    for (const t of spendRows) {
+      spent += spendAmount(t);
     }
 
     const limit = overallBudget ? toNumber(overallBudget.amount) : 0;
     const progress = budgetProgress(spent, limit);
     const { dayOfMonth, totalDays } = monthProgress(today);
 
-    const numeric = rows.map((t) => ({ row: t, occurred_at: t.occurred_at, amount: toNumber(t.amount), type: t.type, paid_back_for: t.paid_back_for }));
+    const numeric = spendRows.map((t) => ({ row: t, occurred_at: t.occurred_at, amount: toNumber(t.amount), type: t.type, paid_back_for: t.paid_back_for }));
     const bars = last7DaysTotals(numeric, today);
     const todayInfo = todaySummary(numeric, overallBudget ? limit : null, today);
     const daysLeft = todayInfo.daysLeft;
