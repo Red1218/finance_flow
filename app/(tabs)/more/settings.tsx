@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as Updates from 'expo-updates';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
@@ -218,6 +219,13 @@ export default function Settings() {
             <Text style={styles.rowValue}>›</Text>
           </Pressable>
         </View>
+
+        {/* Which code is running: the one built into the APK, or an over-the-air update. */}
+        <Muted style={styles.version}>
+          {Updates.isEmbeddedLaunch || !Updates.createdAt
+            ? 'Built-in version'
+            : `Update from ${Updates.createdAt.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`}
+        </Muted>
       </ScrollView>
 
       <SelectModal
@@ -258,4 +266,5 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontFamily: fonts.bold, fontSize: 16, color: colors.text, flexShrink: 1 },
   rowValue: { fontFamily: fonts.bold, fontSize: 14, color: colors.muted },
+  version: { fontSize: 12, textAlign: 'center', marginTop: spacing.s4 },
 });

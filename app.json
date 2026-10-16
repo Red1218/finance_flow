@@ -35,6 +35,20 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6dc1ee93-7718-4ba3-85e7-aeb02271b16f"
+      }
+    },
+    "owner": "venkat1218",
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/6dc1ee93-7718-4ba3-85e7-aeb02271b16f",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     }
   }
 }
