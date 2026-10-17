@@ -127,7 +127,7 @@ export default function Budgets() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} colors={['transparent']} progressBackgroundColor="transparent" progressViewOffset={-200} tintColor="transparent" />}
+        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} colors={['transparent']} progressBackgroundColor="transparent" tintColor="transparent" />}
       >
         <Rise>
           <K style={styles.kicker}>{monthLabel}</K>
