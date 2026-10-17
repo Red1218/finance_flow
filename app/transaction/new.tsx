@@ -13,7 +13,7 @@ import { transactionErrorMessage } from '../../src/ui/errorMessages';
 import { Body, Button, Chip, Input, K, Seg } from '../../src/ui/primitives';
 import { accountLabel, expenseOptionLabel } from '../../src/domain/transactionView';
 import { DatePickerField } from '../../src/ui/DatePickerField';
-import { Shake, SlideInText } from '../../src/ui/motion';
+import { SaveMorph, Shake, SlideInText } from '../../src/ui/motion';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
@@ -175,7 +175,7 @@ export default function NewTransaction() {
       }
       // A beat of ✓ before closing. `saving` stays true, so it can't be saved twice.
       setSaved(true);
-      setTimeout(() => router.back(), 350);
+      setTimeout(() => router.back(), 450);
     } catch (e) {
       setError(transactionErrorMessage(e));
       setSaving(false);
@@ -276,14 +276,18 @@ export default function NewTransaction() {
 
         {error ? <Body style={styles.error}>{error}</Body> : null}
 
-        <Button
-          title={saved ? '✓ Saved' : `Save ${kind.toLowerCase()}`}
-          onPress={onSavePress}
-          disabled={!canSave && !missingAmount}
-          dimmed={missingAmount}
-          loading={saving && !saved}
-          block
-        />
+        {saved ? (
+          <SaveMorph label="Saved" />
+        ) : (
+          <Button
+            title={`Save ${kind.toLowerCase()}`}
+            onPress={onSavePress}
+            disabled={!canSave && !missingAmount}
+            dimmed={missingAmount}
+            loading={saving}
+            block
+          />
+        )}
       </ScrollView>
 
       <View style={styles.keypad}>

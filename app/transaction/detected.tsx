@@ -17,6 +17,7 @@ import { formatCurrency, toNumber } from '../../src/domain/money';
 import { lastCategoryByMerchant, suggestPaidBackExpense } from '../../src/domain/transactionRules';
 import { expenseOptionLabel } from '../../src/domain/transactionView';
 import { K } from '../../src/ui/primitives';
+import { FlyCard } from '../../src/ui/motion';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 
@@ -276,57 +277,61 @@ export default function DetectedScreen() {
             const paidBackGuess = d.direction === 'credit' ? suggestPaidBackExpense(d, recentExpenses) : null;
             const bill = billForDetection(d, bills.data ?? []);
             return (
-              <View key={d.id} style={styles.row}>
-                <Pressable
-                  style={styles.rowMain}
-                  onPress={() => (selectMode ? toggleSelect(d.id) : handleOpen(d))}
-                  onLongPress={() => handleRowLongPress(d.id)}
-                >
-                  {selectMode && (
-                    <View style={[styles.checkbox, selectedIds.has(d.id) && styles.checkboxChecked]}>
-                      {selectedIds.has(d.id) && <Text style={styles.checkmark}>✓</Text>}
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.merchant}>{d.merchant || d.bankLabel}</Text>
-                    <Text style={styles.meta}>
-                      {d.bankLabel} ·{' '}
-                      <Text style={d.direction === 'credit' && styles.credit}>
-                        {formatCurrency(d.direction === 'credit' ? d.amount : -d.amount, currencyCode, { sign: true })}
-                      </Text>{' '}
-                      · {d.date}
-                      {categoryName ? ` · ${categoryName}` : ''}
-                    </Text>
-                  </View>
-                </Pressable>
-                {/* Actions sit under the item and wrap: on one line beside it, a long
-                    "Paid back for …?" squeezed the name to a letter per line. */}
-                {!selectMode && (
-                  <View style={styles.actions}>
-                    {paidBackGuess && (
-                      <Pressable onPress={() => handlePaidBack(d, paidBackGuess.id)}>
-                        <Text style={styles.dismiss}>Paid back for {paidBackGuess.description?.trim() || 'expense'}?</Text>
-                      </Pressable>
-                    )}
-                    {d.direction === 'credit' && (
-                      <Pressable onPress={() => setPaidBackFor(d)}>
-                        <Text style={styles.dismiss}>Paid back</Text>
-                      </Pressable>
-                    )}
-                    {bill && (
-                      <Pressable onPress={() => handleOpen(d, bill)}>
-                        <Text style={styles.dismiss}>
-                          Paid {bill.name}
-                          {toNumber(bill.amount) !== d.amount && ` (bill ${formatCurrency(toNumber(bill.amount), currencyCode)})`}
+              <FlyCard key={d.id} style={styles.row}>
+                {(fly) => (
+                  <>
+                    <Pressable
+                      style={styles.rowMain}
+                      onPress={() => (selectMode ? toggleSelect(d.id) : handleOpen(d))}
+                      onLongPress={() => handleRowLongPress(d.id)}
+                    >
+                      {selectMode && (
+                        <View style={[styles.checkbox, selectedIds.has(d.id) && styles.checkboxChecked]}>
+                          {selectedIds.has(d.id) && <Text style={styles.checkmark}>✓</Text>}
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.merchant}>{d.merchant || d.bankLabel}</Text>
+                        <Text style={styles.meta}>
+                          {d.bankLabel} ·{' '}
+                          <Text style={d.direction === 'credit' && styles.credit}>
+                            {formatCurrency(d.direction === 'credit' ? d.amount : -d.amount, currencyCode, { sign: true })}
+                          </Text>{' '}
+                          · {d.date}
+                          {categoryName ? ` · ${categoryName}` : ''}
                         </Text>
-                      </Pressable>
-                    )}
-                    <Pressable onPress={() => handleDismiss(d.id)}>
-                      <Text style={styles.dismiss}>Not a transaction</Text>
+                      </View>
                     </Pressable>
-                  </View>
+                    {/* Actions sit under the item and wrap: on one line beside it, a long
+                        "Paid back for …?" squeezed the name to a letter per line. */}
+                    {!selectMode && (
+                      <View style={styles.actions}>
+                        {paidBackGuess && (
+                          <Pressable onPress={() => fly(() => handlePaidBack(d, paidBackGuess.id))}>
+                            <Text style={styles.dismiss}>Paid back for {paidBackGuess.description?.trim() || 'expense'}?</Text>
+                          </Pressable>
+                        )}
+                        {d.direction === 'credit' && (
+                          <Pressable onPress={() => setPaidBackFor(d)}>
+                            <Text style={styles.dismiss}>Paid back</Text>
+                          </Pressable>
+                        )}
+                        {bill && (
+                          <Pressable onPress={() => handleOpen(d, bill)}>
+                            <Text style={styles.dismiss}>
+                              Paid {bill.name}
+                              {toNumber(bill.amount) !== d.amount && ` (bill ${formatCurrency(toNumber(bill.amount), currencyCode)})`}
+                            </Text>
+                          </Pressable>
+                        )}
+                        <Pressable onPress={() => fly(() => handleDismiss(d.id))}>
+                          <Text style={styles.dismiss}>Not a transaction</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  </>
                 )}
-              </View>
+              </FlyCard>
             );
           })
         )}

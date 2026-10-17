@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  LayoutAnimation,
   LayoutChangeEvent,
   PanResponder,
   Platform,
@@ -16,6 +17,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caps, colors, fonts, themed } from '../theme/tokens';
 import { Plunk, type PlunkTone, whenMotionAllowed } from './primitives';
 
@@ -571,6 +573,168 @@ export function QuickAdd({ actions }: { actions: QuickAction[] }) {
   );
 }
 
+// ---- Pull to refresh: the f tile drops in and spins while you refresh -------
+//
+// Tracks the pull itself, not every background refetch, so the tile only
+// shows when you asked for it. Stays at least 700ms so the motion reads.
+
+export function usePullRefresh(loading: boolean, refetch: () => void) {
+  const [pulling, setPulling] = useState(false);
+  const sawLoading = useRef(false);
+  const startedAt = useRef(0);
+  useEffect(() => {
+    if (!pulling) return;
+    if (loading) {
+      sawLoading.current = true;
+      return;
+    }
+    if (!sawLoading.current) return;
+    const t = setTimeout(() => setPulling(false), Math.max(0, 700 - (Date.now() - startedAt.current)));
+    return () => clearTimeout(t);
+  }, [pulling, loading]);
+  useEffect(() => {
+    if (!pulling) return;
+    const t = setTimeout(() => setPulling(false), 8000); // never spin forever
+    return () => clearTimeout(t);
+  }, [pulling]);
+  const onRefresh = () => {
+    sawLoading.current = false;
+    startedAt.current = Date.now();
+    setPulling(true);
+    refetch();
+  };
+  return { refreshing: pulling, onRefresh };
+}
+
+export function RefreshTile({ refreshing }: { refreshing: boolean }) {
+  const drop = useRef(new Animated.Value(0)).current;
+  const spin = useRef(new Animated.Value(0)).current;
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (refreshing) {
+      setShown(true);
+      spin.setValue(0);
+      const loop = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 700, easing: Easing.linear, useNativeDriver: native }));
+      Animated.spring(drop, { toValue: 1, speed: 16, bounciness: 10, useNativeDriver: native }).start();
+      loop.start();
+      return () => loop.stop();
+    }
+    Animated.timing(drop, { toValue: 0, duration: 180, useNativeDriver: native }).start(() => setShown(false));
+  }, [refreshing, drop, spin]);
+  if (!shown) return null;
+  return <SpinningTile drop={drop} spin={spin} />;
+}
+
+function SpinningTile({ drop, spin }: { drop: Animated.Value; spin: Animated.Value }) {
+  // Sits just under the status bar, not behind it.
+  const { top } = useSafeAreaInsets();
+  const translateY = drop.interpolate({ inputRange: [0, 1], outputRange: [-70, 0] });
+  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  return (
+    <Animated.View pointerEvents="none" style={[motionStyles.refreshTile, { top: top + 10, transform: [{ translateY }, { rotate }] }]}>
+      <Text style={motionStyles.refreshF}>f</Text>
+    </Animated.View>
+  );
+}
+
+// ---- SwipeRow: swipe left to reveal actions behind a row --------------------
+
+const ACTION_W = 84;
+
+export type SwipeAction = { label: string; tone: 'accent' | 'plain'; onPress: () => void };
+
+export function SwipeRow({ actions, enabled = true, children }: { actions: SwipeAction[]; enabled?: boolean; children: React.ReactNode }) {
+  const open = actions.length * ACTION_W;
+  const x = useRef(new Animated.Value(0)).current;
+  const at = useRef(0);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+  const settle = (to: number) => {
+    at.current = to;
+    Animated.spring(x, { toValue: to, speed: 18, bounciness: 6, useNativeDriver: native }).start();
+  };
+  const pan = useRef(
+    PanResponder.create({
+      // Only a clearly sideways drag takes the touch, so vertical scrolling still wins.
+      onMoveShouldSetPanResponder: (_e, g) => enabledRef.current && Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
+      onPanResponderMove: (_e, g) => x.setValue(Math.max(-open - 20, Math.min(0, at.current + g.dx))),
+      onPanResponderRelease: (_e, g) => settle(at.current + g.dx < -open / 2 ? -open : 0),
+      onPanResponderTerminate: () => settle(at.current),
+    })
+  ).current;
+  useEffect(() => {
+    if (!enabled && at.current !== 0) settle(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+  return (
+    <View style={motionStyles.swipeRow}>
+      <View style={motionStyles.swipeActions}>
+        {actions.map((a) => (
+          <Pressable
+            key={a.label}
+            onPress={() => {
+              settle(0);
+              a.onPress();
+            }}
+            accessibilityRole="button"
+            style={[motionStyles.swipeAction, a.tone === 'accent' ? motionStyles.swipeActionAccent : motionStyles.swipeActionPlain]}
+          >
+            <Text style={motionStyles.swipeActionText}>{a.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Animated.View style={[motionStyles.swipeFront, { transform: [{ translateX: x }] }]} {...pan.panHandlers}>
+        {children}
+      </Animated.View>
+    </View>
+  );
+}
+
+// ---- FlyCard: a handled card flies off, then the list closes the gap --------
+
+export function FlyCard({ children, style }: { children: (fly: (then: () => unknown) => void) => React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const v = useRef(new Animated.Value(0)).current;
+  const fly = (then: () => unknown) =>
+    whenMotionAllowed(
+      () =>
+        Animated.timing(v, { toValue: 1, duration: 260, easing: Easing.in(Easing.cubic), useNativeDriver: native }).start(() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          // If the card is still here afterwards (the action failed), bring it back.
+          Promise.resolve(then()).finally(() => v.setValue(0));
+        }),
+      () => {
+        then();
+      }
+    );
+  const translateX = v.interpolate({ inputRange: [0, 1], outputRange: [0, 420] });
+  const rotate = v.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '10deg'] });
+  const opacity = v.interpolate({ inputRange: [0, 0.8, 1], outputRange: [1, 0.6, 0] });
+  return <Animated.View style={[style, { opacity, transform: [{ translateX }, { rotate }] }]}>{children(fly)}</Animated.View>;
+}
+
+// ---- SaveMorph: the Save button shrinks into a tick square -----------------
+
+export function SaveMorph({ label }: { label: string }) {
+  const [w, setW] = useState(0);
+  const width = useRef(new Animated.Value(0)).current;
+  const pop = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!w) return;
+    width.setValue(w);
+    Animated.timing(width, { toValue: 56, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    Animated.spring(pop, { toValue: 1, speed: 14, bounciness: 12, useNativeDriver: native }).start();
+  }, [w, width, pop]);
+  return (
+    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={motionStyles.morphRow} accessibilityLabel={label} accessible>
+      {w > 0 && (
+        <Animated.View style={[motionStyles.morph, { width }]}>
+          <Animated.Text style={[motionStyles.morphTick, { transform: [{ scale: pop }] }]}>{'\u2713'}</Animated.Text>
+        </Animated.View>
+      )}
+    </View>
+  );
+}
+
 // ---- LaunchIntro: the f tile drops in once per cold start (≤650ms) ----------
 //
 // Drawn over the first screen with pointerEvents none, so it never blocks a tap.
@@ -649,6 +813,18 @@ const motionStyles = themed(() =>
     chipOn: { borderColor: 'transparent' },
     chipText: { ...caps, letterSpacing: 1.5, color: colors.muted },
     chipTextOn: { color: colors.bg },
+    refreshTile: { position: 'absolute', top: 10, alignSelf: 'center', width: 40, height: 40, zIndex: 25, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+    refreshF: { fontFamily: fonts.display, fontSize: 34, lineHeight: 40, color: colors.bg, marginTop: -4 },
+    swipeRow: { overflow: 'hidden' },
+    swipeActions: { ...StyleSheet.absoluteFillObject, flexDirection: 'row', justifyContent: 'flex-end' },
+    swipeAction: { width: ACTION_W, alignItems: 'center', justifyContent: 'center' },
+    swipeActionAccent: { backgroundColor: colors.accent },
+    swipeActionPlain: { backgroundColor: colors.text },
+    swipeActionText: { ...caps, fontSize: 10, letterSpacing: 1.4, color: colors.bg },
+    swipeFront: { backgroundColor: colors.bg },
+    morphRow: { height: 48, alignItems: 'center' },
+    morph: { height: 48, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+    morphTick: { fontFamily: fonts.heading, fontSize: 22, color: colors.bg },
     quickDim: { backgroundColor: 'rgba(0,0,0,0.6)' },
     quickList: { position: 'absolute', right: 20, bottom: 96, alignItems: 'flex-end', gap: 14 },
     quickItem: { height: 46, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },

@@ -10,7 +10,7 @@ import { attributePaidBack, spendAmount } from '../../../src/domain/transactionR
 import { buildTransactionRowVM, indexById, transactionsCsv } from '../../../src/domain/transactionView';
 import { formatCurrency } from '../../../src/domain/money';
 import { Button, Input, K, Muted, Rise, ScreenHeader } from '../../../src/ui/primitives';
-import { QuickAdd, Skeleton, SlidingChips } from '../../../src/ui/motion';
+import { QuickAdd, RefreshTile, Skeleton, SlidingChips, SwipeRow, usePullRefresh } from '../../../src/ui/motion';
 import { TransactionRow } from '../../../src/ui/TransactionRow';
 import { caps, colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
@@ -60,6 +60,13 @@ export default function TransactionsList() {
     setSelectedIds(new Set());
     setDeleteConfirmOpen(false);
     setDeleteError(null);
+  };
+
+  // Swipe-to-delete reuses the delete confirmation for a single row.
+  const askDelete = (id: string) => {
+    setSelectedIds(new Set([id]));
+    setDeleteError(null);
+    setDeleteConfirmOpen(true);
   };
 
   const confirmBulkDelete = async () => {
@@ -134,6 +141,8 @@ export default function TransactionsList() {
     Share.share({ title: 'Finance Flow transactions', message: csv });
   };
 
+  const pull = usePullRefresh(loading, refetch);
+
   if (!session) {
     return (
       <SafeAreaView style={styles.screen} edges={['top']}>
@@ -191,7 +200,7 @@ export default function TransactionsList() {
             {deleteError && <Text style={[styles.confirmText, styles.confirmError]}>{deleteError}</Text>}
             <View style={styles.confirmActions}>
               <Button title="Delete anyway" variant="secondary" onPress={confirmBulkDelete} loading={deleting} />
-              <Button title="Keep it" variant="ghost" onPress={() => setDeleteConfirmOpen(false)} />
+              <Button title="Keep it" variant="ghost" onPress={() => (selectMode ? setDeleteConfirmOpen(false) : cancelSelect())} />
             </View>
           </View>
         )}
@@ -199,7 +208,7 @@ export default function TransactionsList() {
 
       <ScrollView
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} colors={[colors.bg]} progressBackgroundColor={colors.bg} tintColor="transparent" />}
       >
         {!ready ? (
           error ? (
@@ -212,14 +221,22 @@ export default function TransactionsList() {
             <Rise key={g.day} delay={Math.min(gi, 6) * 60} style={styles.group}>
               <K style={styles.groupLabel}>{g.day}</K>
               {g.rows.map((r) => (
-                <TransactionRow
+                <SwipeRow
                   key={r.id}
-                  tx={r}
-                  onPress={() => handleRowPress(r.id)}
-                  onLongPress={() => handleRowLongPress(r.id)}
-                  selectable={selectMode}
-                  selected={selectedIds.has(r.id)}
-                />
+                  enabled={!selectMode}
+                  actions={[
+                    { label: 'Edit', tone: 'plain', onPress: () => router.push(`/transaction/${r.id}`) },
+                    { label: 'Delete', tone: 'accent', onPress: () => askDelete(r.id) },
+                  ]}
+                >
+                  <TransactionRow
+                    tx={r}
+                    onPress={() => handleRowPress(r.id)}
+                    onLongPress={() => handleRowLongPress(r.id)}
+                    selectable={selectMode}
+                    selected={selectedIds.has(r.id)}
+                  />
+                </SwipeRow>
               ))}
             </Rise>
           ))
@@ -233,6 +250,7 @@ export default function TransactionsList() {
           { label: '− Expense', tone: 'accent', onPress: () => router.push({ pathname: '/transaction/new', params: { kind: 'Expense' } }) },
         ]}
       />
+      <RefreshTile refreshing={pull.refreshing} />
     </SafeAreaView>
   );
 }

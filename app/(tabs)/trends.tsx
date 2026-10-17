@@ -8,7 +8,7 @@ import { attributePaidBack } from '../../src/domain/transactionRules';
 import { monthlyExpenseTotals, findCategoryWatch } from '../../src/domain/trends';
 import { monthProgress } from '../../src/domain/dashboard';
 import { Body, Grow, K, Muted, Plunk, Rise, ScreenHeader, Tag } from '../../src/ui/primitives';
-import { Lift, Odometer, Skeleton } from '../../src/ui/motion';
+import { Lift, Odometer, RefreshTile, Skeleton, usePullRefresh } from '../../src/ui/motion';
 import { caps, colors, fonts, spacing, themed } from '../../src/theme/tokens';
 import { useAuth } from '../../src/data/AuthContext';
 import { SignInPrompt } from '../../src/ui/SignInPrompt';
@@ -67,6 +67,8 @@ export default function Trends() {
   const selectedDelta = selected && prevTotal > 0 ? Math.round(((selected.total - prevTotal) / prevTotal) * 100) : null;
   const maxMonth = Math.max(1, ...data.months.map((m) => m.total));
 
+  const pull = usePullRefresh(loading, refetch);
+
   if (!session) {
     return (
       <SafeAreaView style={styles.screen} edges={['top']}>
@@ -79,7 +81,7 @@ export default function Trends() {
     <SafeAreaView style={styles.screen} edges={['top']}>
     <ScrollView
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.accent} />}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} colors={[colors.bg]} progressBackgroundColor={colors.bg} tintColor="transparent" />}
     >
       <Rise>
         <K style={styles.kicker}>Last {MONTHS_BACK} months</K>
@@ -177,6 +179,7 @@ export default function Trends() {
         </>
       )}
     </ScrollView>
+      <RefreshTile refreshing={pull.refreshing} />
     </SafeAreaView>
   );
 }
