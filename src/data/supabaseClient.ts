@@ -15,5 +15,11 @@ export const supabase = createClient(url, anonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // PKCE: the password-recovery deep link carries a one-time `code`, not
+    // raw session tokens. The code is useless without the verifier this
+    // device stored when it requested the reset, so another app catching the
+    // financeflow:// link — or a crafted link planting someone else's
+    // session — gets nowhere.
+    flowType: 'pkce',
   },
 });

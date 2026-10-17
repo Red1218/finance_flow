@@ -11,7 +11,7 @@ jest.mock('react-native-safe-area-context', () => {
   return { SafeAreaView: View };
 });
 
-let mockUrl: string | null = 'financeflow://reset-password#access_token=AAA&refresh_token=BBB&type=recovery';
+let mockUrl: string | null = 'financeflow://reset-password?code=CCC';
 jest.mock('expo-linking', () => ({ useLinkingURL: () => mockUrl }));
 
 const mockCompletePasswordReset = jest.fn();
@@ -23,7 +23,7 @@ describe('Reset password screen', () => {
   beforeEach(() => {
     mockCompletePasswordReset.mockReset();
     mockBack.mockClear();
-    mockUrl = 'financeflow://reset-password#access_token=AAA&refresh_token=BBB&type=recovery';
+    mockUrl = 'financeflow://reset-password?code=CCC';
   });
 
   it('sets a new password using the incoming deep-link URL', async () => {
