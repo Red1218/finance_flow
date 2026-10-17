@@ -12,7 +12,7 @@ import { monthRange } from '../../src/domain/dateRange';
 import { attributePaidBack, spendAmount } from '../../src/domain/transactionRules';
 import { buildTransactionRowVM, indexById } from '../../src/domain/transactionView';
 import { Grow, K, Muted, Num, Plunk, Rise, Tag } from '../../src/ui/primitives';
-import { Odometer, QuickAdd, Ring, Shine, Skeleton, SwipeToConfirm, TiltCard, Toast } from '../../src/ui/motion';
+import { Odometer, QuickAdd, RefreshTile, Ring, Shine, Skeleton, SwipeToConfirm, TiltCard, Toast, usePullRefresh } from '../../src/ui/motion';
 import { markBillPaid, restoreBillDueDate } from '../../src/data/repositories/bills';
 import type { Bill } from '../../src/data/types';
 import { TransactionRow } from '../../src/ui/TransactionRow';
@@ -121,6 +121,8 @@ export default function Home() {
     new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - i)).toLocaleDateString('en-IN', { weekday: 'narrow' })
   );
 
+  const pull = usePullRefresh(d.loading, d.refetch);
+
   if (!session) {
     return (
       <SafeAreaView style={styles.screen} edges={['top']}>
@@ -133,7 +135,7 @@ export default function Home() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={d.loading} onRefresh={d.refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} colors={['transparent']} progressBackgroundColor="transparent" progressViewOffset={-200} tintColor="transparent" />}
       >
         <Rise style={styles.header}>
           <K>{dateLabel}</K>
@@ -272,6 +274,10 @@ export default function Home() {
                   const days = daysUntil(b.next_due_date, today);
                   return (
                     <Pressable key={b.id} style={styles.billRow} onPress={() => router.push('/(tabs)/more/bills', { withAnchor: true })}>
+                      {/* Countdown ring: fills as the due day nears; shows days left. */}
+                      <Ring size={36} stroke={4} pct={Math.max(0, Math.min(1, (7 - days) / 7))}>
+                        <Text style={styles.ringDays}>{days < 0 ? '!' : days}</Text>
+                      </Ring>
                       <View style={{ flex: 1, gap: 3 }}>
                         <Text style={styles.billName}>{b.name}</Text>
                         <Text style={styles.billMeta}>{formatCurrency(toNumber(b.amount), d.currencyCode)}</Text>
@@ -318,6 +324,7 @@ export default function Home() {
           onHide={() => setToast(null)}
         />
       )}
+      <RefreshTile refreshing={pull.refreshing} />
     </SafeAreaView>
   );
 }
@@ -355,6 +362,7 @@ const styles = themed(() =>
     link: { ...caps, fontSize: 12, color: colors.text },
     billsEmpty: { flexDirection: 'row', gap: spacing.s2, alignItems: 'baseline' },
     billRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.divider },
+    ringDays: { fontFamily: fonts.heading, fontSize: 12, color: colors.text },
     billName: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
     billMeta: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted },
   })

@@ -10,7 +10,7 @@ import { toNumber, formatCurrency } from '../../src/domain/money';
 import { budgetProgress } from '../../src/domain/budget';
 import { monthRange } from '../../src/domain/dateRange';
 import { Bar, Button, Grow, Input, K, Muted, Plunk, Rise, ScreenHeader, Tag } from '../../src/ui/primitives';
-import { Odometer, Pulse, Skeleton } from '../../src/ui/motion';
+import { Odometer, Pulse, RefreshTile, Skeleton, usePullRefresh } from '../../src/ui/motion';
 import { SelectModal } from '../../src/ui/SelectModal';
 import { FormModal } from '../../src/ui/FormModal';
 import { caps, colors, fonts, spacing, themed, withAlpha } from '../../src/theme/tokens';
@@ -113,6 +113,8 @@ export default function Budgets() {
   const [overallEditOpen, setOverallEditOpen] = useState(false);
   const [overallAmount, setOverallAmount] = useState('');
 
+  const pull = usePullRefresh(loading, refetch);
+
   if (!session) {
     return (
       <SafeAreaView style={styles.screen} edges={['top']}>
@@ -125,7 +127,7 @@ export default function Budgets() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} colors={['transparent']} progressBackgroundColor="transparent" progressViewOffset={-200} tintColor="transparent" />}
       >
         <Rise>
           <K style={styles.kicker}>{monthLabel}</K>
@@ -254,6 +256,7 @@ export default function Budgets() {
           />
         </View>
       </FormModal>
+      <RefreshTile refreshing={pull.refreshing} />
     </SafeAreaView>
   );
 }

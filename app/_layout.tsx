@@ -49,14 +49,14 @@ function RootNavigator() {
     // Keyed on the theme: a palette switch re-renders every screen with the new colours.
     <Stack key={theme} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="transaction/new" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="transaction/detected" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="onboarding/link-bank" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="account/create" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="account/sign-in" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="account/forgot-password" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="reset-password" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="transaction/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="transaction/detected" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="onboarding/link-bank" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="account/create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="account/sign-in" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="account/forgot-password" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="reset-password" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
     </Stack>
   );
 }
