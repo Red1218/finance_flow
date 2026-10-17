@@ -17,6 +17,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caps, colors, fonts, themed } from '../theme/tokens';
 import { Plunk, type PlunkTone, whenMotionAllowed } from './primitives';
 
@@ -621,10 +622,16 @@ export function RefreshTile({ refreshing }: { refreshing: boolean }) {
     Animated.timing(drop, { toValue: 0, duration: 180, useNativeDriver: native }).start(() => setShown(false));
   }, [refreshing, drop, spin]);
   if (!shown) return null;
+  return <SpinningTile drop={drop} spin={spin} />;
+}
+
+function SpinningTile({ drop, spin }: { drop: Animated.Value; spin: Animated.Value }) {
+  // Sits just under the status bar, not behind it.
+  const { top } = useSafeAreaInsets();
   const translateY = drop.interpolate({ inputRange: [0, 1], outputRange: [-70, 0] });
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   return (
-    <Animated.View pointerEvents="none" style={[motionStyles.refreshTile, { transform: [{ translateY }, { rotate }] }]}>
+    <Animated.View pointerEvents="none" style={[motionStyles.refreshTile, { top: top + 10, transform: [{ translateY }, { rotate }] }]}>
       <Text style={motionStyles.refreshF}>f</Text>
     </Animated.View>
   );

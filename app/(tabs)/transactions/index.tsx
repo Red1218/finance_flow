@@ -208,7 +208,7 @@ export default function TransactionsList() {
 
       <ScrollView
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} colors={['transparent']} progressBackgroundColor="transparent" tintColor="transparent" />}
+        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} colors={[colors.bg]} progressBackgroundColor={colors.bg} tintColor="transparent" />}
       >
         {!ready ? (
           error ? (
