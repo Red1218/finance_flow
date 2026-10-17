@@ -123,31 +123,26 @@ export async function sendPasswordResetEmail(email: string): Promise<void> {
   if (error) translateAuthError(error);
 }
 
-// GoTrue's recovery email redirects with tokens appended to the redirect
-// URL — as a '#' fragment under this client's flowType ('implicit', the
-// supabase-js default, never overridden in supabaseClient.ts). Since
-// supabaseClient.ts sets detectSessionInUrl:false (there is no browser
-// location to detect on React Native), the tokens must be parsed and
-// applied by hand. A plain URLSearchParams (react-native-url-polyfill is
-// already active, imported by supabaseClient.ts) handles both '#' and '?'
-// forms without adding expo-auth-session for one parse.
-export function parseRecoveryTokens(url: string): { access_token: string; refresh_token: string } | null {
-  const raw = url.includes('#') ? url.split('#')[1] : url.split('?')[1];
-  if (!raw) return null;
-  const params = new URLSearchParams(raw);
-  const access_token = params.get('access_token');
-  const refresh_token = params.get('refresh_token');
-  if (!access_token || !refresh_token) return null;
-  return { access_token, refresh_token };
+// Under this client's PKCE flow (supabaseClient.ts), GoTrue's recovery email
+// redirects to financeflow://reset-password?code=... — a one-time auth code,
+// never raw session tokens. Since detectSessionInUrl is false (no browser
+// location on React Native), the code is read by hand. A link carrying
+// access_token/refresh_token instead is deliberately NOT accepted: that is
+// exactly what a crafted link planting someone else's session looks like.
+export function parseRecoveryCode(url: string): string | null {
+  const query = url.split('#')[0].split('?')[1];
+  if (!query) return null;
+  return new URLSearchParams(query).get('code');
 }
 
-// Any failure here — missing tokens, or setSession rejecting an
-// expired/already-used link — collapses to one InvalidRecoveryLinkError.
-// The UI response is identical either way: "request a new link."
+// Any failure here — no code, a missing verifier (reset requested on another
+// device/install, or a newer reset superseded it), or an expired/already-used
+// code — collapses to one InvalidRecoveryLinkError. The UI response is
+// identical either way: "request a new link."
 export async function establishRecoverySession(url: string): Promise<Session> {
-  const tokens = parseRecoveryTokens(url);
-  if (!tokens) throw new InvalidRecoveryLinkError();
-  const { data, error } = await supabase.auth.setSession(tokens);
+  const code = parseRecoveryCode(url);
+  if (!code) throw new InvalidRecoveryLinkError();
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data.session) throw new InvalidRecoveryLinkError();
   return data.session;
 }

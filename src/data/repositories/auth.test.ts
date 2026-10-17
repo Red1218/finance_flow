@@ -4,7 +4,7 @@ import {
   setPassword,
   signInWithPassword,
   sendPasswordResetEmail,
-  parseRecoveryTokens,
+  parseRecoveryCode,
   establishRecoverySession,
   getExistingSession,
   signOutUser,
@@ -31,7 +31,7 @@ jest.mock('../supabaseClient', () => ({
       verifyOtp: jest.fn(),
       signInWithPassword: jest.fn(),
       resetPasswordForEmail: jest.fn(),
-      setSession: jest.fn(),
+      exchangeCodeForSession: jest.fn(),
       getSession: jest.fn(),
       signOut: jest.fn(),
     },
@@ -165,43 +165,41 @@ describe('sendPasswordResetEmail', () => {
   });
 });
 
-describe('parseRecoveryTokens', () => {
-  it('parses tokens from a fragment', () => {
-    const url = 'financeflow://reset-password#access_token=AAA&refresh_token=BBB&type=recovery';
-    expect(parseRecoveryTokens(url)).toEqual({ access_token: 'AAA', refresh_token: 'BBB' });
+describe('parseRecoveryCode', () => {
+  it('parses the PKCE code from the query string', () => {
+    expect(parseRecoveryCode('financeflow://reset-password?code=CCC')).toBe('CCC');
   });
 
-  it('parses tokens from a query string', () => {
-    const url = 'financeflow://reset-password?access_token=AAA&refresh_token=BBB&type=recovery';
-    expect(parseRecoveryTokens(url)).toEqual({ access_token: 'AAA', refresh_token: 'BBB' });
+  it('returns null when there is no code', () => {
+    expect(parseRecoveryCode('financeflow://reset-password')).toBeNull();
   });
 
-  it('returns null when tokens are missing', () => {
-    expect(parseRecoveryTokens('financeflow://reset-password')).toBeNull();
+  it('ignores raw session tokens (a planted-session link)', () => {
+    expect(parseRecoveryCode('financeflow://reset-password#access_token=AAA&refresh_token=BBB')).toBeNull();
+    expect(parseRecoveryCode('financeflow://reset-password?access_token=AAA&refresh_token=BBB')).toBeNull();
   });
 });
 
 describe('establishRecoverySession', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('returns the session on success', async () => {
+  it('exchanges the code for a session', async () => {
     const session = { user: { id: 'u1', is_anonymous: false } };
-    (supabase.auth.setSession as jest.Mock).mockResolvedValue({ data: { session }, error: null });
-    const url = 'financeflow://reset-password#access_token=AAA&refresh_token=BBB';
-    const result = await establishRecoverySession(url);
-    expect(supabase.auth.setSession).toHaveBeenCalledWith({ access_token: 'AAA', refresh_token: 'BBB' });
+    (supabase.auth.exchangeCodeForSession as jest.Mock).mockResolvedValue({ data: { session }, error: null });
+    const result = await establishRecoverySession('financeflow://reset-password?code=CCC');
+    expect(supabase.auth.exchangeCodeForSession).toHaveBeenCalledWith('CCC');
     expect(result).toBe(session);
   });
 
-  it('throws InvalidRecoveryLinkError when the URL has no tokens', async () => {
-    await expect(establishRecoverySession('financeflow://reset-password')).rejects.toBeInstanceOf(InvalidRecoveryLinkError);
-    expect(supabase.auth.setSession).not.toHaveBeenCalled();
+  it('throws InvalidRecoveryLinkError for a token link and never sets a session from it', async () => {
+    const url = 'financeflow://reset-password#access_token=AAA&refresh_token=BBB&type=recovery';
+    await expect(establishRecoverySession(url)).rejects.toBeInstanceOf(InvalidRecoveryLinkError);
+    expect(supabase.auth.exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
-  it('throws InvalidRecoveryLinkError when setSession errors (expired/replayed link)', async () => {
-    (supabase.auth.setSession as jest.Mock).mockResolvedValue({ data: { session: null }, error: { message: 'invalid' } });
-    const url = 'financeflow://reset-password#access_token=AAA&refresh_token=BBB';
-    await expect(establishRecoverySession(url)).rejects.toBeInstanceOf(InvalidRecoveryLinkError);
+  it('throws InvalidRecoveryLinkError when the exchange fails (missing verifier, expired/replayed code)', async () => {
+    (supabase.auth.exchangeCodeForSession as jest.Mock).mockResolvedValue({ data: { session: null }, error: { message: 'invalid' } });
+    await expect(establishRecoverySession('financeflow://reset-password?code=CCC')).rejects.toBeInstanceOf(InvalidRecoveryLinkError);
   });
 });
 

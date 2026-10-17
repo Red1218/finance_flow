@@ -93,13 +93,12 @@ forgot-password.tsx → requestPasswordReset(email)
         ▼  (email delivered via custom SMTP; default Supabase mailer's
         │   quota is too easily exhausted for reliable manual testing —
         │   see testing.md's Known risks)
-Tap link → GET /auth/v1/verify?token=...&type=recovery&redirect_to=financeflow://reset-password
-        │  (implicit flow — this client never sets flowType: 'pkce', so no
-        │   code_challenge is ever generated; confirmed from auth-js source,
-        │   not assumed. GoTrue therefore redirects with raw tokens, not a
-        │   `code` param.)
+Tap link → GET /auth/v1/verify?token=pkce_...&type=recovery&redirect_to=financeflow://reset-password
+        │  (PKCE flow — supabaseClient.ts sets flowType: 'pkce', so
+        │   resetPasswordForEmail() stored a code verifier on this device
+        │   and sent only its challenge to GoTrue)
         ▼
-303 → financeflow://reset-password#access_token=...&refresh_token=...&type=recovery
+303 → financeflow://reset-password?code=...
         │  (Android: AndroidManifest.xml's MainActivity intent-filter,
         │   scheme="financeflow", singleTask launch mode — confirmed present
         │   and correct in the built APK)
@@ -108,11 +107,9 @@ reset-password.tsx mounts
   → url = Linking.useLinkingURL()
   → completePasswordReset(url, password)
       → establishRecoverySession(url)
-          → parseRecoveryTokens(url)                    [fragment or query]
-          → supabase.auth.setSession({access_token, refresh_token})
-              (this itself makes a network call — GET /user to validate
-               the token, or a refresh if already expired; confirmed from
-               auth-js source, not assumed to be purely client-side)
+          → parseRecoveryCode(url)                      [query `code` only]
+          → supabase.auth.exchangeCodeForSession(code)
+              (POST /token?grant_type=pkce with the stored verifier)
       → setPassword(password)
           → supabase.auth.updateUser({ password })
 ```
@@ -136,18 +133,30 @@ alone. `useLinkingURL()` reads `ExpoLinkingModule.initialURL`, a
 persisted, mutable value updated on every `onNewIntent()` (cold or warm),
 so it isn't subject to the same mount-order race.
 
-**Why `setSession()`, not `exchangeCodeForSession()`:** the redirect
-carries raw `access_token`/`refresh_token` (implicit flow), not a `code`
-param — confirmed from `auth-js` source: `resetPasswordForEmail()` only
-generates a `code_challenge` when `this.flowType === 'pkce'`, and this
-client never sets that option, so it defaults to `'implicit'`.
-`exchangeCodeForSession()` is the PKCE counterpart and doesn't apply here.
+**Why PKCE, not the implicit flow (security fix, 2026-10-18):** the
+original implicit flow redirected with raw `access_token`/`refresh_token`
+and applied them via `setSession()`. Android doesn't reserve custom
+schemes, so any installed app registering `financeflow` could catch a live
+session from the reset email, and any web page could open
+`financeflow://reset-password#access_token=…` with an attacker's own tokens
+to sign the device into the attacker's account (whose ledger then receives
+the victim's detected bank SMS). Under PKCE the link carries only a
+one-time `code`, redeemable only with the verifier stored on the device
+that requested the reset. `parseRecoveryCode()` deliberately ignores
+token-bearing links. Consequence: the link must be opened on the same
+install that requested it, and only the most recent request's link works
+(auth-js reads the verifier from its single legacy slot because the
+redirect carries no flow id) — both fail as `InvalidRecoveryLinkError`.
+On Hermes there is no WebCrypto, so auth-js uses a `plain` challenge with
+a `Math.random` verifier; the verifier never leaves the device except over
+HTTPS to GoTrue, so both attacks above stay closed. Adding `expo-crypto`
+(native change, needs a new build) would upgrade this to S256.
 
 **Why no `PASSWORD_RECOVERY` event handling:** that event only fires from
 supabase-js's own URL-detection code path, which requires
 `detectSessionInUrl: true` and a `window.location` to parse — neither
 applies on React Native, and `supabaseClient.ts` explicitly sets
-`detectSessionInUrl: false`. The manual `setSession()` call above is the
+`detectSessionInUrl: false`. The manual `exchangeCodeForSession()` call above is the
 intended substitute, not a gap.
 
 ## Typed error taxonomy
@@ -169,7 +178,7 @@ that boundary (`AuthContext`, screens) only ever sees these typed classes:
 | `InvalidOtpError` | 403 + "token" in message (no distinct code — GoTrue returns the same generic message for wrong and expired tokens) | Create account (OTP step) |
 | `ExpiredOtpError` | `otp_expired` (structured code) | Create account (OTP step) |
 | `RateLimitedError` | `over_email_send_rate_limit`, `over_request_rate_limit`, `over_sms_send_rate_limit` | Any email-sending call |
-| `InvalidRecoveryLinkError` | any failure inside `establishRecoverySession` (missing tokens, expired/replayed link) | Password reset |
+| `InvalidRecoveryLinkError` | any failure inside `establishRecoverySession` (no code, missing verifier, expired/replayed link) | Password reset |
 | `AuthNetworkError` | fallback for anything else (offline, 5xx, an unrecognized code) | Any call — never shown verbatim, only via the generic "Couldn't connect" copy |
 
 `src/ui/errorMessages.ts` is the only place with user-facing copy —
