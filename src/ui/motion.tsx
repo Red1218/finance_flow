@@ -295,6 +295,8 @@ export function Toast({
   const y = useRef(new Animated.Value(-150)).current;
   const drain = useRef(new Animated.Value(1)).current;
   const [landed, setLanded] = useState(false);
+  // Below the status bar: the screens draw edge to edge.
+  const insets = useSafeAreaInsets();
   const hideRef = useRef(onHide);
   hideRef.current = onHide;
   useEffect(() => {
@@ -316,7 +318,7 @@ export function Toast({
   }, [y, drain, message, duration]);
   const edge = error ? colors.text : colors.accent;
   return (
-    <Animated.View style={[motionStyles.toast, { transform: [{ translateY: y }] }]} accessibilityLiveRegion="polite">
+    <Animated.View style={[motionStyles.toast, { top: insets.top + 8, transform: [{ translateY: y }] }]} accessibilityLiveRegion="polite">
       <Shake trigger={error && landed}>
         <Plunk tone={error ? 'white' : 'accent'} depth={4} style={[motionStyles.toastFace, { borderColor: edge }]}>
           <View style={[motionStyles.toastTile, { backgroundColor: edge }]}>
@@ -802,8 +804,8 @@ const motionStyles = themed(() =>
     shine: { position: 'absolute', top: -20, bottom: -20, width: 60, backgroundColor: 'rgba(255,255,255,0.28)' },
     skeleton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider, overflow: 'hidden' },
     skeletonSweep: { position: 'absolute', top: 0, bottom: 0, width: 90, backgroundColor: colors.divider, opacity: 0.55 },
-    toast: { position: 'absolute', top: 12, left: 14, right: 14, zIndex: 20 },
-    toastFace: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1, overflow: 'hidden' },
+    toast: { position: 'absolute', left: 14, right: 14, zIndex: 20 },
+    toastFace: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1 },
     toastTile: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
     toastBody: { flex: 1, gap: 3 },
     toastTitle: { ...caps, fontSize: 10, letterSpacing: 1.4 },
