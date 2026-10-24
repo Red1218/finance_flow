@@ -95,13 +95,13 @@ export default function Home() {
   const billsDue = dueSoon(billList, today);
   // The soonest bill due today or tomorrow (or overdue) gets a swipe-to-pay card.
   const payable = billsDue.find((b) => daysUntil(b.next_due_date, today) <= 1) ?? null;
-  const [toast, setToast] = useState<{ message: string; error?: boolean; undo?: Bill } | null>(null);
+  const [toast, setToast] = useState<{ title: string; message: string; error?: boolean; undo?: Bill } | null>(null);
   const swipePay = async (b: Bill) => {
     try {
       await markBillPaid(b);
-      setToast({ message: `Marked ${b.name} paid.`, undo: b });
+      setToast({ title: 'Bill paid', message: `Marked ${b.name} paid.`, undo: b });
     } catch {
-      setToast({ message: 'Could not mark this bill paid.', error: true });
+      setToast({ title: "Didn't save", message: 'Could not mark this bill paid.', error: true });
     }
     bills.refetch();
   };
@@ -110,7 +110,7 @@ export default function Home() {
     try {
       await restoreBillDueDate(b);
     } catch {
-      setToast({ message: 'Could not undo this.', error: true });
+      setToast({ title: "Didn't undo", message: 'Could not undo this.', error: true });
     }
     bills.refetch();
   };
@@ -317,6 +317,7 @@ export default function Home() {
       />
       {toast && (
         <Toast
+          title={toast.title}
           message={toast.message}
           error={toast.error}
           actionLabel={toast.undo ? 'Undo' : undefined}
