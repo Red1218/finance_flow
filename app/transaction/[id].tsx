@@ -130,6 +130,16 @@ export default function TransactionDetail() {
     );
   }
 
+  // A failed load (offline, or the row is gone) says so instead of spinning.
+  if (!loading && !tx) {
+    return (
+      <View style={[styles.loading, { gap: spacing.s4, padding: spacing.s4 }]}>
+        <Body style={{ textAlign: 'center' }}>{error ?? "That transaction couldn't be found"}</Body>
+        <Button title="Back" variant="secondary" onPress={() => router.back()} />
+      </View>
+    );
+  }
+
   if (loading || !tx) {
     return (
       <View style={styles.loading}>

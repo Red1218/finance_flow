@@ -3,6 +3,9 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { TabBar } from './TabBar';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
+// The offline line above the tabs has its own data wiring; not under test here.
+jest.mock('./OfflineBar', () => ({ OfflineBar: () => null }));
+
 function makeProps(
   activeIndex: number,
   navigate = jest.fn(),

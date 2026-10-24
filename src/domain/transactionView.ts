@@ -35,7 +35,8 @@ export function buildTransactionRowVM(
       : tx.type === 'TRANSFER_IN'
         ? 'Transfer in'
         : (tx.paid_back_for ? 'Paid back · ' : '') + (category?.name ?? 'Uncategorised');
-  const subtitle = [categoryLabel, accountLabel(account)].filter(Boolean).join(' · ');
+  const uploadLabel = tx.pending ? (tx.pending.error ? "Couldn't upload" : 'Waiting to upload') : null;
+  const subtitle = [uploadLabel, categoryLabel, accountLabel(account)].filter(Boolean).join(' · ');
 
   return {
     id: tx.id,

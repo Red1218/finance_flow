@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTransactions, useCategories, useAccounts, usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
@@ -15,9 +15,10 @@ import { TransactionRow } from '../../../src/ui/TransactionRow';
 import { caps, colors, fonts, spacing, themed } from '../../../src/theme/tokens';
 import { useAuth } from '../../../src/data/AuthContext';
 import { SignInPrompt } from '../../../src/ui/SignInPrompt';
-import { archiveTransaction } from '../../../src/application/transactions';
+import { archiveTransaction, discardQueuedTransaction } from '../../../src/application/transactions';
 import { TransactionNotFoundError } from '../../../src/application/transactions/errors';
 import { useToday } from '../../../src/hooks/useToday';
+import type { Transaction } from '../../../src/data/types';
 
 type Filter = 'All' | 'Expenses' | 'Income' | 'Transfers';
 const FILTERS: Filter[] = ['All', 'Expenses', 'Income', 'Transfers'];
@@ -40,6 +41,24 @@ export default function TransactionsList() {
       else next.add(id);
       return next;
     });
+  };
+
+  // An entry saved offline lives only on this phone until it uploads, so it
+  // can't be opened, edited or selected — only explained or discarded.
+  const showPending = (t: Transaction) => {
+    const why = t.pending?.error
+      ? `Supabase refused it: ${t.pending.error}
+
+Discard it and add it again.`
+      : 'Saved on this phone while offline. It uploads by itself when you are back online.';
+    Alert.alert(t.pending?.error ? "Couldn't upload" : 'Waiting to upload', why, [
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: () => discardQueuedTransaction(t.id).then(() => tx.refetch()),
+      },
+    ]);
   };
 
   const handleRowPress = (id: string) => {
@@ -99,6 +118,7 @@ export default function TransactionsList() {
 
   // A search looks through every month; otherwise the Ledger shows this month.
   const tx = useTransactions(search ? { search } : { from, to });
+  const pendingById = useMemo(() => new Map((tx.data ?? []).filter((t) => t.pending).map((t) => [t.id, t])), [tx.data]);
   const categories = useCategories();
   const accounts = useAccounts();
   const prefs = usePreferences();
@@ -220,24 +240,27 @@ export default function TransactionsList() {
           groups.map((g, gi) => (
             <Rise key={g.day} delay={Math.min(gi, 6) * 60} style={styles.group}>
               <K style={styles.groupLabel}>{g.day}</K>
-              {g.rows.map((r) => (
-                <SwipeRow
-                  key={r.id}
-                  enabled={!selectMode}
-                  actions={[
-                    { label: 'Edit', tone: 'plain', onPress: () => router.push(`/transaction/${r.id}`) },
-                    { label: 'Delete', tone: 'accent', onPress: () => askDelete(r.id) },
-                  ]}
-                >
-                  <TransactionRow
-                    tx={r}
-                    onPress={() => handleRowPress(r.id)}
-                    onLongPress={() => handleRowLongPress(r.id)}
-                    selectable={selectMode}
-                    selected={selectedIds.has(r.id)}
-                  />
-                </SwipeRow>
-              ))}
+              {g.rows.map((r) => {
+                const pending = pendingById.get(r.id);
+                return (
+                  <SwipeRow
+                    key={r.id}
+                    enabled={!selectMode && !pending}
+                    actions={[
+                      { label: 'Edit', tone: 'plain', onPress: () => router.push(`/transaction/${r.id}`) },
+                      { label: 'Delete', tone: 'accent', onPress: () => askDelete(r.id) },
+                    ]}
+                  >
+                    <TransactionRow
+                      tx={r}
+                      onPress={() => (pending ? showPending(pending) : handleRowPress(r.id))}
+                      onLongPress={() => (pending ? showPending(pending) : handleRowLongPress(r.id))}
+                      selectable={selectMode}
+                      selected={selectedIds.has(r.id)}
+                    />
+                  </SwipeRow>
+                );
+              })}
             </Rise>
           ))
         )}

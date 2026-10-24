@@ -3,7 +3,9 @@
 // translation; multi-step orchestration (e.g. signUp -> verify OTP) lives in
 // AuthContext.
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AUTH_STORAGE_KEY, supabase } from '../supabaseClient';
+import { isNetworkError } from '../offline';
 import {
   InvalidEmailError,
   EmailAlreadyRegisteredError,
@@ -25,12 +27,22 @@ import {
 // rather than in each consumer.
 export async function getExistingSession(): Promise<Session | null> {
   const { data, error } = await supabase.auth.getSession();
+  // Offline with an expired access token: the refresh can't reach Supabase,
+  // but the saved session is intact, so stay signed in on it. The next
+  // request made online refreshes it (or signs out if it was revoked).
+  if (error && isNetworkError(error)) return readSavedSession();
   if (error) throw error;
   if (data.session?.user.is_anonymous) {
     await supabase.auth.signOut();
     return null;
   }
   return data.session;
+}
+
+// The session as last saved on this phone, read without any network call.
+export async function readSavedSession(): Promise<Session | null> {
+  const raw = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
+  return raw ? (JSON.parse(raw) as Session) : null;
 }
 
 export async function signOutUser(): Promise<void> {

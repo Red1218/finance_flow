@@ -46,6 +46,9 @@ export interface Transaction {
   // Income only: the expense this money was paid back for (a friend's share).
   paid_back_for: string | null;
   archived_at: string | null;
+  // Phone only, never from Supabase: saved offline and not uploaded yet.
+  // `error` is set when Supabase refused it.
+  pending?: { error?: string };
 }
 
 export interface Budget {

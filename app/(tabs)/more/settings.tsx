@@ -5,6 +5,7 @@ import { usePreferences } from '../../../src/hooks/queries';
 import { firstLoad } from '../../../src/hooks/useLiveQuery';
 import { updatePreferences } from '../../../src/data/repositories/preferences';
 import { useAuth } from '../../../src/data/AuthContext';
+import { getConnection } from '../../../src/data/offline';
 import { requestSmsPermission, requestReadSmsPermission } from '../../../src/data/native/smsListener';
 import { importPastSms } from '../../../src/data/importPastSms';
 import { setSmsDetectionEnabled } from '../../../src/data/smsDetectionEnabled';
@@ -25,6 +26,16 @@ export default function Settings() {
   const [reminderTimeText, setReminderTimeText] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+
+  // Entries saved offline are wiped on sign-out, so say so first.
+  const confirmSignOut = () => {
+    const { queued } = getConnection();
+    if (queued === 0) return signOut();
+    Alert.alert('Sign out?', `${queued} ${queued === 1 ? 'entry has' : 'entries have'} not uploaded yet and will be lost.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: signOut },
+    ]);
+  };
 
   const runImport = async () => {
     setImporting(true);
@@ -97,7 +108,7 @@ export default function Settings() {
 
         <View style={styles.section}>
           <K style={styles.sectionLabel}>Account</K>
-          <Pressable style={styles.row} onPress={signOut}>
+          <Pressable style={styles.row} onPress={confirmSignOut}>
             <Text style={styles.rowLabel}>Sign out</Text>
             <Text style={styles.rowValue}>›</Text>
           </Pressable>

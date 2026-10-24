@@ -28,6 +28,7 @@ import {
   RateLimitedError,
   InvalidRecoveryLinkError,
 } from '../data/repositories/authErrors';
+import { isNetworkError } from '../data/offline';
 
 export function transactionErrorMessage(error: unknown): string {
   if (error instanceof InvalidAmountError) return error.message;
@@ -39,6 +40,7 @@ export function transactionErrorMessage(error: unknown): string {
   if (error instanceof TransferMustBeEditedAsPairError) return 'This transfer must be edited as a pair';
   if (error instanceof TransferPairCorruptError) return "This transfer can't be found or is no longer valid";
   if (error instanceof UnauthorizedError) return "You don't have access to this";
+  if (isNetworkError(error)) return "You're offline — this needs a connection. New expenses and income can be added offline.";
   if (error instanceof PersistenceError) return "Couldn't save — check your connection and try again";
   return "Couldn't save — check your connection and try again";
 }
