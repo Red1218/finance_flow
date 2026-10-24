@@ -16,7 +16,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caps, colors, fonts, themed } from '../theme/tokens';
 import { Plunk, type PlunkTone, whenMotionAllowed } from './primitives';
@@ -269,10 +269,15 @@ export function SlideInText({ text, style }: { text: string; style: StyleProp<Te
   );
 }
 
-// ---- Toast: slides down from the top, optional action, hides itself ---------
+// ---- Toast: plunk drop. A raised card drops from the top, a bar drains ----
+// while it waits, and errors shake once after landing.
+
+const TICK = 'M5 12.5l4.5 4.5L19 7.5';
+const BANG = 'M12 4.5v10M12 18.5v1';
 
 export function Toast({
   message,
+  title,
   error,
   actionLabel,
   onAction,
@@ -280,35 +285,59 @@ export function Toast({
   duration = 3500,
 }: {
   message: string;
+  title?: string;
   error?: boolean;
   actionLabel?: string;
   onAction?: () => void;
   onHide: () => void;
   duration?: number;
 }) {
-  const y = useRef(new Animated.Value(-120)).current;
+  const y = useRef(new Animated.Value(-150)).current;
+  const drain = useRef(new Animated.Value(1)).current;
+  const [landed, setLanded] = useState(false);
   const hideRef = useRef(onHide);
   hideRef.current = onHide;
   useEffect(() => {
-    const show = Animated.spring(y, { toValue: 0, speed: 14, bounciness: 6, useNativeDriver: native });
-    const hide = Animated.timing(y, { toValue: -120, duration: 220, useNativeDriver: native });
-    show.start();
-    const t = setTimeout(() => hide.start(() => hideRef.current()), duration);
+    setLanded(false);
+    drain.setValue(1);
+    whenMotionAllowed(
+      () => {
+        y.setValue(-150);
+        Animated.spring(y, { toValue: 0, speed: 14, bounciness: 6, useNativeDriver: native }).start(() => setLanded(true));
+        Animated.timing(drain, { toValue: 0, duration, easing: Easing.linear, useNativeDriver: native }).start();
+      },
+      () => y.setValue(0)
+    );
+    const t = setTimeout(
+      () => Animated.timing(y, { toValue: -150, duration: 220, useNativeDriver: native }).start(() => hideRef.current()),
+      duration
+    );
     return () => clearTimeout(t);
-  }, [y, message, duration]);
+  }, [y, drain, message, duration]);
+  const edge = error ? colors.text : colors.accent;
   return (
     <Animated.View style={[motionStyles.toast, { transform: [{ translateY: y }] }]} accessibilityLiveRegion="polite">
-      <View style={motionStyles.toastTick}>
-        <Text style={motionStyles.toastTickText}>{error ? '!' : '✓'}</Text>
-      </View>
-      <Text style={motionStyles.toastText} numberOfLines={2}>
-        {message}
-      </Text>
-      {actionLabel && onAction && (
-        <Pressable onPress={onAction} hitSlop={10} accessibilityRole="button">
-          <Text style={motionStyles.toastAction}>{actionLabel}</Text>
-        </Pressable>
-      )}
+      <Shake trigger={error && landed}>
+        <Plunk tone={error ? 'white' : 'accent'} depth={4} style={[motionStyles.toastFace, { borderColor: edge }]}>
+          <View style={[motionStyles.toastTile, { backgroundColor: edge }]}>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Path d={error ? BANG : TICK} stroke={colors.bg} strokeWidth={2.6} strokeLinecap="square" />
+            </Svg>
+          </View>
+          <View style={motionStyles.toastBody}>
+            {title && <Text style={[motionStyles.toastTitle, { color: edge }]}>{title}</Text>}
+            <Text style={motionStyles.toastText} numberOfLines={2}>
+              {message}
+            </Text>
+          </View>
+          {actionLabel && onAction && (
+            <Pressable onPress={onAction} hitSlop={10} accessibilityRole="button" style={motionStyles.toastAction}>
+              <Text style={motionStyles.toastActionText}>{actionLabel}</Text>
+            </Pressable>
+          )}
+          <Animated.View style={[motionStyles.toastTimer, { backgroundColor: edge, transform: [{ scaleX: drain }] }]} />
+        </Plunk>
+      </Shake>
     </Animated.View>
   );
 }
@@ -773,22 +802,15 @@ const motionStyles = themed(() =>
     shine: { position: 'absolute', top: -20, bottom: -20, width: 60, backgroundColor: 'rgba(255,255,255,0.28)' },
     skeleton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider, overflow: 'hidden' },
     skeletonSweep: { position: 'absolute', top: 0, bottom: 0, width: 90, backgroundColor: colors.divider, opacity: 0.55 },
-    toast: {
-      position: 'absolute',
-      top: 12,
-      left: 14,
-      right: 14,
-      zIndex: 20,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      padding: 14,
-      backgroundColor: colors.text,
-    },
-    toastTick: { width: 26, height: 26, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-    toastTickText: { fontFamily: fonts.heading, color: colors.bg, fontSize: 14 },
-    toastText: { flex: 1, fontFamily: fonts.bold, fontSize: 14, color: colors.bg },
-    toastAction: { ...caps, fontSize: 12, color: colors.bg, textDecorationLine: 'underline' },
+    toast: { position: 'absolute', top: 12, left: 14, right: 14, zIndex: 20 },
+    toastFace: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1, overflow: 'hidden' },
+    toastTile: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+    toastBody: { flex: 1, gap: 3 },
+    toastTitle: { ...caps, fontSize: 10, letterSpacing: 1.4 },
+    toastText: { fontFamily: fonts.bold, fontSize: 14, color: colors.text },
+    toastAction: { minHeight: 36, paddingHorizontal: 12, justifyContent: 'center', backgroundColor: colors.text },
+    toastActionText: { ...caps, fontSize: 11, letterSpacing: 1.2, color: colors.bg },
+    toastTimer: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, transformOrigin: 'left' },
     stamp: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderWidth: 2, borderColor: colors.accent },
     stampText: { ...caps, fontSize: 11, color: colors.accent },
     confetti: { position: 'absolute', left: '50%', top: '40%', width: 0, height: 0, zIndex: 30 },
