@@ -3,6 +3,7 @@ import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-nat
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { StackActions } from '@react-navigation/native';
 import { caps, colors, themed } from '../theme/tokens';
+import { OfflineBar } from './OfflineBar';
 
 // NeoPOP nav bar: no icons, all-caps labels, 64px content height + OS gesture
 // inset, active tab marked by an accent rule on the top edge that springs
@@ -24,47 +25,50 @@ export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarP
   }, [x, slot, state.index]);
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom }]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {slot > 0 && <Animated.View style={[styles.activeRule, { width: slot, transform: [{ translateX: x }] }]} />}
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const label = options.title ?? route.name;
-        const isFocused = state.index === index;
+    <View>
+      <OfflineBar />
+      <View style={[styles.bar, { paddingBottom: insets.bottom }]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        {slot > 0 && <Animated.View style={[styles.activeRule, { width: slot, transform: [{ translateX: x }] }]} />}
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const label = options.title ?? route.name;
+          const isFocused = state.index === index;
 
-        // A tab always opens on its first screen. Home's bill links open Bills
-        // inside More and leave that link's params on the More tab route —
-        // passing them on (as the stock tab bar does) reopened Bills on every
-        // tap, hiding the More list.
-        const onPress = () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (event.defaultPrevented) return;
-          const nested = route.state;
-          if (nested?.key && (nested.index ?? 0) > 0) {
-            navigation.dispatch({ ...StackActions.popToTop(), target: nested.key });
-          }
-          if (!isFocused) navigation.navigate(route.name);
-        };
+          // A tab always opens on its first screen. Home's bill links open Bills
+          // inside More and leave that link's params on the More tab route —
+          // passing them on (as the stock tab bar does) reopened Bills on every
+          // tap, hiding the More list.
+          const onPress = () => {
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (event.defaultPrevented) return;
+            const nested = route.state;
+            if (nested?.key && (nested.index ?? 0) > 0) {
+              navigation.dispatch({ ...StackActions.popToTop(), target: nested.key });
+            }
+            if (!isFocused) navigation.navigate(route.name);
+          };
 
-        const onLongPress = () => {
-          navigation.emit({ type: 'tabLongPress', target: route.key });
-        };
+          const onLongPress = () => {
+            navigation.emit({ type: 'tabLongPress', target: route.key });
+          };
 
-        return (
-          <Pressable
-            key={route.key}
-            onPress={onPress}
-            onLongPress={onLongPress}
-            onFocus={() => setFocusedKey(route.key)}
-            onBlur={() => setFocusedKey((k) => (k === route.key ? null : k))}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isFocused }}
-            accessibilityLabel={label}
-            style={[styles.item, focusedKey === route.key && styles.itemFocused]}
-          >
-            <Text style={[styles.label, isFocused && styles.labelActive]}>{label}</Text>
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable
+              key={route.key}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              onFocus={() => setFocusedKey(route.key)}
+              onBlur={() => setFocusedKey((k) => (k === route.key ? null : k))}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isFocused }}
+              accessibilityLabel={label}
+              style={[styles.item, focusedKey === route.key && styles.itemFocused]}
+            >
+              <Text style={[styles.label, isFocused && styles.labelActive]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }

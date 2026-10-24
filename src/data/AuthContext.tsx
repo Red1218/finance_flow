@@ -10,7 +10,10 @@ import {
   signInWithPassword,
   sendPasswordResetEmail,
   establishRecoverySession,
+  readSavedSession,
 } from './repositories/auth';
+import { clearQueued } from './repositories/outbox';
+import { clearCache, markOffline } from './offline';
 
 export type AuthStatus = 'initializing' | 'authenticated' | 'signedOut' | 'error';
 
@@ -53,6 +56,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setSessionResolved(false);
     setAuthListenerSeen(false);
+    // Offline with an expired access token, supabase-js retries the refresh
+    // for about 30s before giving up. If this phone has a saved session,
+    // open on it after 2s instead (and show saved data); getExistingSession
+    // still settles it when it returns. Requests made meanwhile wait for
+    // supabase-js's own session lock, so none goes out half-authenticated.
+    const slow = setTimeout(() => {
+      readSavedSession()
+        .then((saved) => {
+          if (cancelled || !saved) return;
+          markOffline();
+          setSession((cur) => cur ?? saved);
+          setSessionResolved(true);
+          setAuthListenerSeen(true);
+        })
+        .catch(() => {});
+    }, 2000);
     getExistingSession()
       .then((s) => {
         if (cancelled) return;
@@ -64,9 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(null);
         setStatus('error');
         setError(e instanceof Error ? e.message : String(e));
-      });
+      })
+      .finally(() => clearTimeout(slow));
     return () => {
       cancelled = true;
+      clearTimeout(slow);
     };
   }, [attempt]);
 
@@ -79,8 +100,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // a real, permanent resting state, not just a pre-bootstrap gap) —
     // gating this on a truthy session, as an earlier version of this file
     // did, would leave a signed-out user stuck on 'initializing' forever.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
+    // A null INITIAL_SESSION is ignored: offline, supabase-js reports one when
+    // it can't refresh an expired token, and getExistingSession has already
+    // decided the starting session (it returns null itself when signed out).
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      if (next || event !== 'INITIAL_SESSION') setSession(next);
       setAuthListenerSeen(true);
     });
     return () => sub.subscription.unsubscribe();
@@ -94,6 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await signOutUser();
+    // Saved copies and unsent entries belong to this account, not the next one.
+    await Promise.all([clearCache(), clearQueued()]);
     // Every account is now real and recoverable by signing back in — unlike
     // the old anonymous case, there is nothing to re-bootstrap after
     // signing out. Going straight to signedOut (instead of re-running the

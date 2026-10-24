@@ -9,6 +9,8 @@ export interface TransferPair {
 }
 
 export interface NewTransaction {
+  // Optional: set by the app so a retried upload can't create a duplicate.
+  id?: string;
   accountId: string;
   categoryId: string | null;
   type: Extract<TransactionType, 'EXPENSE' | 'INCOME'>;
@@ -72,12 +74,14 @@ export async function getTransaction(id: string): Promise<Transaction | null> {
 }
 
 export async function createTransaction(input: NewTransaction): Promise<Transaction> {
-  const { data: userRes } = await supabase.auth.getUser();
+  const { data: userRes, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
   const user_id = userRes.user?.id;
   if (!user_id) throw new Error('Not signed in');
   const { data, error } = await supabase
     .from('transactions')
     .insert({
+      ...(input.id ? { id: input.id } : {}),
       user_id,
       account_id: input.accountId,
       category_id: input.categoryId,

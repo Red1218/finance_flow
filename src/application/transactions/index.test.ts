@@ -36,7 +36,7 @@ beforeEach(() => {
   mocked(getPreferences).mockResolvedValue({ decimal_precision: 2 });
   mocked(getAccountById).mockImplementation(async (id: string) => activeAccount(id));
   mocked(getCategoryById).mockResolvedValue({ id: 'cat-1', kind: 'EXPENSE', user_id: 'u1', is_system: false });
-  mocked(repo.createTransaction).mockImplementation(async (input) => ({ id: 'tx-1', user_id: 'u1', ...input }));
+  mocked(repo.createTransaction).mockImplementation(async (input) => ({ user_id: 'u1', ...input, id: 'tx-1' }));
   mocked(repo.createTransferPair).mockResolvedValue({ out: { id: 'out-1' }, in: { id: 'in-1' } });
   mocked(repo.getTransaction).mockImplementation(async (id: string) => ({ id, type: 'EXPENSE', transfer_group_id: null }));
   mocked(repo.updateTransaction).mockImplementation(async (id: string, patch: object) => ({ id, ...patch }));
@@ -49,7 +49,7 @@ describe('createTransaction', () => {
   it('creates a valid expense', async () => {
     const result = await createTransaction(baseInput);
     expect(result.id).toBe('tx-1');
-    expect(repo.createTransaction).toHaveBeenCalledWith(baseInput);
+    expect(repo.createTransaction).toHaveBeenCalledWith(expect.objectContaining(baseInput));
   });
 
   it('creates a valid income', async () => {

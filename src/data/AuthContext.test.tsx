@@ -20,6 +20,7 @@ jest.mock('./repositories/auth', () => ({
   signInWithPassword: (email: string, password: string) => mockSignInWithPassword(email, password),
   sendPasswordResetEmail: (email: string) => mockSendPasswordResetEmail(email),
   establishRecoverySession: (url: string) => mockEstablishRecoverySession(url),
+  readSavedSession: () => Promise.resolve(null),
 }));
 
 let authStateCallback: ((event: string, session: unknown) => void) | null = null;
